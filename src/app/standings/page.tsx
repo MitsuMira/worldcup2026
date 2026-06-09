@@ -12,9 +12,12 @@ export default function StandingsPage() {
   const { t } = useT()
   const { data, error, isLoading } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { refreshInterval: 60_000 })
 
+  const getGroupLetter = (g: EnrichedGroup) =>
+    g.group || g.standings.find((s) => s.team?.groups)?.team?.groups || ''
+
   const groups = [...(data?.groups ?? [])]
     .filter((g) => Array.isArray(g?.standings))
-    .sort((a, b) => (a.group || '').localeCompare(b.group || ''))
+    .sort((a, b) => getGroupLetter(a).localeCompare(getGroupLetter(b)))
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -35,7 +38,7 @@ export default function StandingsPage() {
       )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {groups.map((g) => <GroupTable key={g.group} group={g} />)}
+        {groups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} />)}
       </div>
 
       {!isLoading && groups.length === 0 && !error && (

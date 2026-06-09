@@ -39,8 +39,20 @@ export default function Home() {
   )
 
   const games = gamesData?.games ?? []
-  const groups = [...(groupsData?.groups ?? [])].sort((a, b) => (a.group || '').localeCompare(b.group || ''))
   const teams = teamsData?.teams ?? []
+
+  const getGroupLetter = (g: EnrichedGroup) =>
+    g.group || g.standings.find((s) => s.team?.groups)?.team?.groups || ''
+
+  const groups = [...(groupsData?.groups ?? [])].sort((a, b) =>
+    getGroupLetter(a).localeCompare(getGroupLetter(b))
+  )
+
+  // Groups containing at least one favorite team (by team_id in standings)
+  const favoriteGroups = favorites.length > 0
+    ? groups.filter((g) => g.standings.some((s) => favorites.includes(s.team_id)))
+    : []
+  const homeGroups = favoriteGroups.length > 0 ? favoriteGroups : groups.slice(0, 8)
   const now = new Date()
   const tournamentStarted = now >= TOURNAMENT_START
 
@@ -171,9 +183,9 @@ export default function Home() {
       {groups.length > 0 && (
         <Section title={t.home.groupStandings}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {groups.slice(0, 8).map((g) => <GroupTable key={g.group} group={g} compact />)}
+            {homeGroups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} compact />)}
           </div>
-          {groups.length > 8 && (
+          {homeGroups.length < groups.length && (
             <div className="mt-4 text-center">
               <Link href="/standings" className="text-sm text-blue-400 hover:text-blue-300">
                 {t.home.viewAllGroups}
