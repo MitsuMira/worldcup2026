@@ -75,7 +75,7 @@ function BracketMatchCard({ game, timezone }: { game?: EnrichedGame; timezone: s
         </div>
       )}
       {status === 'scheduled' && (
-        <div className="text-xs text-blue-400/70 mb-1">{formatMatchDateTime(game.local_date, timezone, getVenueTimezone(game))}</div>
+        <div className="text-xs text-blue-400/70 mb-1">{formatMatchDateTime(game.local_date, timezone)}</div>
       )}
       <BracketSlot game={game} side="home" />
       <div className="h-px bg-slate-800" />

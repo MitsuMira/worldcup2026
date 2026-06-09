@@ -58,7 +58,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           <span className="text-xs text-slate-500 font-semibold">FT</span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
-            {formatMatchDateTime(game.local_date, timezone, venueTimezone)}
+            {formatMatchDateTime(game.local_date, timezone)}
           </span>
         )}
       </div>
@@ -66,10 +66,19 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
       {/* Teams and score */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
-          <TeamFlag team={game.homeTeam} name={homeName} size="lg" />
-          <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">
-            {homeName}
-          </span>
+          {game.homeTeam?.id ? (
+            <Link href={`/teams/${game.homeTeam.id}`} className="flex flex-col items-center gap-1 group">
+              <TeamFlag team={game.homeTeam} name={homeName} size="lg" />
+              <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1 group-hover:underline">
+                {homeName}
+              </span>
+            </Link>
+          ) : (
+            <>
+              <TeamFlag team={game.homeTeam} name={homeName} size="lg" />
+              <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">{homeName}</span>
+            </>
+          )}
           {game.homeTeam?.fifa_code && (
             <span className="text-xs text-slate-500">{game.homeTeam.fifa_code}</span>
           )}
@@ -95,10 +104,19 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         </div>
 
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
-          <TeamFlag team={game.awayTeam} name={awayName} size="lg" />
-          <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">
-            {awayName}
-          </span>
+          {game.awayTeam?.id ? (
+            <Link href={`/teams/${game.awayTeam.id}`} className="flex flex-col items-center gap-1 group">
+              <TeamFlag team={game.awayTeam} name={awayName} size="lg" />
+              <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1 group-hover:underline">
+                {awayName}
+              </span>
+            </Link>
+          ) : (
+            <>
+              <TeamFlag team={game.awayTeam} name={awayName} size="lg" />
+              <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">{awayName}</span>
+            </>
+          )}
           {game.awayTeam?.fifa_code && (
             <span className="text-xs text-slate-500">{game.awayTeam.fifa_code}</span>
           )}
