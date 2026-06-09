@@ -68,12 +68,13 @@ export default function SettingsModal({ onClose }: Props) {
   })).filter((g) => g.options.length > 0)
 
   return (
-    <div
-      ref={backdropRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === backdropRef.current) onClose() }}
-    >
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm">
+      <div
+        ref={backdropRef}
+        className="flex min-h-full items-center justify-center p-4"
+        onClick={(e) => { if (e.target === backdropRef.current) onClose() }}
+      >
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl my-4">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
           <div className="flex items-center gap-2 text-white font-bold">
@@ -117,6 +118,10 @@ export default function SettingsModal({ onClose }: Props) {
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block">
               {t.settings.timezone}
             </label>
+            {/* Show currently selected */}
+            <div className="mb-2 px-3 py-2 bg-blue-600/10 border border-blue-500/20 rounded-lg text-xs text-blue-300">
+              ✓ {TIMEZONE_OPTIONS.flatMap(g => g.options).find(o => o.value === timezone)?.label ?? timezone}
+            </div>
             <input
               type="text"
               placeholder="Search timezone…"
@@ -159,6 +164,7 @@ export default function SettingsModal({ onClose }: Props) {
             {t.settings.close}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )

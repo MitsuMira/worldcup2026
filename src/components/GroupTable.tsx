@@ -13,10 +13,11 @@ interface Props {
 
 export default function GroupTable({ group, compact = false, highlightTeamId }: Props) {
   const { t } = useT()
+  const groupLetter = group.group || group.standings.find((s) => s.team?.groups)?.team?.groups || ''
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-800">
-        <h3 className="text-sm font-bold text-white">{t.match.stageGroup} {group.group}</h3>
+        <h3 className="text-sm font-bold text-white">{t.match.stageGroup} {groupLetter}</h3>
       </div>
       <table className="w-full text-sm">
         <thead>

@@ -54,6 +54,19 @@ export default function TeamDetailPage() {
   const pts = won * 3 + drawn
   const gd = gf - ga
 
+  // Aggregate goal scorers from finished games
+  const scorerMap = new Map<string, number>()
+  for (const g of finishedGames) {
+    const isHome = g.home_team_id === id
+    const raw = isHome ? g.home_scorers : g.away_scorers
+    if (raw && raw !== 'null') {
+      raw.split(',').map((s) => s.trim()).filter(Boolean).forEach((name) => {
+        scorerMap.set(name, (scorerMap.get(name) ?? 0) + 1)
+      })
+    }
+  }
+  const topScorers = [...scorerMap.entries()].sort((a, b) => b[1] - a[1])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 text-slate-400 py-32">
@@ -131,6 +144,30 @@ export default function TeamDetailPage() {
         <div className="mb-6">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.groupStanding}</h2>
           <GroupTable group={teamGroup} highlightTeamId={team.id} />
+        </div>
+      )}
+
+      {/* Tournament scorers */}
+      {topScorers.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
+            ⚽ {t.teamDetail.scorers}
+          </h2>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            {topScorers.map(([name, goals], i) => (
+              <div
+                key={name}
+                className="flex items-center gap-3 px-4 py-2.5 border-t border-slate-800/50 first:border-t-0"
+              >
+                <span className="text-xs text-slate-600 w-5 text-right">{i + 1}</span>
+                <span className="flex-1 text-sm text-white font-medium">{name}</span>
+                <span className="flex items-center gap-1 text-sm font-bold text-white">
+                  <span className="text-base">⚽</span>
+                  {goals}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

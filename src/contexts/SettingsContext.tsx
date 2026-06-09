@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState } from 'react'
 
 interface SettingsContextValue {
   timezone: string
@@ -13,16 +13,10 @@ const SettingsContext = createContext<SettingsContextValue>({
 })
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [timezone, setTimezoneState] = useState<string>('UTC')
-
-  useEffect(() => {
-    const stored = localStorage.getItem('wc2026_timezone')
-    if (stored) {
-      setTimezoneState(stored)
-    } else {
-      setTimezoneState(Intl.DateTimeFormat().resolvedOptions().timeZone)
-    }
-  }, [])
+  const [timezone, setTimezoneState] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'UTC'
+    return localStorage.getItem('wc2026_timezone') ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  })
 
   const setTimezone = (tz: string) => {
     setTimezoneState(tz)

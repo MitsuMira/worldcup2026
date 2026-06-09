@@ -39,7 +39,7 @@ export default function Home() {
   )
 
   const games = gamesData?.games ?? []
-  const groups = groupsData?.groups ?? []
+  const groups = [...(groupsData?.groups ?? [])].sort((a, b) => (a.group || '').localeCompare(b.group || ''))
   const teams = teamsData?.teams ?? []
   const now = new Date()
   const tournamentStarted = now >= TOURNAMENT_START

@@ -35,7 +35,7 @@ export interface Translations {
   teamDetail: {
     backToTeams: string; allMatches: string; groupStanding: string
     stats: string; played: string; won: string; drawn: string; lost: string
-    noMatches: string; upcomingMatches: string; pastMatches: string
+    noMatches: string; upcomingMatches: string; pastMatches: string; scorers: string
   }
   predictions: {
     title: string; subtitle: string; points: string; exactScores: string; pending: string
@@ -102,7 +102,7 @@ export const en: Translations = {
   teamDetail: {
     backToTeams: '← Teams', allMatches: 'All Matches', groupStanding: 'Group Standing',
     stats: 'Stats', played: 'P', won: 'W', drawn: 'D', lost: 'L',
-    noMatches: 'No matches yet.', upcomingMatches: 'Upcoming', pastMatches: 'Results',
+    noMatches: 'No matches yet.', upcomingMatches: 'Upcoming', pastMatches: 'Results', scorers: 'Tournament Scorers',
   },
   predictions: {
     title: 'Predictions', subtitle: 'Predict match scores · Stored locally in your browser',
@@ -176,7 +176,7 @@ export const pt: Translations = {
   teamDetail: {
     backToTeams: '← Seleções', allMatches: 'Todas as Partidas', groupStanding: 'Classificação do Grupo',
     stats: 'Estatísticas', played: 'J', won: 'V', drawn: 'E', lost: 'D',
-    noMatches: 'Nenhuma partida ainda.', upcomingMatches: 'Próximas', pastMatches: 'Resultados',
+    noMatches: 'Nenhuma partida ainda.', upcomingMatches: 'Próximas', pastMatches: 'Resultados', scorers: 'Artilheiros',
   },
   predictions: {
     title: 'Previsões', subtitle: 'Preveja os placares · Salvo localmente no seu navegador',
@@ -250,7 +250,7 @@ export const es: Translations = {
   teamDetail: {
     backToTeams: '← Selecciones', allMatches: 'Todos los Partidos', groupStanding: 'Clasificación del Grupo',
     stats: 'Estadísticas', played: 'PJ', won: 'G', drawn: 'E', lost: 'P',
-    noMatches: 'Sin partidos aún.', upcomingMatches: 'Próximos', pastMatches: 'Resultados',
+    noMatches: 'Sin partidos aún.', upcomingMatches: 'Próximos', pastMatches: 'Resultados', scorers: 'Goleadores',
   },
   predictions: {
     title: 'Predicciones', subtitle: 'Predice los marcadores · Guardado localmente en tu navegador',
