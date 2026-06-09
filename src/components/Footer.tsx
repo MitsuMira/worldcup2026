@@ -17,18 +17,7 @@ export default function Footer() {
           {t.footer.madeByName}
         </a>
       </p>
-      <p>
-        {t.footer.dataVia}{' '}
-        <a
-          href="https://github.com/rezarahiminia/worldcup2026"
-          className="hover:text-slate-400 underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          github/rezarahiminia/worldcup2026
-        </a>{' '}
-        · ISC License
-      </p>
+      <p>{t.footer.dataVia} ESPN</p>
     </footer>
   )
 }

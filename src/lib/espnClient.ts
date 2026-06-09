@@ -203,36 +203,70 @@ interface EspnStandingsResponse {
   groups?: EspnStandingsGroup[]
 }
 
+function extractGroupLetter(text: string): string {
+  const m = text.match(/\bGroup\s+([A-L])\b/i) ?? text.match(/\b([A-L])\s+Group\b/i) ?? text.match(/\b([A-L])\b/)
+  return m ? m[1].toUpperCase() : ''
+}
+
 async function fetchTeamGroupMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>()
+  const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
+  const opts = { next: { revalidate: 3600 }, headers }
+
+  // ── Attempt 1: Standings endpoint (tries both paths) ─────────────────────
+  for (const url of [
+    'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
+    'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026',
+  ]) {
+    try {
+      const res = await fetch(url, opts)
+      if (!res.ok) continue
+      const data: EspnStandingsResponse = await res.json()
+
+      let groups: EspnStandingsGroup[] = []
+      const s = data.standings
+      if (Array.isArray(s)) groups = s
+      else if (s && 'groups' in s && Array.isArray(s.groups)) groups = s.groups
+      else if (Array.isArray(data.groups)) groups = data.groups
+      else if (data.content?.standingsGroups) groups = data.content.standingsGroups
+
+      for (const grp of groups) {
+        const raw = grp.name ?? grp.abbreviation ?? grp.shortName ?? ''
+        const letter = extractGroupLetter(raw)
+        if (!letter) continue
+        const entries: EspnStandingsEntry[] = grp.entries ?? grp.standings?.entries ?? []
+        for (const entry of entries) {
+          if (entry.team?.abbreviation) map.set(entry.team.abbreviation, letter)
+          if (entry.team?.id) map.set(entry.team.id, letter)
+        }
+      }
+      if (map.size > 0) return map
+    } catch { /* try next */ }
+  }
+
+  // ── Attempt 2: Teams endpoint — standingSummary contains "1st in Group A" ─
   try {
     const res = await fetch(
-      'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
-      { next: { revalidate: 3600 }, headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } },
+      'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams',
+      opts,
     )
-    if (!res.ok) return map
-    const data: EspnStandingsResponse = await res.json()
-
-    // Try to find groups array regardless of nesting
-    let groups: EspnStandingsGroup[] = []
-    const s = data.standings
-    if (Array.isArray(s)) groups = s
-    else if (s && 'groups' in s && Array.isArray(s.groups)) groups = s.groups
-    else if (Array.isArray(data.groups)) groups = data.groups
-    else if (data.content?.standingsGroups) groups = data.content.standingsGroups
-
-    for (const grp of groups) {
-      const raw = grp.name ?? grp.abbreviation ?? grp.shortName ?? ''
-      const gm = raw.match(/\b([A-L])\b/i)
-      if (!gm) continue
-      const letter = gm[1].toUpperCase()
-      const entries: EspnStandingsEntry[] = grp.entries ?? grp.standings?.entries ?? []
-      for (const entry of entries) {
-        if (entry.team?.abbreviation) map.set(entry.team.abbreviation, letter)
-        if (entry.team?.id) map.set(entry.team.id, letter)
+    if (res.ok) {
+      const data = await res.json() as {
+        sports?: Array<{ leagues?: Array<{ teams?: Array<{ team: { id: string; abbreviation: string; standingSummary?: string } }> }> }>
       }
+      const teams = data.sports?.[0]?.leagues?.[0]?.teams ?? []
+      for (const { team } of teams) {
+        if (!team.standingSummary) continue
+        const letter = extractGroupLetter(team.standingSummary)
+        if (letter) {
+          if (team.abbreviation) map.set(team.abbreviation, letter)
+          if (team.id) map.set(team.id, letter)
+        }
+      }
+      if (map.size > 0) return map
     }
-  } catch { /* standings unavailable — group letters fall back to scoreboard parsing */ }
+  } catch { /* fall through */ }
+
   return map
 }
 
