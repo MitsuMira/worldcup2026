@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import TeamFlag from './TeamFlag'
 import type { ApiTeam, EnrichedGame, EnrichedGroup } from '@/lib/types'
-import { getMatchStatus, getTeamName, parseMatchDate } from '@/lib/utils'
+import { getMatchStatus, getTeamName, parseMatchDate, getVenueTimezone } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
@@ -20,16 +20,16 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
   const lastGame = [...teamGames]
     .filter((g) => getMatchStatus(g) === 'finished')
     .sort((a, b) => {
-      const da = parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0
-      const db = parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0
+      const da = parseMatchDate(a.local_date, getVenueTimezone(a))?.getTime() ?? 0
+      const db = parseMatchDate(b.local_date, getVenueTimezone(b))?.getTime() ?? 0
       return db - da
     })[0]
 
   const nextGame = teamGames
     .filter((g) => getMatchStatus(g) === 'scheduled' || getMatchStatus(g) === 'live')
     .sort((a, b) => {
-      const da = parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0
-      const db = parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0
+      const da = parseMatchDate(a.local_date, getVenueTimezone(a))?.getTime() ?? 0
+      const db = parseMatchDate(b.local_date, getVenueTimezone(b))?.getTime() ?? 0
       return da - db
     })[0]
 

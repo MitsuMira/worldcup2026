@@ -5,7 +5,7 @@ import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getTeamName, formatMatchDateTime } from '@/lib/utils'
+import { getMatchStatus, getTeamName, formatMatchDateTime, getVenueTimezone } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import { Loader2 } from 'lucide-react'
@@ -75,7 +75,7 @@ function BracketMatchCard({ game, timezone }: { game?: EnrichedGame; timezone: s
         </div>
       )}
       {status === 'scheduled' && (
-        <div className="text-xs text-blue-400/70 mb-1">{formatMatchDateTime(game.local_date, timezone, game.persian_date)}</div>
+        <div className="text-xs text-blue-400/70 mb-1">{formatMatchDateTime(game.local_date, timezone, getVenueTimezone(game))}</div>
       )}
       <BracketSlot game={game} side="home" />
       <div className="h-px bg-slate-800" />

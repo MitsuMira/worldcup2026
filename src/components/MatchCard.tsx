@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime } from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -18,12 +19,24 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const { t } = useT()
   const { timezone } = useSettings()
   const status = getMatchStatus(game)
+  const venueTimezone = getVenueTimezone(game)
   const statusLabel = getStatusLabel(game, timezone)
   const homeScorers = getScorers(game.home_scorers)
   const awayScorers = getScorers(game.away_scorers)
   const homeName = getTeamName(game, 'home')
   const awayName = getTeamName(game, 'away')
   const stageLabel = localStageLabel(game.type, game.group, t)
+
+  const [prediction, setPrediction] = useState<import('@/lib/types').Prediction | null>(null)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('wc2026_predictions')
+      if (raw) {
+        const preds: import('@/lib/types').Prediction[] = JSON.parse(raw)
+        setPrediction(preds.find((p) => p.matchId === game.id) ?? null)
+      }
+    } catch { /* ignore */ }
+  }, [game.id])
 
   return (
     <div
@@ -45,7 +58,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           <span className="text-xs text-slate-500 font-semibold">FT</span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
-            {formatMatchDateTime(game.local_date, timezone, game.persian_date)}
+            {formatMatchDateTime(game.local_date, timezone, venueTimezone)}
           </span>
         )}
       </div>
@@ -108,12 +121,27 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
 
       {showPredictLink && status === 'scheduled' && (
         <div className="mt-3 pt-3 border-t border-slate-800">
-          <Link
-            href={`/predictions?match=${game.id}`}
-            className="text-xs text-amber-400 hover:text-amber-300 font-medium"
-          >
-            {t.match.predict}
-          </Link>
+          {prediction ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
+              <span className="text-sm font-black text-amber-300 tabular-nums">
+                {prediction.homeScore} – {prediction.awayScore}
+              </span>
+              <Link
+                href={`/predictions?match=${game.id}`}
+                className="text-xs text-slate-500 hover:text-amber-400 ml-auto"
+              >
+                {t.match.editPick}
+              </Link>
+            </div>
+          ) : (
+            <Link
+              href={`/predictions?match=${game.id}`}
+              className="text-xs text-amber-400 hover:text-amber-300 font-medium"
+            >
+              {t.match.predict}
+            </Link>
+          )}
         </div>
       )}
     </div>

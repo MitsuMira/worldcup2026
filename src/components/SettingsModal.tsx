@@ -155,7 +155,7 @@ export default function SettingsModal({ onClose }: Props) {
             </div>
             <p className="text-xs text-slate-500 mt-2">{t.settings.timezoneHint}</p>
             <p className="text-xs text-slate-600 mt-1">
-              Source field: <code className="text-slate-500">local_date</code> (parsed as UTC)
+              Match times are in the venue's local timezone.
             </p>
           </div>
         </div>

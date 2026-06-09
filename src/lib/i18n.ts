@@ -49,6 +49,7 @@ export interface Translations {
     live: string; vs: string; predict: string
     stageGroup: string; stageR32: string; stageR16: string
     stageQF: string; stageSF: string; stageThird: string; stageFinal: string
+    myPick: string; editPick: string
   }
   group: { top2: string }
   footer: { dataVia: string; madeWith: string; madeByName: string; madeByUrl: string }
@@ -119,6 +120,7 @@ export const en: Translations = {
     live: 'LIVE', vs: 'vs', predict: '✦ Make a prediction →',
     stageGroup: 'Group', stageR32: 'Round of 32', stageR16: 'Round of 16',
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
+    myPick: 'My pick', editPick: 'Edit',
   },
   group: { top2: 'Top 2 advance' },
   footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
@@ -193,6 +195,7 @@ export const pt: Translations = {
     live: 'AO VIVO', vs: 'vs', predict: '✦ Fazer previsão →',
     stageGroup: 'Grupo', stageR32: 'Fase de 32', stageR16: 'Oitavas de Final',
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
+    myPick: 'Meu palpite', editPick: 'Editar',
   },
   group: { top2: 'Top 2 avançam' },
   footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
@@ -267,6 +270,7 @@ export const es: Translations = {
     live: 'EN VIVO', vs: 'vs', predict: '✦ Hacer predicción →',
     stageGroup: 'Grupo', stageR32: 'Dieciseisavos', stageR16: 'Octavos de Final',
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
+    myPick: 'Mi pronóstico', editPick: 'Editar',
   },
   group: { top2: 'Top 2 avanzan' },
   footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
