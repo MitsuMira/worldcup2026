@@ -129,7 +129,22 @@ function mapEvent(event: EspnEvent): EnrichedGame {
   const away = comp.competitors.find(c => c.homeAway === 'away')
   if (!home || !away) throw new Error(`Event ${event.id} missing competitors`)
 
-  const { type, group } = parseRound(comp)
+  let { type, group } = parseRound(comp)
+
+  // If parseRound() hit the default, check team display names for knockout hints.
+  // ESPN uses placeholder names like "Group A Winner", "Semifinal 1 Loser" for TBD slots.
+  if (type === 'group' && !group) {
+    const combined = `${home.team.displayName} ${away.team.displayName}`.toLowerCase()
+    if (/semifinal|semi-final/.test(combined)) {
+      type = /loser/.test(combined) ? 'third' : 'sf'
+    } else if (/quarterfinal|quarter-final|quarter final/.test(combined)) {
+      type = 'qf'
+    } else if (/\bfinal\b/.test(combined) && !/semi|quarter/.test(combined)) {
+      type = 'final'
+    } else if (/\b(winner|loser|runner|2nd place|3rd place)\b/.test(combined)) {
+      type = 'r32'
+    }
+  }
   const st = comp.status
   const isLive = st.type.state === 'in'
   const finished = (st.type.completed || st.type.state === 'post') ? 'TRUE' : 'FALSE'
@@ -356,7 +371,7 @@ export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
 export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
   // Derive standings from game results — no extra ESPN endpoint needed
   const games = await fetchEnrichedGames()
-  const groupGames = games.filter(g => g.type === 'group')
+  const groupGames = games.filter(g => g.type === 'group' && g.group !== '')
 
   type Entry = { team: ApiTeam; pts: number; gf: number; ga: number }
   const groupMap = new Map<string, Map<string, Entry>>()
