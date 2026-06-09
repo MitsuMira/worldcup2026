@@ -6,6 +6,7 @@ export interface Translations {
   home: {
     liveNow: string; today: string; upNext: string; firstMatches: string
     recentResults: string; groupStandings: string; viewAllGroups: string
+    upcoming48h: string; noUpcoming48h: string
   }
   schedule: {
     title: string; subtitle: string
@@ -18,6 +19,16 @@ export interface Translations {
     noData: string; qualTitle: string; qualRules: string[]
   }
   teams: { title: string; subtitle: string; search: string; all: string; noTeams: string }
+  favorites: {
+    myTeams: string; noFavorites: string; addFavorites: string
+    nextMatch: string; lastMatch: string; groupPos: string
+    addToFav: string; removeFromFav: string
+  }
+  teamDetail: {
+    backToTeams: string; allMatches: string; groupStanding: string
+    stats: string; played: string; won: string; drawn: string; lost: string
+    noMatches: string; upcomingMatches: string; pastMatches: string
+  }
   predictions: {
     title: string; subtitle: string; points: string; exactScores: string; pending: string
     predictTab: string; resultsTab: string; save: string; clear: string
@@ -32,7 +43,7 @@ export interface Translations {
     stageQF: string; stageSF: string; stageThird: string; stageFinal: string
   }
   group: { top2: string }
-  footer: { dataVia: string; madeWith: string }
+  footer: { dataVia: string; madeWith: string; madeByName: string; madeByUrl: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -44,6 +55,7 @@ export const en: Translations = {
     liveNow: '🔴 Live Now', today: '📅 Today', upNext: '⏭ Up Next',
     firstMatches: '🗓 First Matches', recentResults: '📊 Recent Results',
     groupStandings: '🏆 Group Standings', viewAllGroups: 'View all 12 groups →',
+    upcoming48h: '🗓 Next 48 Hours', noUpcoming48h: 'No matches in the next 48 hours.',
   },
   schedule: {
     title: 'Schedule', subtitle: 'All 104 matches · June 11 – July 19, 2026',
@@ -63,6 +75,17 @@ export const en: Translations = {
     ],
   },
   teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.' },
+  favorites: {
+    myTeams: '⭐ My Teams', noFavorites: 'No favorite teams yet.',
+    addFavorites: 'Tap the ⭐ on any team to track them here.',
+    nextMatch: 'Next', lastMatch: 'Last', groupPos: 'Group',
+    addToFav: 'Add to favorites', removeFromFav: 'Remove from favorites',
+  },
+  teamDetail: {
+    backToTeams: '← Teams', allMatches: 'All Matches', groupStanding: 'Group Standing',
+    stats: 'Stats', played: 'P', won: 'W', drawn: 'D', lost: 'L',
+    noMatches: 'No matches yet.', upcomingMatches: 'Upcoming', pastMatches: 'Results',
+  },
   predictions: {
     title: 'Predictions', subtitle: 'Predict match scores · Stored locally in your browser',
     points: 'Points', exactScores: 'Exact Scores', pending: 'Pending',
@@ -80,7 +103,7 @@ export const en: Translations = {
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
   },
   group: { top2: 'Top 2 advance' },
-  footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by MitsuMira' },
+  footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
   errors: {
     games: 'Failed to load matches. Check your API credentials.',
@@ -96,6 +119,7 @@ export const pt: Translations = {
     liveNow: '🔴 Ao Vivo', today: '📅 Hoje', upNext: '⏭ A Seguir',
     firstMatches: '🗓 Primeiras Partidas', recentResults: '📊 Resultados Recentes',
     groupStandings: '🏆 Classificação dos Grupos', viewAllGroups: 'Ver todos os 12 grupos →',
+    upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'Nenhuma partida nas próximas 48 horas.',
   },
   schedule: {
     title: 'Calendário', subtitle: 'Todos os 104 jogos · 11 Jun – 19 Jul, 2026',
@@ -115,6 +139,17 @@ export const pt: Translations = {
     ],
   },
   teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.' },
+  favorites: {
+    myTeams: '⭐ Meus Times', noFavorites: 'Nenhum time favorito ainda.',
+    addFavorites: 'Toque em ⭐ em qualquer seleção para acompanhá-la aqui.',
+    nextMatch: 'Próx.', lastMatch: 'Últ.', groupPos: 'Grupo',
+    addToFav: 'Adicionar aos favoritos', removeFromFav: 'Remover dos favoritos',
+  },
+  teamDetail: {
+    backToTeams: '← Seleções', allMatches: 'Todas as Partidas', groupStanding: 'Classificação do Grupo',
+    stats: 'Estatísticas', played: 'J', won: 'V', drawn: 'E', lost: 'D',
+    noMatches: 'Nenhuma partida ainda.', upcomingMatches: 'Próximas', pastMatches: 'Resultados',
+  },
   predictions: {
     title: 'Previsões', subtitle: 'Preveja os placares · Salvo localmente no seu navegador',
     points: 'Pontos', exactScores: 'Placar Exato', pending: 'Pendente',
@@ -132,7 +167,7 @@ export const pt: Translations = {
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
   },
   group: { top2: 'Top 2 avançam' },
-  footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por MitsuMira' },
+  footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
   errors: {
     games: 'Falha ao carregar partidas. Verifique suas credenciais de API.',
@@ -148,6 +183,7 @@ export const es: Translations = {
     liveNow: '🔴 En Vivo', today: '📅 Hoy', upNext: '⏭ Próximos',
     firstMatches: '🗓 Primeros Partidos', recentResults: '📊 Resultados Recientes',
     groupStandings: '🏆 Clasificación de Grupos', viewAllGroups: 'Ver los 12 grupos →',
+    upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'No hay partidos en las próximas 48 horas.',
   },
   schedule: {
     title: 'Calendario', subtitle: 'Los 104 partidos · 11 Jun – 19 Jul, 2026',
@@ -167,6 +203,17 @@ export const es: Translations = {
     ],
   },
   teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.' },
+  favorites: {
+    myTeams: '⭐ Mis Equipos', noFavorites: 'Aún no tienes equipos favoritos.',
+    addFavorites: 'Toca ⭐ en cualquier selección para seguirla aquí.',
+    nextMatch: 'Próx.', lastMatch: 'Últ.', groupPos: 'Grupo',
+    addToFav: 'Agregar a favoritos', removeFromFav: 'Quitar de favoritos',
+  },
+  teamDetail: {
+    backToTeams: '← Selecciones', allMatches: 'Todos los Partidos', groupStanding: 'Clasificación del Grupo',
+    stats: 'Estadísticas', played: 'PJ', won: 'G', drawn: 'E', lost: 'P',
+    noMatches: 'Sin partidos aún.', upcomingMatches: 'Próximos', pastMatches: 'Resultados',
+  },
   predictions: {
     title: 'Predicciones', subtitle: 'Predice los marcadores · Guardado localmente en tu navegador',
     points: 'Puntos', exactScores: 'Resultado Exacto', pending: 'Pendiente',
@@ -184,7 +231,7 @@ export const es: Translations = {
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
   },
   group: { top2: 'Top 2 avanzan' },
-  footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por MitsuMira' },
+  footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
   loading: { matches: 'Cargando partidos…', schedule: 'Cargando calendario…', standings: 'Cargando clasificación…', teams: 'Cargando selecciones…', generic: 'Cargando…' },
   errors: {
     games: 'Error al cargar partidos. Verifica tus credenciales de API.',
@@ -195,7 +242,6 @@ export const es: Translations = {
 
 export const translations: Record<Lang, Translations> = { en, pt, es }
 
-// Localized stage label helper (use in components with useT())
 export function localStageLabel(type: string, group: string, t: Translations): string {
   if (type === 'group') return `${t.match.stageGroup} ${group}`
   const map: Record<string, keyof Translations['match']> = {

@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
-import { LanguageProvider } from '@/contexts/LanguageContext'
 import Footer from '@/components/Footer'
+import { LanguageProvider } from '@/contexts/LanguageContext'
+import { FavoriteTeamsProvider } from '@/contexts/FavoriteTeamsContext'
 
 export const metadata: Metadata = {
   title: 'WC 2026 Tracker',
@@ -14,9 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <LanguageProvider>
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
+          <FavoriteTeamsProvider>
+            <Navbar />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+          </FavoriteTeamsProvider>
         </LanguageProvider>
       </body>
     </html>

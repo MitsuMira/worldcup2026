@@ -4,9 +4,11 @@ import useSWR from 'swr'
 import MatchCard from '@/components/MatchCard'
 import GroupTable from '@/components/GroupTable'
 import CountdownTimer from '@/components/CountdownTimer'
-import type { EnrichedGame, EnrichedGroup } from '@/lib/types'
+import FavoriteTeamCard from '@/components/FavoriteTeamCard'
+import type { EnrichedGame, EnrichedGroup, ApiTeam } from '@/lib/types'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
+import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -24,21 +26,37 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function Home() {
   const { t } = useT()
+  const { favorites } = useFavorites()
+
   const { data: gamesData, error: gamesError, isLoading: gamesLoading } = useSWR<{ games: EnrichedGame[] }>(
     '/api/games', fetcher, { refreshInterval: 30_000 },
   )
   const { data: groupsData } = useSWR<{ groups: EnrichedGroup[] }>(
     '/api/groups', fetcher, { refreshInterval: 60_000 },
   )
+  const { data: teamsData } = useSWR<{ teams: ApiTeam[] }>(
+    favorites.length > 0 ? '/api/teams' : null, fetcher, { revalidateOnFocus: false },
+  )
 
   const games = gamesData?.games ?? []
   const groups = groupsData?.groups ?? []
+  const teams = teamsData?.teams ?? []
   const now = new Date()
   const tournamentStarted = now >= TOURNAMENT_START
+
+  const favoriteTeams = teams.filter((tm) => favorites.includes(tm.id))
 
   const liveGames = games.filter((g) => getMatchStatus(g) === 'live')
   const todayStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`
   const todayGames = games.filter((g) => g.local_date?.startsWith(todayStr) && getMatchStatus(g) !== 'finished')
+
+  // Next 48 hours (excluding today's matches already shown and live)
+  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+  const upcoming48h = games.filter((g) => {
+    const d = parseMatchDate(g.local_date)
+    return d && d > now && d <= in48h && getMatchStatus(g) === 'scheduled' && !g.local_date?.startsWith(todayStr)
+  }).sort((a, b) => (parseMatchDate(a.local_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date)?.getTime() ?? 0))
+
   const upcomingGames = games
     .filter((g) => { const d = parseMatchDate(g.local_date); return d && d > now && getMatchStatus(g) === 'scheduled' })
     .slice(0, 6)
@@ -76,6 +94,26 @@ export default function Home() {
         </div>
       )}
 
+      {/* My favorite teams */}
+      <Section title={t.favorites.myTeams}>
+        {favoriteTeams.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {favoriteTeams.map((tm) => (
+              <FavoriteTeamCard key={tm.id} team={tm} games={games} groups={groups} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-dashed border-slate-700 rounded-xl p-6 text-center">
+            <p className="text-slate-500 text-sm mb-2">{t.favorites.noFavorites}</p>
+            <p className="text-slate-600 text-xs">{t.favorites.addFavorites}</p>
+            <Link href="/teams" className="inline-block mt-3 text-xs text-blue-400 hover:text-blue-300">
+              {t.nav.teams} →
+            </Link>
+          </div>
+        )}
+      </Section>
+
+      {/* Live matches */}
       {liveGames.length > 0 && (
         <Section title={t.home.liveNow}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -84,6 +122,7 @@ export default function Home() {
         </Section>
       )}
 
+      {/* Today's matches */}
       {todayGames.length > 0 && (
         <Section title={t.home.today}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -92,6 +131,16 @@ export default function Home() {
         </Section>
       )}
 
+      {/* Next 48h (only during tournament) */}
+      {tournamentStarted && upcoming48h.length > 0 && (
+        <Section title={t.home.upcoming48h}>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcoming48h.map((g) => <MatchCard key={g.id} game={g} showPredictLink />)}
+          </div>
+        </Section>
+      )}
+
+      {/* Pre-tournament: first matches */}
       {!tournamentStarted && upcomingGames.length > 0 && (
         <Section title={t.home.firstMatches}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -100,7 +149,8 @@ export default function Home() {
         </Section>
       )}
 
-      {tournamentStarted && upcomingGames.length > 0 && liveGames.length === 0 && todayGames.length === 0 && (
+      {/* Up next (during tournament, no live/today) */}
+      {tournamentStarted && upcomingGames.length > 0 && liveGames.length === 0 && todayGames.length === 0 && upcoming48h.length === 0 && (
         <Section title={t.home.upNext}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {upcomingGames.map((g) => <MatchCard key={g.id} game={g} showPredictLink />)}
@@ -108,6 +158,7 @@ export default function Home() {
         </Section>
       )}
 
+      {/* Recent results */}
       {recentResults.length > 0 && (
         <Section title={t.home.recentResults}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -116,6 +167,7 @@ export default function Home() {
         </Section>
       )}
 
+      {/* Group standings preview */}
       {groups.length > 0 && (
         <Section title={t.home.groupStandings}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
