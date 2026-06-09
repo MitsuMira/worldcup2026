@@ -213,44 +213,65 @@ async function fetchTeamGroupMap(): Promise<Map<string, string>> {
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
   const opts = { next: { revalidate: 3600 }, headers }
 
-  // ── Attempt 1: ESPN core API groups endpoint ──────────────────────────────
-  // Returns { items: [{ $ref: "...groups/1" }, ...] }; each group has abbreviation + teams.$ref
+  // ── Attempt 1: ESPN core API — groups list → standings → teams ───────────
+  // Groups have no direct teams field; standings/$ref has entries with team $refs
   try {
     const baseUrl = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
     const listRes = await fetch(`${baseUrl}/seasons/2026/types/1/groups?limit=20`, opts)
     if (listRes.ok) {
       const listData = await listRes.json() as { items?: Array<{ $ref: string }> }
       const groupRefs = listData.items ?? []
+
+      // Step 1: fetch all 12 group details in parallel
       const groupDetails = await Promise.all(
         groupRefs.map(({ $ref }) =>
           fetch($ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
         )
       )
-      for (const grp of groupDetails) {
+
+      // Step 2: fetch all 12 standings in parallel
+      type GrpDetail = { name?: string; abbreviation?: string; standings?: { $ref: string } }
+      const standingsJobs: Array<{ letter: string; ref: string }> = []
+      for (const grp of groupDetails as (GrpDetail | null)[]) {
         if (!grp) continue
         const letter = extractGroupLetter(grp.abbreviation ?? grp.name ?? '')
-        if (!letter) continue
-        const teamsRef: string | undefined = grp.teams?.$ref
-        if (!teamsRef) continue
-        try {
-          const tRes = await fetch(teamsRef, opts)
-          if (!tRes.ok) continue
-          const tData = await tRes.json() as { items?: Array<{ $ref: string }> }
-          await Promise.all(
-            (tData.items ?? []).map(async ({ $ref: teamRef }) => {
-              try {
-                const tr = await fetch(teamRef, opts)
-                if (!tr.ok) return
-                const td = await tr.json() as { team?: { abbreviation?: string; id?: string }; abbreviation?: string; id?: string }
-                const abbr = td.team?.abbreviation ?? td.abbreviation
-                const id = td.team?.id ?? td.id
-                if (abbr) map.set(abbr, letter)
-                if (id) map.set(id, letter)
-              } catch { /* skip */ }
-            })
-          )
-        } catch { /* skip */ }
+        if (letter && grp.standings?.$ref) standingsJobs.push({ letter, ref: grp.standings.$ref })
       }
+
+      const standingsResults = await Promise.all(
+        standingsJobs.map(({ ref }) =>
+          fetch(ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      )
+
+      // Step 3: collect all team $refs with their group letter
+      type StandingsEntry = { team?: { $ref?: string; abbreviation?: string; id?: string } }
+      type StandingsData = { entries?: StandingsEntry[] }
+      const teamJobs: Array<{ letter: string; ref: string }> = []
+      for (let i = 0; i < standingsResults.length; i++) {
+        const s = standingsResults[i] as StandingsData | null
+        if (!s) continue
+        const letter = standingsJobs[i].letter
+        for (const entry of s.entries ?? []) {
+          if (entry.team?.$ref) teamJobs.push({ letter, ref: entry.team.$ref })
+          else if (entry.team?.abbreviation) map.set(entry.team.abbreviation, letter)
+        }
+      }
+
+      // Step 4: fetch all team details in parallel
+      const teamResults = await Promise.all(
+        teamJobs.map(({ ref }) =>
+          fetch(ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      )
+      for (let i = 0; i < teamResults.length; i++) {
+        const td = teamResults[i] as { abbreviation?: string; id?: string } | null
+        if (!td) continue
+        const letter = teamJobs[i].letter
+        if (td.abbreviation) map.set(td.abbreviation, letter)
+        if (td.id) map.set(td.id, letter)
+      }
+
       if (map.size > 0) return map
     }
   } catch { /* try next */ }
