@@ -217,7 +217,7 @@ async function fetchTeamGroupMap(): Promise<Map<string, string>> {
   // Returns { items: [{ $ref: "...groups/1" }, ...] }; each group has abbreviation + teams.$ref
   try {
     const baseUrl = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
-    const listRes = await fetch(`${baseUrl}/seasons/2026/types/2/groups?limit=20`, opts)
+    const listRes = await fetch(`${baseUrl}/seasons/2026/types/1/groups?limit=20`, opts)
     if (listRes.ok) {
       const listData = await listRes.json() as { items?: Array<{ $ref: string }> }
       const groupRefs = listData.items ?? []
