@@ -20,16 +20,16 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
   const lastGame = [...teamGames]
     .filter((g) => getMatchStatus(g) === 'finished')
     .sort((a, b) => {
-      const da = parseMatchDate(a.local_date)?.getTime() ?? 0
-      const db = parseMatchDate(b.local_date)?.getTime() ?? 0
+      const da = parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0
+      const db = parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0
       return db - da
     })[0]
 
   const nextGame = teamGames
     .filter((g) => getMatchStatus(g) === 'scheduled' || getMatchStatus(g) === 'live')
     .sort((a, b) => {
-      const da = parseMatchDate(a.local_date)?.getTime() ?? 0
-      const db = parseMatchDate(b.local_date)?.getTime() ?? 0
+      const da = parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0
+      const db = parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0
       return da - db
     })[0]
 

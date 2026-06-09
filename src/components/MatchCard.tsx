@@ -45,7 +45,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           <span className="text-xs text-slate-500 font-semibold">FT</span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
-            {formatMatchDateTime(game.local_date, timezone)}
+            {formatMatchDateTime(game.local_date, timezone, game.persian_date)}
           </span>
         )}
       </div>

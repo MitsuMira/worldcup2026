@@ -53,12 +53,12 @@ export default function Home() {
   // Next 48 hours (excluding today's matches already shown and live)
   const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
   const upcoming48h = games.filter((g) => {
-    const d = parseMatchDate(g.local_date)
+    const d = parseMatchDate(g.local_date, g.persian_date)
     return d && d > now && d <= in48h && getMatchStatus(g) === 'scheduled' && !g.local_date?.startsWith(todayStr)
-  }).sort((a, b) => (parseMatchDate(a.local_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date)?.getTime() ?? 0))
+  }).sort((a, b) => (parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0))
 
   const upcomingGames = games
-    .filter((g) => { const d = parseMatchDate(g.local_date); return d && d > now && getMatchStatus(g) === 'scheduled' })
+    .filter((g) => { const d = parseMatchDate(g.local_date, g.persian_date); return d && d > now && getMatchStatus(g) === 'scheduled' })
     .slice(0, 6)
   const recentResults = games.filter((g) => getMatchStatus(g) === 'finished').slice(-4).reverse()
 

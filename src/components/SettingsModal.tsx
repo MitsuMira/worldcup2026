@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Settings } from 'lucide-react'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -153,6 +154,9 @@ export default function SettingsModal({ onClose }: Props) {
               ))}
             </div>
             <p className="text-xs text-slate-500 mt-2">{t.settings.timezoneHint}</p>
+            <p className="text-xs text-slate-600 mt-1">
+              Source field: <code className="text-slate-500">local_date</code> (parsed as UTC)
+            </p>
           </div>
         </div>
 
@@ -172,6 +176,7 @@ export default function SettingsModal({ onClose }: Props) {
 
 export function SettingsButton() {
   const [open, setOpen] = useState(false)
+  // Portal renders at document.body to escape the Navbar stacking context
   return (
     <>
       <button
@@ -181,7 +186,10 @@ export function SettingsButton() {
       >
         <Settings size={18} />
       </button>
-      {open && <SettingsModal onClose={() => setOpen(false)} />}
+      {open && createPortal(
+        <SettingsModal onClose={() => setOpen(false)} />,
+        document.body,
+      )}
     </>
   )
 }

@@ -1,8 +1,54 @@
 import type { ApiGame, EnrichedGame, Prediction, PredictionResult } from './types'
 
-export function parseMatchDate(localDate: string): Date | null {
+// Iran Daylight Time (IRDT) = UTC+4:30 (April–September)
+// Iran Standard Time (IRST) = UTC+3:30 (October–March)
+// WC 2026 runs June–July → always IRDT (UTC+4:30 = 270 minutes ahead of UTC)
+const IRAN_SUMMER_OFFSET_MIN = 4 * 60 + 30 // 270 minutes
+
+/**
+ * Derive UTC from the persian_date field.
+ * persian_date format: "YYYY/MM/DD HH:MM" in Tehran time (IRDT = UTC+4:30 in summer).
+ * We ignore the Jalali calendar date and only use the time portion together with the
+ * Gregorian date from local_date, then subtract the Tehran offset to get UTC.
+ */
+function parseUTCFromPersian(localDate: string, persianDate: string): Date | null {
   try {
-    // Format: "MM/DD/YYYY HH:MM" — treated as UTC
+    const persianTime = persianDate.split(' ')[1] // "HH:MM"
+    if (!persianTime) return null
+    const [ph, pm] = persianTime.split(':').map(Number)
+    if (isNaN(ph) || isNaN(pm)) return null
+
+    // Use the Gregorian date from local_date, time from persian_date
+    const [datePart] = localDate.split(' ')
+    const [m, d, y] = datePart.split('/').map(Number)
+
+    // Persian time in minutes since midnight
+    const tehranMinutes = ph * 60 + pm
+    // Convert to UTC: subtract IRDT offset (270 min)
+    let utcMinutes = tehranMinutes - IRAN_SUMMER_OFFSET_MIN
+    let dayOffset = 0
+    if (utcMinutes < 0) { utcMinutes += 24 * 60; dayOffset = -1 }
+    if (utcMinutes >= 24 * 60) { utcMinutes -= 24 * 60; dayOffset = 1 }
+
+    const utcH = Math.floor(utcMinutes / 60)
+    const utcM = utcMinutes % 60
+
+    // Apply day offset to the Gregorian date
+    const base = new Date(Date.UTC(y, m - 1, d + dayOffset, utcH, utcM))
+    return base
+  } catch {
+    return null
+  }
+}
+
+export function parseMatchDate(localDate: string, persianDate?: string): Date | null {
+  try {
+    // If we have persian_date, use it to derive UTC (Tehran time - 4:30 = UTC)
+    if (persianDate && persianDate !== 'null' && persianDate.includes(' ')) {
+      const fromPersian = parseUTCFromPersian(localDate, persianDate)
+      if (fromPersian) return fromPersian
+    }
+    // Fallback: treat local_date as UTC
     const [datePart, timePart] = localDate.split(' ')
     const [m, d, y] = datePart.split('/')
     const [h, min] = timePart.split(':')
@@ -12,8 +58,8 @@ export function parseMatchDate(localDate: string): Date | null {
   }
 }
 
-export function formatMatchDateTime(localDate: string, timezone?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatMatchDateTime(localDate: string, timezone?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return localDate
   return d.toLocaleString('en-US', {
     weekday: 'short',
@@ -25,8 +71,8 @@ export function formatMatchDateTime(localDate: string, timezone?: string): strin
   })
 }
 
-export function formatMatchDate(localDate: string, timezone?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatMatchDate(localDate: string, timezone?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return localDate
   return d.toLocaleDateString('en-US', {
     weekday: 'short',
@@ -36,8 +82,8 @@ export function formatMatchDate(localDate: string, timezone?: string): string {
   })
 }
 
-export function formatTime(localDate: string, timezone?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatTime(localDate: string, timezone?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return ''
   return d.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -58,7 +104,7 @@ export function getStatusLabel(game: ApiGame, timezone?: string): string {
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
   if (s === 'live') return `${game.time_elapsed}'`
-  return formatTime(game.local_date, timezone)
+  return formatTime(game.local_date, timezone, game.persian_date)
 }
 
 export function getStageLabel(game: ApiGame): string {

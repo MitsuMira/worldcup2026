@@ -10,8 +10,12 @@ export interface ApiGame {
   away_scorers: string
   group: string          // "A"-"L", "R32", "R16", "QF", "SF", "3RD", "FINAL"
   matchday: string       // "1"-"9"
-  local_date: string     // "MM/DD/YYYY HH:MM"
-  persian_date: string
+  local_date: string     // "MM/DD/YYYY HH:MM" — venue local time or UTC (TBD via /api/game-debug)
+  persian_date: string   // same moment in Jalali calendar + Tehran time (IRDT = UTC+4:30 in summer)
+  // Potential additional UTC fields from the API (captured if present)
+  utc_date?: string
+  datetime_utc?: string
+  date_utc?: string
   stadium_id: string
   finished: string       // "TRUE" | "FALSE"
   time_elapsed: string   // "notstarted" | minute as string, e.g. "45"
