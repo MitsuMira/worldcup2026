@@ -82,10 +82,18 @@ function parseLocalInTimezone(localDate: string, tz: string): Date | null {
   }
 }
 
-// Parse "MM/DD/YYYY HH:MM" venue local time to UTC.
-// venueTimezone should be an IANA string from getVenueTimezone().
+// Parse a match date string to UTC Date.
+// Handles ISO 8601 UTC strings from ESPN (e.g. "2026-06-11T19:00:00Z")
+// and legacy "MM/DD/YYYY HH:MM" venue-local strings from the old API.
 export function parseMatchDate(localDate: string, venueTimezone?: string): Date | null {
+  if (!localDate) return null
   try {
+    // ISO 8601 (ESPN) — parse directly, no timezone conversion needed
+    if (/^\d{4}-\d{2}-\d{2}T/.test(localDate)) {
+      const d = new Date(localDate)
+      return isNaN(d.getTime()) ? null : d
+    }
+    // Legacy "MM/DD/YYYY HH:MM" venue-local time
     if (venueTimezone && venueTimezone !== 'UTC') {
       return parseLocalInTimezone(localDate, venueTimezone)
     }
@@ -134,11 +142,11 @@ export function getMatchStatus(game: ApiGame): MatchStatus {
   return 'scheduled'
 }
 
-export function getStatusLabel(game: ApiGame & { stadium?: ApiStadium | null }, timezone?: string): string {
+export function getStatusLabel(game: ApiGame, timezone?: string): string {
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
   if (s === 'live') return `${game.time_elapsed}'`
-  return formatTime(game.local_date, timezone, getVenueTimezone(game))
+  return formatTime(game.local_date, timezone)
 }
 
 export function getStageLabel(game: ApiGame): string {

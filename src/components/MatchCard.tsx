@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone } from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -19,7 +19,6 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const { t } = useT()
   const { timezone } = useSettings()
   const status = getMatchStatus(game)
-  const venueTimezone = getVenueTimezone(game)
   const statusLabel = getStatusLabel(game, timezone)
   const homeScorers = getScorers(game.home_scorers)
   const awayScorers = getScorers(game.away_scorers)
@@ -58,7 +57,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           <span className="text-xs text-slate-500 font-semibold">FT</span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
-            {formatMatchDateTime(game.local_date, timezone, venueTimezone)}
+            {formatMatchDateTime(game.local_date, timezone)}
           </span>
         )}
       </div>

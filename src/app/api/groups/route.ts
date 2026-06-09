@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { fetchEnrichedGroups } from '@/lib/apiClient'
+import { fetchEnrichedGroups } from '@/lib/espnClient'
 
 export const dynamic = 'force-dynamic'
 

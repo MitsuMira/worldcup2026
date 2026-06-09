@@ -1,0 +1,251 @@
+import 'server-only'
+import type { EnrichedGame, EnrichedGroup, ApiTeam, ApiStadium } from './types'
+
+const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
+
+// ── Minimal ESPN raw types ──────────────────────────────────────────────────
+
+interface EspnTeam {
+  id: string
+  abbreviation: string
+  displayName: string
+  shortDisplayName?: string
+  logo?: string
+}
+
+interface EspnCompetitor {
+  id: string
+  homeAway: 'home' | 'away'
+  team: EspnTeam
+  score?: string
+  winner?: boolean
+}
+
+interface EspnStatusType {
+  name: string   // STATUS_SCHEDULED | STATUS_IN_PROGRESS | STATUS_HALFTIME | STATUS_FULL_TIME | STATUS_FINAL
+  state: 'pre' | 'in' | 'post'
+  completed: boolean
+}
+
+interface EspnStatus {
+  clock?: number       // elapsed seconds in current period
+  displayClock?: string
+  period?: number      // 1 = first half, 2 = second half
+  type: EspnStatusType
+}
+
+interface EspnDetail {
+  type?: { id: string; text: string }
+  clock?: { value: number; displayValue: string }
+  team?: { id: string }
+  athletesInvolved?: Array<{ id: string; displayName: string }>
+}
+
+interface EspnVenue {
+  id?: string
+  fullName?: string
+  address?: { city?: string; country?: string }
+}
+
+interface EspnCompetition {
+  competitors: EspnCompetitor[]
+  status: EspnStatus
+  details?: EspnDetail[]
+  notes?: Array<{ type?: string; headline?: string }>
+  groups?: { name?: string; shortName?: string; abbreviation?: string }
+  venue?: EspnVenue
+}
+
+interface EspnEvent {
+  id: string
+  date: string  // ISO 8601 UTC e.g. "2026-06-11T19:00:00Z"
+  name: string
+  competitions: EspnCompetition[]
+  status: EspnStatus
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function parseRound(comp: EspnCompetition): { type: string; group: string } {
+  const groupName = comp.groups?.name ?? comp.groups?.shortName ?? ''
+  const gm = groupName.match(/Group\s+([A-L])/i)
+  if (gm) return { type: 'group', group: gm[1].toUpperCase() }
+
+  const headline = comp.notes?.find(n => n.headline)?.headline ?? ''
+  const hm = headline.match(/Group\s+([A-L])/i)
+  if (hm) return { type: 'group', group: hm[1].toUpperCase() }
+
+  const h = headline.toLowerCase()
+  if (h.includes('round of 32')) return { type: 'r32', group: '' }
+  if (h.includes('round of 16')) return { type: 'r16', group: '' }
+  if (h.includes('quarter'))     return { type: 'qf',  group: '' }
+  if (h.includes('semi'))        return { type: 'sf',  group: '' }
+  if (h.includes('third') || h.includes('3rd')) return { type: 'third', group: '' }
+  if (h.includes('final'))       return { type: 'final', group: '' }
+
+  return { type: 'group', group: '' }
+}
+
+function computeTimeElapsed(status: EspnStatus): string {
+  if (status.type.name === 'STATUS_HALFTIME') return 'HT'
+  const period = status.period ?? 0
+  const clock = status.clock ?? 0
+  // clock = elapsed seconds in current period
+  const min = period <= 1 ? Math.floor(clock / 60) : 45 + Math.floor(clock / 60)
+  return String(Math.max(1, min))
+}
+
+function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
+  if (!comp.details) return ''
+  return comp.details
+    .filter(d => d.type?.text === 'Goal' && d.team?.id === espnTeamId)
+    .map(d => d.athletesInvolved?.[0]?.displayName ?? '')
+    .filter(Boolean)
+    .join(',')
+}
+
+function mapEvent(event: EspnEvent): EnrichedGame {
+  const comp = event.competitions[0]
+  const home = comp.competitors.find(c => c.homeAway === 'home')
+  const away = comp.competitors.find(c => c.homeAway === 'away')
+  if (!home || !away) throw new Error(`Event ${event.id} missing competitors`)
+
+  const { type, group } = parseRound(comp)
+  const st = comp.status
+  const isLive = st.type.state === 'in'
+  const finished = (st.type.completed || st.type.state === 'post') ? 'TRUE' : 'FALSE'
+
+  const makeTeam = (c: EspnCompetitor): ApiTeam => ({
+    id: c.team.abbreviation,
+    name_en: c.team.displayName,
+    name_fa: '',
+    fifa_code: c.team.abbreviation,
+    groups: group,
+    flag: c.team.logo ?? `https://a.espncdn.com/i/teamlogos/soccer/500/${c.team.id}.png`,
+  })
+
+  const stadium: ApiStadium | undefined = comp.venue ? {
+    id: comp.venue.id ?? event.id,
+    name_en: comp.venue.fullName ?? '',
+    name_fa: '',
+    fifa_name: comp.venue.fullName ?? '',
+    city_en: comp.venue.address?.city ?? '',
+    country_en: comp.venue.address?.country ?? '',
+    capacity: 0,
+  } : undefined
+
+  return {
+    id: event.id,
+    home_team_id: home.team.abbreviation,
+    away_team_id: away.team.abbreviation,
+    home_team_name_en: home.team.displayName,
+    away_team_name_en: away.team.displayName,
+    home_team_label: home.team.shortDisplayName ?? home.team.abbreviation,
+    away_team_label: away.team.shortDisplayName ?? away.team.abbreviation,
+    home_score: home.score ?? '0',
+    away_score: away.score ?? '0',
+    home_scorers: extractScorers(comp, home.id),
+    away_scorers: extractScorers(comp, away.id),
+    group,
+    matchday: '',
+    local_date: event.date,   // UTC ISO 8601 — display timezone handled by formatters
+    persian_date: '',
+    stadium_id: comp.venue?.id ?? '',
+    finished,
+    time_elapsed: isLive ? computeTimeElapsed(st) : 'notstarted',
+    type,
+    homeTeam: makeTeam(home),
+    awayTeam: makeTeam(away),
+    stadium,
+  }
+}
+
+async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
+  const res = await fetch(`${SCOREBOARD}?dates=${yearMonth}`, {
+    next: { revalidate: 30 },
+    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
+  })
+  if (!res.ok) throw new Error(`ESPN scoreboard ${yearMonth}: ${res.status}`)
+  const data: { events?: EspnEvent[] } = await res.json()
+  return data.events ?? []
+}
+
+// ── Public API (same shape as apiClient.ts exports) ─────────────────────────
+
+export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
+  // WC 2026 spans June 11 – July 19
+  const [juneEvents, julyEvents] = await Promise.all([
+    fetchScoreboard('202606'),
+    fetchScoreboard('202607'),
+  ])
+  return [...juneEvents, ...julyEvents]
+    .map(ev => { try { return mapEvent(ev) } catch { return null } })
+    .filter((g): g is EnrichedGame => g !== null)
+}
+
+export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
+  // Derive standings from game results — no extra ESPN endpoint needed
+  const games = await fetchEnrichedGames()
+  const groupGames = games.filter(g => g.type === 'group' && g.group)
+
+  type Entry = { team: ApiTeam; pts: number; gf: number; ga: number }
+  const groupMap = new Map<string, Map<string, Entry>>()
+
+  for (const game of groupGames) {
+    const grp = game.group
+    if (!groupMap.has(grp)) groupMap.set(grp, new Map())
+    const teams = groupMap.get(grp)!
+
+    const addTeam = (team: ApiTeam | undefined) => {
+      if (team && !teams.has(team.id))
+        teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0 })
+    }
+    addTeam(game.homeTeam)
+    addTeam(game.awayTeam)
+
+    if (game.finished === 'TRUE') {
+      const hs = parseInt(game.home_score) || 0
+      const as_ = parseInt(game.away_score) || 0
+      const homeEntry = game.homeTeam ? teams.get(game.homeTeam.id) : undefined
+      const awayEntry = game.awayTeam ? teams.get(game.awayTeam.id) : undefined
+      if (homeEntry) {
+        homeEntry.gf += hs; homeEntry.ga += as_
+        homeEntry.pts += hs > as_ ? 3 : hs === as_ ? 1 : 0
+      }
+      if (awayEntry) {
+        awayEntry.gf += as_; awayEntry.ga += hs
+        awayEntry.pts += as_ > hs ? 3 : as_ === hs ? 1 : 0
+      }
+    }
+  }
+
+  return [...groupMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([grp, teams]) => ({
+      group: grp,
+      standings: [...teams.values()]
+        .sort((a, b) => {
+          const pd = b.pts - a.pts; if (pd) return pd
+          const gdd = (b.gf - b.ga) - (a.gf - a.ga); if (gdd) return gdd
+          return b.gf - a.gf
+        })
+        .map(s => ({
+          team_id: s.team.id,
+          pts: String(s.pts),
+          gf: String(s.gf),
+          ga: String(s.ga),
+          gd: s.gf - s.ga,
+          team: s.team,
+        })),
+    }))
+}
+
+export async function fetchAllTeams(): Promise<ApiTeam[]> {
+  const games = await fetchEnrichedGames()
+  const teamMap = new Map<string, ApiTeam>()
+  for (const g of games) {
+    if (g.homeTeam) teamMap.set(g.homeTeam.id, g.homeTeam)
+    if (g.awayTeam) teamMap.set(g.awayTeam.id, g.awayTeam)
+  }
+  return [...teamMap.values()].sort((a, b) => a.name_en.localeCompare(b.name_en))
+}

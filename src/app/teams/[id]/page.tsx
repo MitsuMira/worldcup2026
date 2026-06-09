@@ -8,7 +8,7 @@ import TeamFlag from '@/components/TeamFlag'
 import GroupTable from '@/components/GroupTable'
 import MatchCard from '@/components/MatchCard'
 import type { ApiTeam, EnrichedGame, EnrichedGroup } from '@/lib/types'
-import { getMatchStatus, parseMatchDate, getVenueTimezone } from '@/lib/utils'
+import { getMatchStatus, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
@@ -33,7 +33,7 @@ export default function TeamDetailPage() {
 
   const teamGames = games
     .filter((g) => g.home_team_id === id || g.away_team_id === id)
-    .sort((a, b) => (parseMatchDate(a.local_date, getVenueTimezone(a))?.getTime() ?? 0) - (parseMatchDate(b.local_date, getVenueTimezone(b))?.getTime() ?? 0))
+    .sort((a, b) => (parseMatchDate(a.local_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date)?.getTime() ?? 0))
 
   const finishedGames = teamGames.filter((g) => getMatchStatus(g) === 'finished')
   const upcomingGames = teamGames.filter((g) => getMatchStatus(g) !== 'finished')
