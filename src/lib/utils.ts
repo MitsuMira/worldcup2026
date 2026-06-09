@@ -2,17 +2,17 @@ import type { ApiGame, EnrichedGame, Prediction, PredictionResult } from './type
 
 export function parseMatchDate(localDate: string): Date | null {
   try {
-    // Format: "MM/DD/YYYY HH:MM"
+    // Format: "MM/DD/YYYY HH:MM" — treated as UTC
     const [datePart, timePart] = localDate.split(' ')
     const [m, d, y] = datePart.split('/')
     const [h, min] = timePart.split(':')
-    return new Date(+y, +m - 1, +d, +h, +min)
+    return new Date(Date.UTC(+y, +m - 1, +d, +h, +min))
   } catch {
     return null
   }
 }
 
-export function formatMatchDateTime(localDate: string): string {
+export function formatMatchDateTime(localDate: string, timezone?: string): string {
   const d = parseMatchDate(localDate)
   if (!d) return localDate
   return d.toLocaleString('en-US', {
@@ -21,19 +21,29 @@ export function formatMatchDateTime(localDate: string): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    ...(timezone ? { timeZone: timezone } : {}),
   })
 }
 
-export function formatMatchDate(localDate: string): string {
+export function formatMatchDate(localDate: string, timezone?: string): string {
   const d = parseMatchDate(localDate)
   if (!d) return localDate
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(timezone ? { timeZone: timezone } : {}),
+  })
 }
 
-export function formatTime(localDate: string): string {
+export function formatTime(localDate: string, timezone?: string): string {
   const d = parseMatchDate(localDate)
   if (!d) return ''
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(timezone ? { timeZone: timezone } : {}),
+  })
 }
 
 export type MatchStatus = 'live' | 'finished' | 'scheduled'
@@ -44,11 +54,11 @@ export function getMatchStatus(game: ApiGame): MatchStatus {
   return 'scheduled'
 }
 
-export function getStatusLabel(game: ApiGame): string {
+export function getStatusLabel(game: ApiGame, timezone?: string): string {
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
   if (s === 'live') return `${game.time_elapsed}'`
-  return formatTime(game.local_date)
+  return formatTime(game.local_date, timezone)
 }
 
 export function getStageLabel(game: ApiGame): string {

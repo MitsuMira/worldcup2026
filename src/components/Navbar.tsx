@@ -2,26 +2,21 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Trophy, Calendar, BarChart3, Users, Star, Menu, X } from 'lucide-react'
+import { Trophy, Calendar, BarChart3, Users, Star, Menu, X, Award } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '@/contexts/LanguageContext'
-import type { Lang } from '@/lib/i18n'
-
-const LANG_OPTIONS: { code: Lang; flag: string; label: string }[] = [
-  { code: 'en', flag: '🇬🇧', label: 'EN' },
-  { code: 'pt', flag: '🇧🇷', label: 'PT' },
-  { code: 'es', flag: '🇪🇸', label: 'ES' },
-]
+import { SettingsButton } from './SettingsModal'
 
 export default function Navbar() {
   const path = usePathname()
   const [open, setOpen] = useState(false)
-  const { t, lang, setLang } = useT()
+  const { t } = useT()
 
   const links = [
     { href: '/', label: t.nav.home, icon: Trophy },
     { href: '/schedule', label: t.nav.schedule, icon: Calendar },
     { href: '/standings', label: t.nav.standings, icon: BarChart3 },
+    { href: '/playoffs', label: t.nav.playoffs, icon: Award },
     { href: '/teams', label: t.nav.teams, icon: Users },
     { href: '/predictions', label: t.nav.predictions, icon: Star },
   ]
@@ -55,23 +50,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language switcher */}
-            <div className="flex items-center gap-0.5 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
-              {LANG_OPTIONS.map(({ code, flag, label }) => (
-                <button
-                  key={code}
-                  onClick={() => setLang(code)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors ${
-                    lang === code
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-500 hover:text-white'
-                  }`}
-                >
-                  <span>{flag}</span>
-                  <span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
+            <SettingsButton />
 
             {/* Mobile menu toggle */}
             <button

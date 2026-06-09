@@ -6,6 +6,7 @@ import MatchCard from '@/components/MatchCard'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, groupGamesByDate, formatMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
+import { useSettings } from '@/contexts/SettingsContext'
 import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -13,6 +14,7 @@ const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 
 export default function SchedulePage() {
   const { t } = useT()
+  const { timezone } = useSettings()
   const { data, error, isLoading } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const [filter, setFilter] = useState(0) // index into filters array
   const [groupFilter, setGroupFilter] = useState('All')
@@ -111,7 +113,7 @@ export default function SchedulePage() {
           <div key={dateKey} className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wide">
-                {formatMatchDate(dateKey + ' 00:00')}
+                {formatMatchDate(dateKey + ' 00:00', timezone)}
               </h2>
               <div className="flex-1 h-px bg-slate-800" />
               <span className="text-xs text-slate-600">

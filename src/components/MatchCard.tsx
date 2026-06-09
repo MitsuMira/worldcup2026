@@ -6,6 +6,7 @@ import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
+import { useSettings } from '@/contexts/SettingsContext'
 import { MapPin } from 'lucide-react'
 
 interface Props {
@@ -15,8 +16,9 @@ interface Props {
 
 export default function MatchCard({ game, showPredictLink = false }: Props) {
   const { t } = useT()
+  const { timezone } = useSettings()
   const status = getMatchStatus(game)
-  const statusLabel = getStatusLabel(game)
+  const statusLabel = getStatusLabel(game, timezone)
   const homeScorers = getScorers(game.home_scorers)
   const awayScorers = getScorers(game.away_scorers)
   const homeName = getTeamName(game, 'home')
@@ -43,7 +45,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           <span className="text-xs text-slate-500 font-semibold">FT</span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
-            {formatMatchDateTime(game.local_date)}
+            {formatMatchDateTime(game.local_date, timezone)}
           </span>
         )}
       </div>

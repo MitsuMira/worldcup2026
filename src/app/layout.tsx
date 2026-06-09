@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { FavoriteTeamsProvider } from '@/contexts/FavoriteTeamsContext'
+import { SettingsProvider } from '@/contexts/SettingsContext'
 
 export const metadata: Metadata = {
   title: 'WC 2026 Tracker',
@@ -15,11 +16,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <LanguageProvider>
-          <FavoriteTeamsProvider>
-            <Navbar />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
-          </FavoriteTeamsProvider>
+          <SettingsProvider>
+            <FavoriteTeamsProvider>
+              <Navbar />
+              <main className="min-h-screen">{children}</main>
+              <Footer />
+            </FavoriteTeamsProvider>
+          </SettingsProvider>
         </LanguageProvider>
       </body>
     </html>

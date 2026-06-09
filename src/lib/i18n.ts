@@ -1,7 +1,7 @@
 export type Lang = 'en' | 'pt' | 'es'
 
 export interface Translations {
-  nav: { home: string; schedule: string; standings: string; teams: string; predictions: string }
+  nav: { home: string; schedule: string; standings: string; playoffs: string; teams: string; predictions: string }
   countdown: { label: string; days: string; hours: string; min: string; sec: string }
   home: {
     liveNow: string; today: string; upNext: string; firstMatches: string
@@ -17,6 +17,14 @@ export interface Translations {
   standings: {
     title: string; subtitle: string; team: string; top2: string
     noData: string; qualTitle: string; qualRules: string[]
+  }
+  playoffs: {
+    title: string; subtitle: string
+    bracket: string; r32: string; r16: string; qf: string; sf: string; third: string; final: string
+    tbd: string; noGames: string
+  }
+  settings: {
+    title: string; language: string; timezone: string; timezoneHint: string; close: string
   }
   teams: { title: string; subtitle: string; search: string; all: string; noTeams: string }
   favorites: {
@@ -49,7 +57,7 @@ export interface Translations {
 }
 
 export const en: Translations = {
-  nav: { home: 'Home', schedule: 'Schedule', standings: 'Standings', teams: 'Teams', predictions: 'Predictions' },
+  nav: { home: 'Home', schedule: 'Schedule', standings: 'Standings', playoffs: 'Playoffs', teams: 'Teams', predictions: 'Predictions' },
   countdown: { label: 'Kickoff countdown', days: 'Days', hours: 'Hours', min: 'Min', sec: 'Sec' },
   home: {
     liveNow: '🔴 Live Now', today: '📅 Today', upNext: '⏭ Up Next',
@@ -73,6 +81,16 @@ export const en: Translations = {
       '8 best third-place teams also advance (total: 32 teams)',
       'Tiebreaker: Points → Goal difference → Goals scored → Head-to-head',
     ],
+  },
+  playoffs: {
+    title: 'Playoffs', subtitle: 'Knockout stage · Round of 32 through Final',
+    bracket: 'Bracket', r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final',
+    tbd: 'TBD', noGames: 'No games for this round yet.',
+  },
+  settings: {
+    title: 'Settings', language: 'Language', timezone: 'Timezone',
+    timezoneHint: 'Match times are converted to your selected timezone.',
+    close: 'Close',
   },
   teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.' },
   favorites: {
@@ -113,7 +131,7 @@ export const en: Translations = {
 }
 
 export const pt: Translations = {
-  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', teams: 'Seleções', predictions: 'Previsões' },
+  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', predictions: 'Previsões' },
   countdown: { label: 'Contagem regressiva', days: 'Dias', hours: 'Horas', min: 'Min', sec: 'Seg' },
   home: {
     liveNow: '🔴 Ao Vivo', today: '📅 Hoje', upNext: '⏭ A Seguir',
@@ -137,6 +155,16 @@ export const pt: Translations = {
       'Os 8 melhores terceiros colocados também avançam (total: 32 seleções)',
       'Desempate: Pontos → Saldo de gols → Gols marcados → Confronto direto',
     ],
+  },
+  playoffs: {
+    title: 'Playoffs', subtitle: 'Fase eliminatória · Da fase de 32 à Final',
+    bracket: 'Chaveamento', r32: 'F32', r16: 'Oitavas', qf: 'Quartas', sf: 'Semi', third: '3º', final: 'Final',
+    tbd: 'A definir', noGames: 'Nenhum jogo para esta rodada ainda.',
+  },
+  settings: {
+    title: 'Configurações', language: 'Idioma', timezone: 'Fuso horário',
+    timezoneHint: 'Os horários das partidas são convertidos para o fuso selecionado.',
+    close: 'Fechar',
   },
   teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.' },
   favorites: {
@@ -177,7 +205,7 @@ export const pt: Translations = {
 }
 
 export const es: Translations = {
-  nav: { home: 'Inicio', schedule: 'Calendario', standings: 'Clasificación', teams: 'Selecciones', predictions: 'Predicciones' },
+  nav: { home: 'Inicio', schedule: 'Calendario', standings: 'Clasificación', playoffs: 'Playoffs', teams: 'Selecciones', predictions: 'Predicciones' },
   countdown: { label: 'Cuenta regresiva', days: 'Días', hours: 'Horas', min: 'Min', sec: 'Seg' },
   home: {
     liveNow: '🔴 En Vivo', today: '📅 Hoy', upNext: '⏭ Próximos',
@@ -201,6 +229,16 @@ export const es: Translations = {
       'Los 8 mejores terceros también avanzan (total: 32 selecciones)',
       'Desempate: Puntos → Diferencia de goles → Goles marcados → Enfrentamiento directo',
     ],
+  },
+  playoffs: {
+    title: 'Playoffs', subtitle: 'Fase eliminatoria · De los 32avos a la Final',
+    bracket: 'Cuadro', r32: '32vos', r16: 'Octavos', qf: 'Cuartos', sf: 'Semi', third: '3er', final: 'Final',
+    tbd: 'Por definir', noGames: 'Aún no hay partidos para esta ronda.',
+  },
+  settings: {
+    title: 'Configuración', language: 'Idioma', timezone: 'Zona horaria',
+    timezoneHint: 'Los horarios de los partidos se convierten a la zona horaria seleccionada.',
+    close: 'Cerrar',
   },
   teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.' },
   favorites: {
