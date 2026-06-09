@@ -3,24 +3,27 @@
 import { useEffect, useState } from 'react'
 import { useT } from '@/contexts/LanguageContext'
 
-const KICKOFF = new Date('2026-06-11T19:00:00')
+interface Props {
+  kickoff?: Date
+}
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
 }
 
-export default function CountdownTimer() {
+export default function CountdownTimer({ kickoff }: Props) {
   const { t } = useT()
   const [diff, setDiff] = useState<number | null>(null)
 
   useEffect(() => {
-    const tick = () => setDiff(KICKOFF.getTime() - Date.now())
+    if (!kickoff) return
+    const tick = () => setDiff(kickoff.getTime() - Date.now())
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [kickoff])
 
-  if (diff === null || diff <= 0) return null
+  if (!kickoff || diff === null || diff <= 0) return null
 
   const totalSeconds = Math.floor(diff / 1000)
   const days = Math.floor(totalSeconds / 86400)

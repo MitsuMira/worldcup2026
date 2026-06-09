@@ -1,36 +1,33 @@
 import type { ApiGame, EnrichedGame, Prediction, PredictionResult, ApiStadium } from './types'
 
-// Convert Jalali (Persian) month+day to a UTC midnight Date for WC 2026.
-// The tournament runs entirely in Jalali months 3 (Khordad) and 4 (Tir) of year 1405:
-//   Khordad 1  = May 22, 2026  → Khordad D = new Date(UTC(2026, 4, 21+D))
-//   Tir 1      = June 22, 2026 → Tir D     = new Date(UTC(2026, 5, 21+D))
-function jalaliToGregorianUTC(month: number, day: number): Date | null {
-  if (month === 3) return new Date(Date.UTC(2026, 4, 21 + day))
-  if (month === 4) return new Date(Date.UTC(2026, 5, 21 + day))
-  return null
-}
-
-// Parse a "MM/DD/YYYY HH:MM" persian_date (Jalali date, Tehran IRDT = UTC+4:30)
-// and return the equivalent UTC Date.
-function parseFromPersianDate(persianDate: string): Date | null {
+// Convert persian_date (YYYY/MM/DD HH:MM, Tehran IRDT = UTC+4:30) + local_date
+// (venue local time, UTC-4 to UTC-7) to a UTC Date.
+//
+// Key insight: all WC 2026 venues are in UTC-4..UTC-7, so UTC is always 4-7 h
+// ahead of venue local time.  If the UTC hour-of-day (derived from persian_date
+// by subtracting 4:30) is LESS than the venue hour (from local_date), the UTC
+// date must be local_date's date + 1.  No Jalali calendar conversion needed.
+function parseFromPersianDate(localDate: string, persianDate: string): Date | null {
   try {
-    const [datePart, timePart] = persianDate.split(' ')
-    const [jMonth, jDay] = datePart.split('/').map(Number)
-    const [ph, pm] = timePart.split(':').map(Number)
+    // Extract IRDT time from persian_date
+    const persianTimePart = persianDate.split(' ')[1]
+    const [ph, pm] = persianTimePart.split(':').map(Number)
 
     // IRDT → UTC: subtract 4h30m
     let utcMins = pm - 30
     let utcHours = ph - 4
-    if (utcMins < 0) { utcMins += 60; utcHours -= 1 }
+    if (utcMins < 0) { utcMins += 60; utcHours-- }
+    if (utcHours < 0) utcHours += 24   // normalise to 0-23 (day adjustment handled below)
 
-    // If time went negative, UTC is the previous calendar day (from Tehran's perspective)
-    let dayOffset = 0
-    if (utcHours < 0) { utcHours += 24; dayOffset = -1 }
+    // Get venue local date and hour from local_date ("MM/DD/YYYY HH:MM")
+    const [localDatePart, localTimePart] = localDate.split(' ')
+    const [lm, ld, ly] = localDatePart.split('/').map(Number)
+    const lh = parseInt(localTimePart.split(':')[0])
 
-    const base = jalaliToGregorianUTC(jMonth, jDay)
-    if (!base) return null
-    base.setUTCDate(base.getUTCDate() + dayOffset)
+    // If UTC hour < venue hour, the UTC moment is on the next calendar day
+    const dayOffset = utcHours < lh ? 1 : 0
 
+    const base = new Date(Date.UTC(ly, lm - 1, ld + dayOffset))
     return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), utcHours, utcMins))
   } catch {
     return null
@@ -48,7 +45,7 @@ export function getVenueTimezone(_game: { stadium?: ApiStadium | null }): string
 export function parseMatchDate(localDate: string, persianDate?: string): Date | null {
   try {
     if (persianDate) {
-      const d = parseFromPersianDate(persianDate)
+      const d = parseFromPersianDate(localDate, persianDate)
       if (d) return d
     }
     const [datePart, timePart] = localDate.split(' ')

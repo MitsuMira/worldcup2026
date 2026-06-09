@@ -6,14 +6,13 @@ import GroupTable from '@/components/GroupTable'
 import CountdownTimer from '@/components/CountdownTimer'
 import FavoriteTeamCard from '@/components/FavoriteTeamCard'
 import type { EnrichedGame, EnrichedGroup, ApiTeam } from '@/lib/types'
-import { getMatchStatus, parseMatchDate, getVenueTimezone } from '@/lib/utils'
+import { getMatchStatus, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
-const TOURNAMENT_START = new Date('2026-06-11T19:00:00')
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -54,7 +53,14 @@ export default function Home() {
     : []
   const homeGroups = favoriteGroups.length > 0 ? favoriteGroups : groups.slice(0, 8)
   const now = new Date()
-  const tournamentStarted = now >= TOURNAMENT_START
+
+  // Derive first game kickoff from API data — use it for countdown and tournament-started check
+  const firstGame = [...games].sort((a, b) =>
+    (parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0) -
+    (parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0)
+  )[0]
+  const firstKickoff = firstGame ? parseMatchDate(firstGame.local_date, firstGame.persian_date) ?? null : null
+  const tournamentStarted = firstKickoff ? now >= firstKickoff : false
 
   const favoriteTeams = teams.filter((tm) => favorites.includes(tm.id))
 
@@ -67,7 +73,7 @@ export default function Home() {
   const upcoming48h = games.filter((g) => {
     const d = parseMatchDate(g.local_date, g.persian_date)
     return d && d > now && d <= in48h && getMatchStatus(g) === 'scheduled' && !g.local_date?.startsWith(todayStr)
-  }).sort((a, b) => (parseMatchDate(a.local_date, getVenueTimezone(a))?.getTime() ?? 0) - (parseMatchDate(b.local_date, getVenueTimezone(b))?.getTime() ?? 0))
+  }).sort((a, b) => (parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0))
 
   const upcomingGames = games
     .filter((g) => { const d = parseMatchDate(g.local_date, g.persian_date); return d && d > now && getMatchStatus(g) === 'scheduled' })
@@ -90,7 +96,7 @@ export default function Home() {
             <p className="text-slate-400 text-sm mb-2 uppercase tracking-widest font-medium">
               {t.countdown.label}
             </p>
-            <CountdownTimer />
+            <CountdownTimer kickoff={firstKickoff ?? undefined} />
           </div>
         )}
       </div>
