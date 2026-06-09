@@ -136,17 +136,18 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         </div>
       )}
 
-      {showPredictLink && status === 'scheduled' && (
-        <div className="mt-3 pt-3 border-t border-slate-800">
-          {prediction ? (
-            <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+        {/* Predict link (scheduled only) */}
+        {showPredictLink && status === 'scheduled' && (
+          prediction ? (
+            <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
               <span className="text-sm font-black text-amber-300 tabular-nums">
                 {prediction.homeScore} – {prediction.awayScore}
               </span>
               <Link
                 href={`/predictions?match=${game.id}`}
-                className="text-xs text-slate-500 hover:text-amber-400 ml-auto"
+                className="text-xs text-slate-500 hover:text-amber-400"
               >
                 {t.match.editPick}
               </Link>
@@ -158,9 +159,18 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
             >
               {t.match.predict}
             </Link>
-          )}
-        </div>
-      )}
+          )
+        )}
+        {/* Spacer when no predict link */}
+        {(!showPredictLink || status !== 'scheduled') && <span />}
+        {/* Match detail link */}
+        <Link
+          href={`/matches/${game.id}`}
+          className="text-xs text-slate-500 hover:text-blue-400 transition-colors"
+        >
+          Details →
+        </Link>
+      </div>
     </div>
   )
 }

@@ -72,6 +72,56 @@ export interface EnrichedGroup {
   standings: Array<ApiGroupStanding & { team?: ApiTeam; gd: number }>
 }
 
+// ── Match detail (from ESPN /summary endpoint) ───────────────────────────────
+
+export interface MatchEvent {
+  type: 'goal' | 'owngoal' | 'penalty' | 'missed_penalty' | 'yellow' | 'red' | 'yellowred' | 'sub'
+  minuteDisplay: string   // "23'" or "45+2'"
+  minute: number          // for sorting
+  teamId: string          // team abbreviation
+  primaryPlayer: string   // scorer / carded / player off
+  secondaryPlayer?: string // assister / player on (sub)
+}
+
+export interface TeamMatchStats {
+  possession?: string
+  shots?: string
+  shotsOnTarget?: string
+  corners?: string
+  fouls?: string
+  offsides?: string
+  yellowCards?: string
+  redCards?: string
+  saves?: string
+}
+
+export interface RosterPlayer {
+  name: string
+  jersey?: string
+  position?: string
+}
+
+export interface TeamLineup {
+  teamId: string
+  teamName: string
+  formation?: string
+  starters: RosterPlayer[]
+  subs: RosterPlayer[]
+}
+
+export interface MatchDetail {
+  id: string
+  events: MatchEvent[]
+  homeTeamId: string
+  awayTeamId: string
+  homeStats?: TeamMatchStats
+  awayStats?: TeamMatchStats
+  homeLineup?: TeamLineup
+  awayLineup?: TeamLineup
+  referee?: string
+  attendance?: number
+}
+
 // Prediction stored in localStorage
 export interface Prediction {
   matchId: string

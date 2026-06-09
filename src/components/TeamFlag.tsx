@@ -5,14 +5,15 @@ interface Props {
   team?: ApiTeam
   name?: string
   flagUrl?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   showName?: boolean
 }
 
 const sizes = {
-  sm: { img: 'w-6 h-4', emoji: 'text-lg', text: 'text-xs' },
-  md: { img: 'w-8 h-6', emoji: 'text-2xl', text: 'text-sm' },
+  sm: { img: 'w-6 h-4',  emoji: 'text-lg',  text: 'text-xs' },
+  md: { img: 'w-8 h-6',  emoji: 'text-2xl', text: 'text-sm' },
   lg: { img: 'w-10 h-7', emoji: 'text-3xl', text: 'text-base' },
+  xl: { img: 'w-16 h-12', emoji: 'text-5xl', text: 'text-lg' },
 }
 
 export default function TeamFlag({ team, name, flagUrl, size = 'md', showName = false }: Props) {
