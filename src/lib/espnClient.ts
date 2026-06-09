@@ -67,22 +67,41 @@ interface EspnEvent {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseRound(comp: EspnCompetition): { type: string; group: string } {
-  const groupName = comp.groups?.name ?? comp.groups?.shortName ?? ''
-  const gm = groupName.match(/Group\s+([A-L])/i)
-  if (gm) return { type: 'group', group: gm[1].toUpperCase() }
+  // 1. competition.groups object (e.g. { name: "Group A", shortName: "A" })
+  const groupObj = comp.groups
+  if (groupObj) {
+    const src = [groupObj.name, groupObj.shortName, groupObj.abbreviation].filter(Boolean).join(' ')
+    const gm = src.match(/\b([A-L])\b/i) ?? src.match(/Group\s+([A-L])/i)
+    if (gm) return { type: 'group', group: gm[1].toUpperCase() }
+  }
 
-  const headline = comp.notes?.find(n => n.headline)?.headline ?? ''
-  const hm = headline.match(/Group\s+([A-L])/i)
-  if (hm) return { type: 'group', group: hm[1].toUpperCase() }
+  // 2. competition.notes[].headline (e.g. "Group A" or "FIFA World Cup 2026 - Group A")
+  for (const note of comp.notes ?? []) {
+    const h = note.headline ?? ''
+    const nm = h.match(/Group\s+([A-L])\b/i)
+    if (nm) return { type: 'group', group: nm[1].toUpperCase() }
+    const kh = h.toLowerCase()
+    if (kh.includes('round of 32')) return { type: 'r32', group: '' }
+    if (kh.includes('round of 16')) return { type: 'r16', group: '' }
+    if (kh.includes('quarter'))     return { type: 'qf',  group: '' }
+    if (kh.includes('semi'))        return { type: 'sf',  group: '' }
+    if (kh.includes('third') || kh.includes('3rd place')) return { type: 'third', group: '' }
+    if (kh.includes('final'))       return { type: 'final', group: '' }
+  }
 
-  const h = headline.toLowerCase()
-  if (h.includes('round of 32')) return { type: 'r32', group: '' }
-  if (h.includes('round of 16')) return { type: 'r16', group: '' }
-  if (h.includes('quarter'))     return { type: 'qf',  group: '' }
-  if (h.includes('semi'))        return { type: 'sf',  group: '' }
-  if (h.includes('third') || h.includes('3rd')) return { type: 'third', group: '' }
-  if (h.includes('final'))       return { type: 'final', group: '' }
+  // 3. competition.type.id / abbreviation (numeric ESPN types)
+  const typeId = (comp as unknown as Record<string, unknown>)?.type as Record<string, string> | undefined
+  if (typeId?.abbreviation) {
+    const a = typeId.abbreviation.toUpperCase()
+    if (['R32', 'ROUND32', 'R-32'].includes(a)) return { type: 'r32', group: '' }
+    if (['R16', 'ROUND16', 'R-16'].includes(a)) return { type: 'r16', group: '' }
+    if (['QF', 'QUARTER'].includes(a))           return { type: 'qf',  group: '' }
+    if (['SF', 'SEMI'].includes(a))              return { type: 'sf',  group: '' }
+    if (['THIRD', '3RD'].includes(a))            return { type: 'third', group: '' }
+    if (['FINAL', 'F'].includes(a))              return { type: 'final', group: '' }
+  }
 
+  // Default — treat as group stage; group letter resolved later via standings map
   return { type: 'group', group: '' }
 }
 
@@ -160,6 +179,65 @@ function mapEvent(event: EspnEvent): EnrichedGame {
   }
 }
 
+// ── ESPN Standings → team→group map ─────────────────────────────────────────
+
+interface EspnStandingsEntry {
+  team?: EspnTeam
+  stats?: Array<{ name: string; value: number; displayValue: string }>
+}
+
+interface EspnStandingsGroup {
+  name?: string
+  abbreviation?: string
+  shortName?: string
+  entries?: EspnStandingsEntry[]
+  standings?: { entries?: EspnStandingsEntry[] }
+}
+
+interface EspnStandingsResponse {
+  // shape A: { standings: { groups: [...] } }
+  standings?: { groups?: EspnStandingsGroup[] } | EspnStandingsGroup[]
+  // shape B: { content: { standingsGroups: [...] } }
+  content?: { standingsGroups?: EspnStandingsGroup[] }
+  // shape C: flat groups array
+  groups?: EspnStandingsGroup[]
+}
+
+async function fetchTeamGroupMap(): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const res = await fetch(
+      'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
+      { next: { revalidate: 3600 }, headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' } },
+    )
+    if (!res.ok) return map
+    const data: EspnStandingsResponse = await res.json()
+
+    // Try to find groups array regardless of nesting
+    let groups: EspnStandingsGroup[] = []
+    const s = data.standings
+    if (Array.isArray(s)) groups = s
+    else if (s && 'groups' in s && Array.isArray(s.groups)) groups = s.groups
+    else if (Array.isArray(data.groups)) groups = data.groups
+    else if (data.content?.standingsGroups) groups = data.content.standingsGroups
+
+    for (const grp of groups) {
+      const raw = grp.name ?? grp.abbreviation ?? grp.shortName ?? ''
+      const gm = raw.match(/\b([A-L])\b/i)
+      if (!gm) continue
+      const letter = gm[1].toUpperCase()
+      const entries: EspnStandingsEntry[] = grp.entries ?? grp.standings?.entries ?? []
+      for (const entry of entries) {
+        if (entry.team?.abbreviation) map.set(entry.team.abbreviation, letter)
+        if (entry.team?.id) map.set(entry.team.id, letter)
+      }
+    }
+  } catch { /* standings unavailable — group letters fall back to scoreboard parsing */ }
+  return map
+}
+
+// ── Scoreboard fetch ─────────────────────────────────────────────────────────
+
 async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
   const res = await fetch(`${SCOREBOARD}?dates=${yearMonth}`, {
     next: { revalidate: 30 },
@@ -174,19 +252,38 @@ async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
 
 export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
   // WC 2026 spans June 11 – July 19
-  const [juneEvents, julyEvents] = await Promise.all([
+  const [juneEvents, julyEvents, groupMap] = await Promise.all([
     fetchScoreboard('202606'),
     fetchScoreboard('202607'),
+    fetchTeamGroupMap(),
   ])
-  return [...juneEvents, ...julyEvents]
+
+  const games = [...juneEvents, ...julyEvents]
     .map(ev => { try { return mapEvent(ev) } catch { return null } })
     .filter((g): g is EnrichedGame => g !== null)
+
+  // Post-pass: fill in group letter from standings map for games where
+  // parseRound() couldn't extract it from the scoreboard response
+  if (groupMap.size > 0) {
+    for (const g of games) {
+      if (g.type === 'group' && !g.group) {
+        const letter = groupMap.get(g.home_team_id) ?? groupMap.get(g.away_team_id)
+        if (letter) {
+          g.group = letter
+          if (g.homeTeam) g.homeTeam.groups = letter
+          if (g.awayTeam) g.awayTeam.groups = letter
+        }
+      }
+    }
+  }
+
+  return games
 }
 
 export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
   // Derive standings from game results — no extra ESPN endpoint needed
   const games = await fetchEnrichedGames()
-  const groupGames = games.filter(g => g.type === 'group' && g.group)
+  const groupGames = games.filter(g => g.type === 'group')
 
   type Entry = { team: ApiTeam; pts: number; gf: number; ga: number }
   const groupMap = new Map<string, Map<string, Entry>>()
