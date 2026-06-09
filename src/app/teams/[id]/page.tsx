@@ -33,7 +33,7 @@ export default function TeamDetailPage() {
 
   const teamGames = games
     .filter((g) => g.home_team_id === id || g.away_team_id === id)
-    .sort((a, b) => (parseMatchDate(a.local_date, getVenueTimezone(a))?.getTime() ?? 0) - (parseMatchDate(b.local_date, getVenueTimezone(b))?.getTime() ?? 0))
+    .sort((a, b) => (parseMatchDate(a.local_date, a.persian_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date, b.persian_date)?.getTime() ?? 0))
 
   const finishedGames = teamGames.filter((g) => getMatchStatus(g) === 'finished')
   const upcomingGames = teamGames.filter((g) => getMatchStatus(g) !== 'finished')

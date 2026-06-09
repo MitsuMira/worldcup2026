@@ -1,8 +1,56 @@
 import type { ApiGame, EnrichedGame, Prediction, PredictionResult, ApiStadium } from './types'
 
-// local_date from the API is in UTC — parse it directly
-export function parseMatchDate(localDate: string, _venueTimezone?: string): Date | null {
+// Convert Jalali (Persian) month+day to a UTC midnight Date for WC 2026.
+// The tournament runs entirely in Jalali months 3 (Khordad) and 4 (Tir) of year 1405:
+//   Khordad 1  = May 22, 2026  → Khordad D = new Date(UTC(2026, 4, 21+D))
+//   Tir 1      = June 22, 2026 → Tir D     = new Date(UTC(2026, 5, 21+D))
+function jalaliToGregorianUTC(month: number, day: number): Date | null {
+  if (month === 3) return new Date(Date.UTC(2026, 4, 21 + day))
+  if (month === 4) return new Date(Date.UTC(2026, 5, 21 + day))
+  return null
+}
+
+// Parse a "MM/DD/YYYY HH:MM" persian_date (Jalali date, Tehran IRDT = UTC+4:30)
+// and return the equivalent UTC Date.
+function parseFromPersianDate(persianDate: string): Date | null {
   try {
+    const [datePart, timePart] = persianDate.split(' ')
+    const [jMonth, jDay] = datePart.split('/').map(Number)
+    const [ph, pm] = timePart.split(':').map(Number)
+
+    // IRDT → UTC: subtract 4h30m
+    let utcMins = pm - 30
+    let utcHours = ph - 4
+    if (utcMins < 0) { utcMins += 60; utcHours -= 1 }
+
+    // If time went negative, UTC is the previous calendar day (from Tehran's perspective)
+    let dayOffset = 0
+    if (utcHours < 0) { utcHours += 24; dayOffset = -1 }
+
+    const base = jalaliToGregorianUTC(jMonth, jDay)
+    if (!base) return null
+    base.setUTCDate(base.getUTCDate() + dayOffset)
+
+    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), utcHours, utcMins))
+  } catch {
+    return null
+  }
+}
+
+// Kept for callers that still import it — no longer affects time parsing
+export function getVenueTimezone(_game: { stadium?: ApiStadium | null }): string {
+  return 'UTC'
+}
+
+// Parse a match date to UTC. Uses persian_date (Tehran IRDT) when available
+// because it is a reliable fixed-offset timestamp; falls back to treating
+// local_date as UTC.
+export function parseMatchDate(localDate: string, persianDate?: string): Date | null {
+  try {
+    if (persianDate) {
+      const d = parseFromPersianDate(persianDate)
+      if (d) return d
+    }
     const [datePart, timePart] = localDate.split(' ')
     const [m, d, y] = datePart.split('/')
     const [h, min] = timePart.split(':')
@@ -12,13 +60,8 @@ export function parseMatchDate(localDate: string, _venueTimezone?: string): Date
   }
 }
 
-// Kept for any callers that still pass it — no longer used for parsing
-export function getVenueTimezone(_game: { stadium?: ApiStadium | null }): string {
-  return 'UTC'
-}
-
-export function formatMatchDateTime(localDate: string, displayTz?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatMatchDateTime(localDate: string, displayTz?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return localDate
   return d.toLocaleString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -27,8 +70,8 @@ export function formatMatchDateTime(localDate: string, displayTz?: string): stri
   })
 }
 
-export function formatMatchDate(localDate: string, displayTz?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatMatchDate(localDate: string, displayTz?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return localDate
   return d.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -36,8 +79,8 @@ export function formatMatchDate(localDate: string, displayTz?: string): string {
   })
 }
 
-export function formatTime(localDate: string, displayTz?: string): string {
-  const d = parseMatchDate(localDate)
+export function formatTime(localDate: string, displayTz?: string, persianDate?: string): string {
+  const d = parseMatchDate(localDate, persianDate)
   if (!d) return ''
   return d.toLocaleTimeString('en-US', {
     hour: '2-digit', minute: '2-digit',
@@ -57,7 +100,7 @@ export function getStatusLabel(game: ApiGame & { stadium?: ApiStadium | null }, 
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
   if (s === 'live') return `${game.time_elapsed}'`
-  return formatTime(game.local_date, timezone)
+  return formatTime(game.local_date, timezone, game.persian_date)
 }
 
 export function getStageLabel(game: ApiGame): string {
