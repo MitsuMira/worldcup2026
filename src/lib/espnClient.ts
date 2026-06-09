@@ -208,75 +208,65 @@ function extractGroupLetter(text: string): string {
   return m ? m[1].toUpperCase() : ''
 }
 
-async function fetchTeamGroupMap(): Promise<Map<string, string>> {
+async function fetchTeamGroupMap(numericToAbbr: Map<string, string>): Promise<Map<string, string>> {
   const map = new Map<string, string>()
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
   const opts = { next: { revalidate: 3600 }, headers }
+  const coreBase = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
 
-  // ── Attempt 1: ESPN core API — groups list → standings → teams ───────────
-  // Groups have no direct teams field; standings/$ref has entries with team $refs
+  // ── ESPN core API: groups list → group details + standings/0 in parallel ──
+  // Structure: groups/N → { name: "Group A" }
+  //            groups/N/standings/0 → { standings: [{ team: { $ref: "...teams/203" } }] }
+  // Team numeric IDs resolved via scoreboard competitor data (no extra calls)
   try {
-    const baseUrl = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
-    const listRes = await fetch(`${baseUrl}/seasons/2026/types/1/groups?limit=20`, opts)
+    const listRes = await fetch(`${coreBase}/seasons/2026/types/1/groups?limit=20`, opts)
     if (listRes.ok) {
       const listData = await listRes.json() as { items?: Array<{ $ref: string }> }
-      const groupRefs = listData.items ?? []
+      const groupIds = (listData.items ?? []).map(({ $ref }) => {
+        const m = $ref.match(/\/groups\/(\d+)/)
+        return m ? m[1] : null
+      }).filter((id): id is string => id !== null)
 
-      // Step 1: fetch all 12 group details in parallel
-      const groupDetails = await Promise.all(
-        groupRefs.map(({ $ref }) =>
-          fetch($ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
-        )
-      )
+      if (groupIds.length > 0) {
+        // Parallel: fetch group detail + standings/0 for all groups
+        const [groupDetails, standingsData] = await Promise.all([
+          Promise.all(groupIds.map(id =>
+            fetch(`${coreBase}/seasons/2026/types/1/groups/${id}`, opts)
+              .then(r => r.ok ? r.json() : null).catch(() => null)
+          )),
+          Promise.all(groupIds.map(id =>
+            fetch(`${coreBase}/seasons/2026/types/1/groups/${id}/standings/0`, opts)
+              .then(r => r.ok ? r.json() : null).catch(() => null)
+          )),
+        ])
 
-      // Step 2: fetch all 12 standings in parallel
-      type GrpDetail = { name?: string; abbreviation?: string; standings?: { $ref: string } }
-      const standingsJobs: Array<{ letter: string; ref: string }> = []
-      for (const grp of groupDetails as (GrpDetail | null)[]) {
-        if (!grp) continue
-        const letter = extractGroupLetter(grp.abbreviation ?? grp.name ?? '')
-        if (letter && grp.standings?.$ref) standingsJobs.push({ letter, ref: grp.standings.$ref })
-      }
+        type GrpDetail = { name?: string; abbreviation?: string }
+        type StandingsEntry = { team?: { $ref?: string } }
+        type StandingsData = { standings?: StandingsEntry[] }
 
-      const standingsResults = await Promise.all(
-        standingsJobs.map(({ ref }) =>
-          fetch(ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
-        )
-      )
+        for (let i = 0; i < groupIds.length; i++) {
+          const grp = groupDetails[i] as GrpDetail | null
+          const s = standingsData[i] as StandingsData | null
+          if (!grp || !s) continue
 
-      // Step 3: collect all team $refs with their group letter
-      type StandingsEntry = { team?: { $ref?: string; abbreviation?: string; id?: string } }
-      type StandingsData = { entries?: StandingsEntry[] }
-      const teamJobs: Array<{ letter: string; ref: string }> = []
-      for (let i = 0; i < standingsResults.length; i++) {
-        const s = standingsResults[i] as StandingsData | null
-        if (!s) continue
-        const letter = standingsJobs[i].letter
-        for (const entry of s.entries ?? []) {
-          if (entry.team?.$ref) teamJobs.push({ letter, ref: entry.team.$ref })
-          else if (entry.team?.abbreviation) map.set(entry.team.abbreviation, letter)
+          const letter = extractGroupLetter(grp.abbreviation ?? grp.name ?? '')
+          if (!letter) continue
+
+          for (const entry of s.standings ?? []) {
+            const numericId = entry.team?.$ref?.match(/\/teams\/(\d+)/)?.[1]
+            if (!numericId) continue
+            const abbr = numericToAbbr.get(numericId)
+            if (abbr) map.set(abbr, letter)
+            map.set(numericId, letter)
+          }
         }
-      }
 
-      // Step 4: fetch all team details in parallel
-      const teamResults = await Promise.all(
-        teamJobs.map(({ ref }) =>
-          fetch(ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
-        )
-      )
-      for (let i = 0; i < teamResults.length; i++) {
-        const td = teamResults[i] as { abbreviation?: string; id?: string } | null
-        if (!td) continue
-        const letter = teamJobs[i].letter
-        if (td.abbreviation) map.set(td.abbreviation, letter)
-        if (td.id) map.set(td.id, letter)
+        if (map.size > 0) return map
       }
-
-      if (map.size > 0) return map
     }
   } catch { /* try next */ }
 
-  // ── Attempt 2: Standings endpoint (multiple URL variants) ────────────────
+  // ── Fallback: old standings/teams endpoints (may work after tournament starts) ──
   for (const url of [
     'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
     'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026',
@@ -307,29 +297,6 @@ async function fetchTeamGroupMap(): Promise<Map<string, string>> {
     } catch { /* try next */ }
   }
 
-  // ── Attempt 3: Teams endpoint — standingSummary contains "1st in Group A" ─
-  try {
-    const res = await fetch(
-      'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams',
-      opts,
-    )
-    if (res.ok) {
-      const data = await res.json() as {
-        sports?: Array<{ leagues?: Array<{ teams?: Array<{ team: { id: string; abbreviation: string; standingSummary?: string } }> }> }>
-      }
-      const teams = data.sports?.[0]?.leagues?.[0]?.teams ?? []
-      for (const { team } of teams) {
-        if (!team.standingSummary) continue
-        const letter = extractGroupLetter(team.standingSummary)
-        if (letter) {
-          if (team.abbreviation) map.set(team.abbreviation, letter)
-          if (team.id) map.set(team.id, letter)
-        }
-      }
-      if (map.size > 0) return map
-    }
-  } catch { /* fall through */ }
-
   return map
 }
 
@@ -349,11 +316,20 @@ async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
 
 export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
   // WC 2026 spans June 11 – July 19
-  const [juneEvents, julyEvents, groupMap] = await Promise.all([
+  const [juneEvents, julyEvents] = await Promise.all([
     fetchScoreboard('202606'),
     fetchScoreboard('202607'),
-    fetchTeamGroupMap(),
   ])
+
+  // Build numeric ESPN team ID → abbreviation from scoreboard (avoids extra API calls in group map)
+  const numericToAbbr = new Map<string, string>()
+  for (const ev of [...juneEvents, ...julyEvents]) {
+    for (const c of ev.competitions[0]?.competitors ?? []) {
+      if (c.team.id && c.team.abbreviation) numericToAbbr.set(c.team.id, c.team.abbreviation)
+    }
+  }
+
+  const groupMap = await fetchTeamGroupMap(numericToAbbr)
 
   const games = [...juneEvents, ...julyEvents]
     .map(ev => { try { return mapEvent(ev) } catch { return null } })
