@@ -6,37 +6,42 @@ export async function GET() {
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
   const base = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
 
-  // Probe the standings for Group A (group id=1)
+  // Probe standings for Group A — check both items and entries
   const standingsRes = await fetch(
     `${base}/seasons/2026/types/1/groups/1/standings`,
     { cache: 'no-store', headers },
   )
-  const standingsData = standingsRes.ok ? await standingsRes.json() : { error: standingsRes.status }
+  const standingsData = standingsRes.ok ? await standingsRes.json() as Record<string, unknown> : {}
 
-  // Also probe a potential /teams endpoint for group 1
-  const teamsEpRes = await fetch(
-    `${base}/seasons/2026/types/1/groups/1/teams?limit=10`,
+  // Also try the group 1 competitors endpoint which might exist
+  const compRes = await fetch(
+    `${base}/seasons/2026/types/1/groups/1/competitors?limit=10`,
     { cache: 'no-store', headers },
   )
-  const teamsEpData = teamsEpRes.ok ? await teamsEpRes.json() : { error: teamsEpRes.status }
+  const compData = compRes.ok ? await compRes.json() : { error: compRes.status }
 
-  // If standings has entries, follow the first team $ref
-  const entries = (standingsData as { entries?: Array<Record<string, unknown>> })?.entries ?? []
-  let firstTeamData: unknown = null
-  const firstTeamRef = (entries[0]?.team as { $ref?: string } | undefined)?.$ref
-  if (firstTeamRef) {
-    const tr = await fetch(firstTeamRef, { cache: 'no-store', headers })
-    firstTeamData = tr.ok ? await tr.json() : { error: tr.status }
+  // Try fetching an individual standings item if items exist
+  const items = (standingsData.items as Array<{ $ref?: string }> | undefined) ?? []
+  let firstItemData: unknown = null
+  if (items[0]?.$ref) {
+    const ir = await fetch(items[0].$ref, { cache: 'no-store', headers })
+    firstItemData = ir.ok ? await ir.json() : { error: ir.status }
   }
 
+  // Try fetching the group 1 detail with an expanded param
+  const grpRes = await fetch(
+    `${base}/seasons/2026/types/1/groups/1?enable=competitors`,
+    { cache: 'no-store', headers },
+  )
+  const grpData = grpRes.ok ? await grpRes.json() : { error: grpRes.status }
+
   return NextResponse.json({
-    standings_status: standingsRes.status,
-    standings_keys: standingsData && typeof standingsData === 'object' ? Object.keys(standingsData) : [],
-    standings_entries_count: entries.length,
-    standings_first_entry: entries[0],
-    standings_first_team_ref: firstTeamRef,
-    standings_first_team_data: firstTeamData,
-    teams_endpoint_status: teamsEpRes.status,
-    teams_endpoint_data: teamsEpData,
+    standings_full: standingsData,
+    standings_items_count: items.length,
+    standings_first_item_ref: items[0]?.$ref,
+    standings_first_item_data: firstItemData,
+    competitors_endpoint_status: compRes.status,
+    competitors_endpoint_data: compData,
+    group1_with_expand: grpData,
   })
 }
