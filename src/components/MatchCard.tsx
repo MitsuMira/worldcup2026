@@ -1,14 +1,11 @@
+'use client'
+
 import Link from 'next/link'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import {
-  getMatchStatus,
-  getStatusLabel,
-  getStageLabel,
-  getScorers,
-  getTeamName,
-  formatMatchDateTime,
-} from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime } from '@/lib/utils'
+import { localStageLabel } from '@/lib/i18n'
+import { useT } from '@/contexts/LanguageContext'
 import { MapPin } from 'lucide-react'
 
 interface Props {
@@ -17,12 +14,14 @@ interface Props {
 }
 
 export default function MatchCard({ game, showPredictLink = false }: Props) {
+  const { t } = useT()
   const status = getMatchStatus(game)
   const statusLabel = getStatusLabel(game)
   const homeScorers = getScorers(game.home_scorers)
   const awayScorers = getScorers(game.away_scorers)
   const homeName = getTeamName(game, 'home')
   const awayName = getTeamName(game, 'away')
+  const stageLabel = localStageLabel(game.type, game.group, t)
 
   return (
     <div
@@ -34,13 +33,11 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
     >
       {/* Stage + status badge */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">
-          {getStageLabel(game)}
-        </span>
+        <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">{stageLabel}</span>
         {status === 'live' ? (
           <span className="flex items-center gap-1.5 text-xs font-bold text-green-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            LIVE {game.time_elapsed}&apos;
+            {t.match.live} {game.time_elapsed}&apos;
           </span>
         ) : status === 'finished' ? (
           <span className="text-xs text-slate-500 font-semibold">FT</span>
@@ -53,7 +50,6 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
 
       {/* Teams and score */}
       <div className="flex items-center justify-between gap-2">
-        {/* Home team */}
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
           <TeamFlag team={game.homeTeam} name={homeName} size="lg" />
           <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">
@@ -64,25 +60,16 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           )}
         </div>
 
-        {/* Score / vs */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           {status === 'scheduled' ? (
-            <span className="text-2xl font-bold text-slate-500">vs</span>
+            <span className="text-2xl font-bold text-slate-500">{t.match.vs}</span>
           ) : (
             <div className="flex items-center gap-2">
-              <span
-                className={`text-3xl font-black tabular-nums ${
-                  status === 'live' ? 'text-white' : 'text-slate-300'
-                }`}
-              >
+              <span className={`text-3xl font-black tabular-nums ${status === 'live' ? 'text-white' : 'text-slate-300'}`}>
                 {game.home_score}
               </span>
               <span className="text-xl text-slate-600">–</span>
-              <span
-                className={`text-3xl font-black tabular-nums ${
-                  status === 'live' ? 'text-white' : 'text-slate-300'
-                }`}
-              >
+              <span className={`text-3xl font-black tabular-nums ${status === 'live' ? 'text-white' : 'text-slate-300'}`}>
                 {game.away_score}
               </span>
             </div>
@@ -92,7 +79,6 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           )}
         </div>
 
-        {/* Away team */}
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
           <TeamFlag team={game.awayTeam} name={awayName} size="lg" />
           <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1">
@@ -104,7 +90,6 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         </div>
       </div>
 
-      {/* Goal scorers */}
       {(homeScorers.length > 0 || awayScorers.length > 0) && (
         <div className="mt-3 flex justify-between text-xs text-slate-400 gap-4">
           <div className="flex-1">{homeScorers.map((s) => `⚽ ${s}`).join(' · ')}</div>
@@ -112,24 +97,20 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         </div>
       )}
 
-      {/* Stadium */}
       {game.stadium && (
         <div className="mt-3 flex items-center gap-1 text-xs text-slate-600">
           <MapPin size={11} />
-          <span>
-            {game.stadium.name_en} · {game.stadium.city_en}
-          </span>
+          <span>{game.stadium.name_en} · {game.stadium.city_en}</span>
         </div>
       )}
 
-      {/* Predict link */}
       {showPredictLink && status === 'scheduled' && (
         <div className="mt-3 pt-3 border-t border-slate-800">
           <Link
             href={`/predictions?match=${game.id}`}
             className="text-xs text-amber-400 hover:text-amber-300 font-medium"
           >
-            ✦ Make a prediction →
+            {t.match.predict}
           </Link>
         </div>
       )}

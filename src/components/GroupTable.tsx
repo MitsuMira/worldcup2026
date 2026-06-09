@@ -1,5 +1,8 @@
+'use client'
+
 import TeamFlag from './TeamFlag'
 import type { EnrichedGroup } from '@/lib/types'
+import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
   group: EnrichedGroup
@@ -7,15 +10,16 @@ interface Props {
 }
 
 export default function GroupTable({ group, compact = false }: Props) {
+  const { t } = useT()
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-800">
-        <h3 className="text-sm font-bold text-white">Group {group.group}</h3>
+        <h3 className="text-sm font-bold text-white">{t.match.stageGroup} {group.group}</h3>
       </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-slate-500 uppercase tracking-wide">
-            <th className="text-left px-4 py-2">Team</th>
+            <th className="text-left px-4 py-2">{t.standings.team}</th>
             {!compact && <th className="text-center px-2 py-2">GF</th>}
             {!compact && <th className="text-center px-2 py-2">GA</th>}
             <th className="text-center px-2 py-2">GD</th>
@@ -24,12 +28,7 @@ export default function GroupTable({ group, compact = false }: Props) {
         </thead>
         <tbody>
           {group.standings.map((s, i) => (
-            <tr
-              key={s.team_id}
-              className={`border-t border-slate-800/50 ${
-                i < 2 ? 'text-white' : 'text-slate-400'
-              }`}
-            >
+            <tr key={s.team_id} className={`border-t border-slate-800/50 ${i < 2 ? 'text-white' : 'text-slate-400'}`}>
               <td className="px-4 py-2.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-600 w-4">{i + 1}</span>
@@ -39,12 +38,8 @@ export default function GroupTable({ group, compact = false }: Props) {
                   </span>
                 </div>
               </td>
-              {!compact && (
-                <td className="text-center px-2 py-2.5 text-slate-300">{s.gf}</td>
-              )}
-              {!compact && (
-                <td className="text-center px-2 py-2.5 text-slate-300">{s.ga}</td>
-              )}
+              {!compact && <td className="text-center px-2 py-2.5 text-slate-300">{s.gf}</td>}
+              {!compact && <td className="text-center px-2 py-2.5 text-slate-300">{s.ga}</td>}
               <td className="text-center px-2 py-2.5 text-slate-300">
                 {s.gd > 0 ? `+${s.gd}` : s.gd}
               </td>
@@ -53,10 +48,9 @@ export default function GroupTable({ group, compact = false }: Props) {
           ))}
         </tbody>
       </table>
-      {/* Qualification indicator */}
       <div className="px-4 py-2 border-t border-slate-800/50 flex items-center gap-2 text-xs text-slate-600">
         <span className="w-2 h-2 rounded-full bg-green-500/40 inline-block" />
-        Top 2 advance
+        {t.group.top2}
       </div>
     </div>
   )
