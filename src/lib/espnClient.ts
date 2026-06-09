@@ -213,7 +213,49 @@ async function fetchTeamGroupMap(): Promise<Map<string, string>> {
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
   const opts = { next: { revalidate: 3600 }, headers }
 
-  // ── Attempt 1: Standings endpoint (tries both paths) ─────────────────────
+  // ── Attempt 1: ESPN core API groups endpoint ──────────────────────────────
+  // Returns { items: [{ $ref: "...groups/1" }, ...] }; each group has abbreviation + teams.$ref
+  try {
+    const baseUrl = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
+    const listRes = await fetch(`${baseUrl}/seasons/2026/types/2/groups?limit=20`, opts)
+    if (listRes.ok) {
+      const listData = await listRes.json() as { items?: Array<{ $ref: string }> }
+      const groupRefs = listData.items ?? []
+      const groupDetails = await Promise.all(
+        groupRefs.map(({ $ref }) =>
+          fetch($ref, opts).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      )
+      for (const grp of groupDetails) {
+        if (!grp) continue
+        const letter = extractGroupLetter(grp.abbreviation ?? grp.name ?? '')
+        if (!letter) continue
+        const teamsRef: string | undefined = grp.teams?.$ref
+        if (!teamsRef) continue
+        try {
+          const tRes = await fetch(teamsRef, opts)
+          if (!tRes.ok) continue
+          const tData = await tRes.json() as { items?: Array<{ $ref: string }> }
+          await Promise.all(
+            (tData.items ?? []).map(async ({ $ref: teamRef }) => {
+              try {
+                const tr = await fetch(teamRef, opts)
+                if (!tr.ok) return
+                const td = await tr.json() as { team?: { abbreviation?: string; id?: string }; abbreviation?: string; id?: string }
+                const abbr = td.team?.abbreviation ?? td.abbreviation
+                const id = td.team?.id ?? td.id
+                if (abbr) map.set(abbr, letter)
+                if (id) map.set(id, letter)
+              } catch { /* skip */ }
+            })
+          )
+        } catch { /* skip */ }
+      }
+      if (map.size > 0) return map
+    }
+  } catch { /* try next */ }
+
+  // ── Attempt 2: Standings endpoint (multiple URL variants) ────────────────
   for (const url of [
     'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
     'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026',
@@ -244,7 +286,7 @@ async function fetchTeamGroupMap(): Promise<Map<string, string>> {
     } catch { /* try next */ }
   }
 
-  // ── Attempt 2: Teams endpoint — standingSummary contains "1st in Group A" ─
+  // ── Attempt 3: Teams endpoint — standingSummary contains "1st in Group A" ─
   try {
     const res = await fetch(
       'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams',

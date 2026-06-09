@@ -4,73 +4,43 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const headers = { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
+  const base = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world'
 
-  // ── Scoreboard ──────────────────────────────────────────────────────────
+  // ── Core API: groups list ─────────────────────────────────────────────────
+  const gListRes = await fetch(`${base}/seasons/2026/types/2/groups?limit=20`, { cache: 'no-store', headers })
+  const gListData = gListRes.ok ? await gListRes.json() : { error: gListRes.status }
+
+  // If we got group refs, fetch the first group's detail
+  let firstGroupDetail: unknown = null
+  const firstRef = (gListData as { items?: Array<{ $ref: string }> })?.items?.[0]?.$ref
+  if (firstRef) {
+    const fgRes = await fetch(firstRef, { cache: 'no-store', headers })
+    firstGroupDetail = fgRes.ok ? await fgRes.json() : { error: fgRes.status }
+  }
+
+  // ── Core API: season types ────────────────────────────────────────────────
+  const typesRes = await fetch(`${base}/seasons/2026/types`, { cache: 'no-store', headers })
+  const typesData = typesRes.ok ? await typesRes.json() : { error: typesRes.status }
+
+  // ── Scoreboard: first event full structure ────────────────────────────────
   const sbRes = await fetch(
     'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=202606',
     { cache: 'no-store', headers },
   )
-  if (!sbRes.ok) return NextResponse.json({ error: `ESPN scoreboard ${sbRes.status}` }, { status: sbRes.status })
-  const sbData = await sbRes.json() as Record<string, unknown>
+  const sbData = sbRes.ok ? await sbRes.json() as Record<string, unknown> : {}
   const events = (sbData.events ?? []) as Array<Record<string, unknown>>
-
-  const groupSamples = events.slice(0, 5).map((ev) => {
-    const c = (ev.competitions as Array<Record<string, unknown>> | undefined)?.[0]
-    return {
-      id: ev.id, name: ev.name, date: ev.date,
-      comp_keys: c ? Object.keys(c) : [],
-      notes: c?.notes,
-      groups: c?.groups,
-      type: c?.type,
-      season: c?.season,
-      headlines: c?.headlines,
-    }
-  })
-
-  // ── Standings (two URL variants) ─────────────────────────────────────────
-  const [s1Res, s2Res] = await Promise.all([
-    fetch('https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings', { cache: 'no-store', headers }),
-    fetch('https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?season=2026', { cache: 'no-store', headers }),
-  ])
-
-  const parseStandingsGroups = (d: Record<string, unknown>) => {
-    let grps: Array<Record<string, unknown>> = []
-    const s = d.standings
-    if (Array.isArray(s)) grps = s as Array<Record<string, unknown>>
-    else if (s && typeof s === 'object' && Array.isArray((s as Record<string, unknown>).groups))
-      grps = (s as Record<string, unknown[]>).groups as Array<Record<string, unknown>>
-    else if (Array.isArray(d.groups)) grps = d.groups as Array<Record<string, unknown>>
-    return grps.slice(0, 3).map(g => ({
-      name: g.name, abbr: g.abbreviation, short: g.shortName,
-      keys: Object.keys(g),
-      entries_count: ((g.entries as unknown[] | undefined) ?? []).length,
-      first_entry: ((g.entries as Array<Record<string, unknown>> | undefined) ?? [])[0],
-    }))
-  }
-
-  const s1Data = s1Res.ok ? parseStandingsGroups(await s1Res.json() as Record<string, unknown>) : { error: s1Res.status }
-  const s2Data = s2Res.ok ? parseStandingsGroups(await s2Res.json() as Record<string, unknown>) : { error: s2Res.status }
-
-  // ── Teams endpoint ───────────────────────────────────────────────────────
-  const teamsRes = await fetch(
-    'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/teams',
-    { cache: 'no-store', headers },
-  )
-  let teamSample: unknown = { error: teamsRes.status }
-  if (teamsRes.ok) {
-    const td = await teamsRes.json() as { sports?: Array<{ leagues?: Array<{ teams?: Array<{ team: Record<string, unknown> }> }> }> }
-    const tlist = td.sports?.[0]?.leagues?.[0]?.teams ?? []
-    teamSample = tlist.slice(0, 5).map(t => ({
-      id: t.team.id, abbr: t.team.abbreviation, name: t.team.displayName,
-      standingSummary: t.team.standingSummary, keys: Object.keys(t.team),
-    }))
-  }
+  const firstEvent = events[0]
+  const firstComp = (firstEvent?.competitions as Array<Record<string, unknown>> | undefined)?.[0]
 
   return NextResponse.json({
-    scoreboard_event_count: events.length,
-    group_samples: groupSamples,
-    standings_base: s1Data,
-    standings_2026: s2Data,
-    teams_sample: teamSample,
+    core_groups_list: gListData,
+    core_first_group_detail: firstGroupDetail,
+    core_season_types: typesData,
+    scoreboard_first_event_keys: firstEvent ? Object.keys(firstEvent) : [],
+    scoreboard_first_comp_keys: firstComp ? Object.keys(firstComp) : [],
+    scoreboard_first_comp_status: firstComp?.status,
+    scoreboard_first_comp_format: firstComp?.format,
+    scoreboard_first_comp_notes: firstComp?.notes,
+    scoreboard_total: events.length,
   })
 }
