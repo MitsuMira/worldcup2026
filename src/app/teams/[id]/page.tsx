@@ -37,7 +37,10 @@ export default function TeamDetailPage() {
 
   const finishedGames = teamGames.filter((g) => getMatchStatus(g) === 'finished')
   const upcomingGames = teamGames.filter((g) => getMatchStatus(g) !== 'finished')
-  const teamGroup = groups.find((g) => g.group === team?.groups)
+  const teamGroup = groups.find((g) =>
+    (g.group && g.group === team?.groups) ||
+    g.standings.some((s) => s.team_id === team?.id)
+  )
 
   // Compute W/D/L from finished games
   let played = 0, won = 0, drawn = 0, lost = 0, gf = 0, ga = 0

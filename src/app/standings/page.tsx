@@ -14,7 +14,7 @@ export default function StandingsPage() {
 
   const groups = [...(data?.groups ?? [])]
     .filter((g) => Array.isArray(g?.standings))
-    .sort((a, b) => a.group.localeCompare(b.group))
+    .sort((a, b) => (a.group || '').localeCompare(b.group || ''))
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

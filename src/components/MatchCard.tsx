@@ -32,8 +32,8 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
     try {
       const raw = localStorage.getItem('wc2026_predictions')
       if (raw) {
-        const preds: import('@/lib/types').Prediction[] = JSON.parse(raw)
-        setPrediction(preds.find((p) => p.matchId === game.id) ?? null)
+        const preds: Record<string, import('@/lib/types').Prediction> = JSON.parse(raw)
+        setPrediction(preds[game.id] ?? null)
       }
     } catch { /* ignore */ }
   }, [game.id])
