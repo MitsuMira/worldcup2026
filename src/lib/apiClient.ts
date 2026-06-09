@@ -5,7 +5,7 @@ const BASE = process.env.WORLDCUP_API_BASE_URL ?? 'https://worldcup26.ir'
 
 let _token: string | null = process.env.WORLDCUP_API_TOKEN ?? null
 
-async function acquireToken(): Promise<string> {
+export async function acquireToken(): Promise<string> {
   if (_token) return _token
 
   const email = process.env.WORLDCUP_API_EMAIL
