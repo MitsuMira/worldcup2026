@@ -1,52 +1,93 @@
 import type { ApiGame, EnrichedGame, Prediction, PredictionResult, ApiStadium } from './types'
 
-// Convert persian_date (YYYY/MM/DD HH:MM, Tehran IRDT = UTC+4:30) + local_date
-// (venue local time, UTC-4 to UTC-7) to a UTC Date.
-//
-// Key insight: all WC 2026 venues are in UTC-4..UTC-7, so UTC is always 4-7 h
-// ahead of venue local time.  If the UTC hour-of-day (derived from persian_date
-// by subtracting 4:30) is LESS than the venue hour (from local_date), the UTC
-// date must be local_date's date + 1.  No Jalali calendar conversion needed.
-function parseFromPersianDate(localDate: string, persianDate: string): Date | null {
+// city_en values from the API → IANA timezone for all WC 2026 venues.
+// Multiple variants per city handle different API spellings.
+const CITY_TIMEZONE: Record<string, string> = {
+  // US Eastern (EDT = UTC-4 in summer)
+  'East Rutherford': 'America/New_York',
+  'New York/New Jersey (East Rutherford)': 'America/New_York',
+  'New York': 'America/New_York',
+  'Foxborough': 'America/New_York',
+  'Boston': 'America/New_York',
+  'Philadelphia': 'America/New_York',
+  'Miami': 'America/New_York',
+  'Miami Gardens': 'America/New_York',
+  'Miami (Miami Gardens)': 'America/New_York',
+  // US Central (CDT = UTC-5 in summer)
+  'Arlington': 'America/Chicago',
+  'Dallas': 'America/Chicago',
+  'Dallas (Arlington)': 'America/Chicago',
+  'Houston': 'America/Chicago',
+  'Kansas City': 'America/Chicago',
+  // US Mountain (MDT = UTC-6 in summer)
+  'Denver': 'America/Denver',
+  // US Pacific (PDT = UTC-7 in summer)
+  'Santa Clara': 'America/Los_Angeles',
+  'San Francisco': 'America/Los_Angeles',
+  'San Francisco (Santa Clara)': 'America/Los_Angeles',
+  'San Francisco Bay Area': 'America/Los_Angeles',
+  'Inglewood': 'America/Los_Angeles',
+  'Los Angeles': 'America/Los_Angeles',
+  'Los Angeles (Inglewood)': 'America/Los_Angeles',
+  'Pasadena': 'America/Los_Angeles',
+  'Los Angeles (Pasadena)': 'America/Los_Angeles',
+  'Seattle': 'America/Los_Angeles',
+  // Canada
+  'Toronto': 'America/Toronto',
+  'Vancouver': 'America/Vancouver',
+  // Mexico
+  'Mexico City': 'America/Mexico_City',
+  'Monterrey': 'America/Mexico_City',
+  'Guadalajara': 'America/Mexico_City',
+}
+
+export function getVenueTimezone(game: { stadium?: ApiStadium | null }): string {
+  const city = game.stadium?.city_en
+  return (city && CITY_TIMEZONE[city]) ?? 'America/New_York'
+}
+
+/**
+ * Convert a "MM/DD/YYYY HH:MM" venue-local time to UTC using the venue's
+ * IANA timezone. Uses iterative Intl.DateTimeFormat to handle DST correctly.
+ */
+function parseLocalInTimezone(localDate: string, tz: string): Date | null {
   try {
-    // Extract IRDT time from persian_date
-    const persianTimePart = persianDate.split(' ')[1]
-    const [ph, pm] = persianTimePart.split(':').map(Number)
+    const [datePart, timePart] = localDate.split(' ')
+    const [m, d, y] = datePart.split('/')
+    const [h, min] = timePart.split(':')
+    const targetH = +h, targetMin = +min
 
-    // IRDT → UTC: subtract 4h30m
-    let utcMins = pm - 30
-    let utcHours = ph - 4
-    if (utcMins < 0) { utcMins += 60; utcHours-- }
-    if (utcHours < 0) utcHours += 24   // normalise to 0-23 (day adjustment handled below)
+    let guess = new Date(Date.UTC(+y, +m - 1, +d, targetH, targetMin))
 
-    // Get venue local date and hour from local_date ("MM/DD/YYYY HH:MM")
-    const [localDatePart, localTimePart] = localDate.split(' ')
-    const [lm, ld, ly] = localDatePart.split('/').map(Number)
-    const lh = parseInt(localTimePart.split(':')[0])
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', hour12: false,
+    })
 
-    // If UTC hour < venue hour, the UTC moment is on the next calendar day
-    const dayOffset = utcHours < lh ? 1 : 0
+    for (let i = 0; i < 3; i++) {
+      const parts = fmt.formatToParts(guess)
+      const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value ?? '0')
+      const repH = get('hour') % 24
+      const represented = new Date(Date.UTC(get('year'), get('month') - 1, get('day'), repH, get('minute')))
+      const target = new Date(Date.UTC(+y, +m - 1, +d, targetH, targetMin))
+      const diffMs = target.getTime() - represented.getTime()
+      if (diffMs === 0) break
+      guess = new Date(guess.getTime() + diffMs)
+    }
 
-    const base = new Date(Date.UTC(ly, lm - 1, ld + dayOffset))
-    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), utcHours, utcMins))
+    return guess
   } catch {
     return null
   }
 }
 
-// Kept for callers that still import it — no longer affects time parsing
-export function getVenueTimezone(_game: { stadium?: ApiStadium | null }): string {
-  return 'UTC'
-}
-
-// Parse a match date to UTC. Uses persian_date (Tehran IRDT) when available
-// because it is a reliable fixed-offset timestamp; falls back to treating
-// local_date as UTC.
-export function parseMatchDate(localDate: string, persianDate?: string): Date | null {
+// Parse "MM/DD/YYYY HH:MM" venue local time to UTC.
+// venueTimezone should be an IANA string from getVenueTimezone().
+export function parseMatchDate(localDate: string, venueTimezone?: string): Date | null {
   try {
-    if (persianDate) {
-      const d = parseFromPersianDate(localDate, persianDate)
-      if (d) return d
+    if (venueTimezone && venueTimezone !== 'UTC') {
+      return parseLocalInTimezone(localDate, venueTimezone)
     }
     const [datePart, timePart] = localDate.split(' ')
     const [m, d, y] = datePart.split('/')
@@ -57,18 +98,18 @@ export function parseMatchDate(localDate: string, persianDate?: string): Date | 
   }
 }
 
-export function formatMatchDateTime(localDate: string, displayTz?: string, persianDate?: string): string {
-  const d = parseMatchDate(localDate, persianDate)
+export function formatMatchDateTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
+  const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
   return d.toLocaleString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
 }
 
-export function formatMatchDate(localDate: string, displayTz?: string, persianDate?: string): string {
-  const d = parseMatchDate(localDate, persianDate)
+export function formatMatchDate(localDate: string, displayTz?: string, venueTimezone?: string): string {
+  const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
   return d.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -76,11 +117,11 @@ export function formatMatchDate(localDate: string, displayTz?: string, persianDa
   })
 }
 
-export function formatTime(localDate: string, displayTz?: string, persianDate?: string): string {
-  const d = parseMatchDate(localDate, persianDate)
+export function formatTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
+  const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return ''
   return d.toLocaleTimeString('en-US', {
-    hour: '2-digit', minute: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
 }
@@ -97,7 +138,7 @@ export function getStatusLabel(game: ApiGame & { stadium?: ApiStadium | null }, 
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
   if (s === 'live') return `${game.time_elapsed}'`
-  return formatTime(game.local_date, timezone, game.persian_date)
+  return formatTime(game.local_date, timezone, getVenueTimezone(game))
 }
 
 export function getStageLabel(game: ApiGame): string {
@@ -139,7 +180,6 @@ export function getPredictionResult(
   return 'wrong'
 }
 
-// Group all games by date string (local date, first 10 chars: MM/DD/YYYY)
 export function groupGamesByDate(games: EnrichedGame[]): Map<string, EnrichedGame[]> {
   const map = new Map<string, EnrichedGame[]>()
   for (const g of games) {
@@ -151,7 +191,6 @@ export function groupGamesByDate(games: EnrichedGame[]): Map<string, EnrichedGam
   return map
 }
 
-// Flag emoji from ISO 3166-1 alpha-2 country code
 function toFlagEmoji(countryCode: string): string {
   return [...countryCode.toUpperCase()]
     .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
