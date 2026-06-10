@@ -41,6 +41,19 @@ export default function Footer() {
           </a>
         </div>
 
+        {/* Row 3 — cross-promotion */}
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 min-h-[44px]">
+          <span>Also by MitsuMira:</span>
+          <a
+            href="https://partygames.mitsumira.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-amber-400 transition-colors font-medium"
+          >
+            🎉 Party Games
+          </a>
+        </div>
+
       </div>
     </footer>
   )
