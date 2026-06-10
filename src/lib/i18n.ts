@@ -24,6 +24,14 @@ export interface Translations {
     bracket: string; r32: string; r16: string; qf: string; sf: string; third: string; final: string
     tbd: string; noGames: string
   }
+  bracket: {
+    groupPrefix: string
+    groupRank1: string
+    groupRank2: string
+    bestThird: string
+    winner: string
+    runnerUp: string
+  }
   settings: {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
     theme: string; themeLight: string; themeDark: string
@@ -128,6 +136,14 @@ export const en: Translations = {
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
     myPick: 'My pick', editPick: 'Edit',
   },
+  bracket: {
+    groupPrefix: 'Group',
+    groupRank1: '1st',
+    groupRank2: '2nd',
+    bestThird: 'Best 3rd Place',
+    winner: 'Winner',
+    runnerUp: 'Runner-up',
+  },
   group: { top2: 'Top 2 advance' },
   footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
@@ -207,6 +223,14 @@ export const pt: Translations = {
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
     myPick: 'Meu palpite', editPick: 'Editar',
   },
+  bracket: {
+    groupPrefix: 'Grupo',
+    groupRank1: '1º',
+    groupRank2: '2º',
+    bestThird: 'Melhor 3º Lugar',
+    winner: 'Vencedor',
+    runnerUp: 'Vice',
+  },
   group: { top2: 'Top 2 avançam' },
   footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
@@ -285,6 +309,14 @@ export const es: Translations = {
     stageGroup: 'Grupo', stageR32: 'Dieciseisavos', stageR16: 'Octavos de Final',
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
     myPick: 'Mi pronóstico', editPick: 'Editar',
+  },
+  bracket: {
+    groupPrefix: 'Grupo',
+    groupRank1: '1°',
+    groupRank2: '2°',
+    bestThird: 'Mejor 3er Lugar',
+    winner: 'Ganador',
+    runnerUp: 'Finalista',
   },
   group: { top2: 'Top 2 avanzan' },
   footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },

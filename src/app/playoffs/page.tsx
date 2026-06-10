@@ -6,7 +6,7 @@ import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, getTeamName, formatTime, parseMatchDate, getVenueTimezone } from '@/lib/utils'
-import { BRACKET_POSITIONS } from '@/lib/bracketStructure'
+import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel } from '@/lib/bracketStructure'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
@@ -25,13 +25,18 @@ const BASE = CARD_H + CARD_GAP
 const HALF_COUNT: Record<string, number> = { r32: 8, r16: 4, qf: 2, sf: 1 }
 
 // Resolve a game's bracket position by venue date + city.
+// ESPN appends US state to city_en ("Inglewood, California") so we try both
+// the raw value and the bare city name before the comma.
 function getBracketPos(game: EnrichedGame) {
   const tz = getVenueTimezone(game)
   const d = parseMatchDate(game.local_date)
   if (!d) return undefined
   const dateStr = d.toLocaleDateString('sv-SE', { timeZone: tz })
-  const city = game.stadium?.city_en ?? ''
-  return BRACKET_POSITIONS.get(`${dateStr}_${city}`)
+  const rawCity = game.stadium?.city_en ?? ''
+  return (
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity}`) ??
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity.split(',')[0].trim()}`)
+  )
 }
 
 // Vertical top position for game[idx] in a round.
@@ -42,17 +47,25 @@ function halfTop(absIdx: number, idx: number): number {
 }
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
-function BracketSlot({ game, side }: { game?: EnrichedGame; side: 'home' | 'away' }) {
+// Detect ESPN's verbose placeholder team names so we can replace them with our
+// translated slot labels in the space-constrained bracket cards.
+function isEspnPlaceholder(name: string) {
+  return /^(group\s|round\s?of\s|tbd$|semifinal|quarterfinal|third\s?place)/i.test(name)
+}
+
+function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations }) {
   if (!game) {
+    const displayLabel = label ? formatSlotLabel(label, t) : t.playoffs.tbd
     return (
       <div className="flex items-center gap-2 px-2 py-0.5 bg-slate-800/50 rounded-lg border border-slate-700/50">
         <div className="w-5 h-5 rounded bg-slate-700/50 shrink-0" />
-        <span className="text-slate-500 text-xs font-medium">TBD</span>
+        <span className="text-slate-500 text-xs font-medium">{displayLabel}</span>
       </div>
     )
   }
 
-  const name = getTeamName(game, side)
+  const rawName = getTeamName(game, side)
+  const name = (isEspnPlaceholder(rawName) && label) ? formatSlotLabel(label, t) : rawName
   const team = side === 'home' ? game.homeTeam : game.awayTeam
   const score = side === 'home' ? game.home_score : game.away_score
   const otherScore = side === 'home' ? game.away_score : game.home_score
@@ -81,10 +94,13 @@ function BracketSlot({ game, side }: { game?: EnrichedGame; side: 'home' | 'away
 }
 
 // ─── Single card ─────────────────────────────────────────────────────────────
-function BracketCard({ game, timezone }: { game?: EnrichedGame; timezone: string }) {
+function BracketCard({ game, matchNum, timezone, t }: { game?: EnrichedGame; matchNum?: number; timezone: string; t: Translations }) {
   const status = game ? getMatchStatus(game) : null
   const d = game ? parseMatchDate(game.local_date) : null
   const bpos = game ? getBracketPos(game) : undefined
+  // matchNum from prop (TBD slots) wins, then from live bracket pos lookup
+  const resolvedMatchNum = matchNum ?? bpos?.matchNum
+  const slotLabels = resolvedMatchNum != null ? MATCH_LABELS[resolvedMatchNum] : undefined
   const dateStr = d?.toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', ...(timezone ? { timeZone: timezone } : {}),
   })
@@ -112,13 +128,13 @@ function BracketCard({ game, timezone }: { game?: EnrichedGame; timezone: string
             <span className="text-[10px] text-slate-500 font-bold">FT · {dateStr}</span>
           )}
         </div>
-        {bpos && (
-          <span className="text-[10px] text-slate-600 font-bold shrink-0 ml-1">M{bpos.matchNum}</span>
+        {resolvedMatchNum != null && (
+          <span className="text-[10px] text-slate-600 font-bold shrink-0 ml-1">M{resolvedMatchNum}</span>
         )}
       </div>
-      <BracketSlot game={game} side="home" />
+      <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} />
       <div className="h-px bg-slate-800" />
-      <BracketSlot game={game} side="away" />
+      <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} />
     </div>
   )
 }
@@ -130,10 +146,12 @@ function HalfBracket({
   rounds,
   flip,
   timezone,
+  t,
 }: {
-  rounds: { key: string; label: string; padded: (EnrichedGame | undefined)[]; absIdx: number }[]
+  rounds: { key: string; label: string; padded: { game?: EnrichedGame; matchNum?: number }[]; absIdx: number }[]
   flip: boolean
   timezone: string
+  t: Translations
 }) {
   if (!rounds.length) return null
   const firstCount = rounds[0].padded.length
@@ -148,13 +166,13 @@ function HalfBracket({
             {label}
           </div>
           <div className="relative w-[196px]" style={{ height: containerH }}>
-            {padded.map((game, i) => (
+            {padded.map(({ game, matchNum }, i) => (
               <div
                 key={game?.id ?? `empty-${key}-${i}`}
                 className="absolute left-0 right-0"
                 style={{ top: halfTop(absIdx, i) }}
               >
-                <BracketCard game={game} timezone={timezone} />
+                <BracketCard game={game} matchNum={matchNum} timezone={timezone} t={t} />
               </div>
             ))}
           </div>
@@ -206,7 +224,10 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
         const bp = getBracketPos(g)
         if (bp && bp.half === halfIdx) byPos.set(bp.pos, g)
       }
-      const padded = Array.from({ length: count }, (_, i) => byPos.get(i) as EnrichedGame | undefined)
+      const padded = Array.from({ length: count }, (_, i) => ({
+        game: byPos.get(i) as EnrichedGame | undefined,
+        matchNum: SLOT_MATCH_NUM.get(`${key}_${halfIdx}_${i}`),
+      }))
       return { key: `${key}-${halfIdx}`, label: labels[key], padded, absIdx }
     })
   }
@@ -222,7 +243,7 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
       <div className="flex gap-2 min-w-max items-start">
 
         {/* Left half: R32 → R16 → QF → SF */}
-        <HalfBracket rounds={leftRounds} flip={false} timezone={timezone} />
+        <HalfBracket rounds={leftRounds} flip={false} timezone={timezone} t={t} />
 
         {/* Final + 3rd Place — centre column */}
         <div className="flex flex-col">
@@ -231,19 +252,19 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
           </div>
           <div className="relative w-[196px]" style={{ height: containerH }}>
             <div className="absolute left-0 right-0" style={{ top: finalTop }}>
-              <BracketCard game={final} timezone={timezone} />
+              <BracketCard game={final} matchNum={103} timezone={timezone} t={t} />
             </div>
             <div className="absolute left-0 right-0" style={{ top: finalTop + CARD_H + 28 }}>
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center mb-1">
                 {t.playoffs.third}
               </div>
-              <BracketCard game={third} timezone={timezone} />
+              <BracketCard game={third} matchNum={104} timezone={timezone} t={t} />
             </div>
           </div>
         </div>
 
         {/* Right half (mirrored): SF → QF → R16 → R32 */}
-        <HalfBracket rounds={rightRounds} flip={true} timezone={timezone} />
+        <HalfBracket rounds={rightRounds} flip={true} timezone={timezone} t={t} />
 
       </div>
     </div>

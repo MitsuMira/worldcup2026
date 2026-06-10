@@ -1,3 +1,5 @@
+import type { Translations } from './i18n'
+
 /**
  * WC 2026 official knockout bracket positions.
  *
@@ -41,7 +43,9 @@ const ENTRIES: [string, BracketPos][] = [
   ['2026-06-28_Los Angeles',                     { round: 'r32', half: 0, pos: 2, matchNum: 73 }],
   ['2026-06-28_Los Angeles (Inglewood)',          { round: 'r32', half: 0, pos: 2, matchNum: 73 }],
   // M75  1F vs 2C  →  R16-M90 bottom
+  // ESPN returns city_en="Guadalupe" (Estadio BBVA is in Guadalupe, NL, not Monterrey)
   ['2026-06-29_Monterrey',                       { round: 'r32', half: 0, pos: 3, matchNum: 75 }],
+  ['2026-06-29_Guadalupe',                       { round: 'r32', half: 0, pos: 3, matchNum: 75 }],
 
   // LEFT HALF  →  QF2-M98 (LA) via R16 M93 (Dallas) and M94 (Seattle)
 
@@ -123,3 +127,73 @@ const ENTRIES: [string, BracketPos][] = [
 
 export const BRACKET_POSITIONS: ReadonlyMap<string, BracketPos> =
   new Map(ENTRIES)
+
+// Slot labels — shown when the team hasn't been determined yet.
+// R32:  group position shorthand ("1A", "2B", "Best 3rd")
+// R16+: winner/loser of the feeding match ("W M73", "L M101")
+export const MATCH_LABELS: Record<number, { home: string; away: string }> = {
+  // ── R32 ──────────────────────────────────────────────────────────────────
+  73:  { home: '2A',      away: '2B'       },
+  74:  { home: '1E',      away: 'Best 3rd' },
+  75:  { home: '1F',      away: '2C'       },
+  76:  { home: '1C',      away: '2F'       },
+  77:  { home: '1I',      away: 'Best 3rd' },
+  78:  { home: '2E',      away: '2I'       },
+  79:  { home: '1A',      away: 'Best 3rd' },
+  80:  { home: '1L',      away: 'Best 3rd' },
+  81:  { home: '1D',      away: 'Best 3rd' },
+  82:  { home: '1G',      away: 'Best 3rd' },
+  83:  { home: '2K',      away: '2L'       },
+  84:  { home: '1H',      away: '2J'       },
+  85:  { home: '1B',      away: 'Best 3rd' },
+  86:  { home: '1J',      away: '2H'       },
+  87:  { home: '1K',      away: 'Best 3rd' },
+  88:  { home: '2D',      away: '2G'       },
+  // ── R16 ──────────────────────────────────────────────────────────────────
+  89:  { home: 'W M74',   away: 'W M77'    },
+  90:  { home: 'W M73',   away: 'W M75'    },
+  91:  { home: 'W M76',   away: 'W M78'    },
+  92:  { home: 'W M79',   away: 'W M80'    },
+  93:  { home: 'W M83',   away: 'W M84'    },
+  94:  { home: 'W M81',   away: 'W M82'    },
+  95:  { home: 'W M86',   away: 'W M88'    },
+  96:  { home: 'W M85',   away: 'W M87'    },
+  // ── QF ───────────────────────────────────────────────────────────────────
+  97:  { home: 'W M89',   away: 'W M90'    },
+  98:  { home: 'W M93',   away: 'W M94'    },
+  99:  { home: 'W M91',   away: 'W M92'    },
+  100: { home: 'W M95',   away: 'W M96'    },
+  // ── SF ───────────────────────────────────────────────────────────────────
+  101: { home: 'W M97',   away: 'W M98'    },
+  102: { home: 'W M99',   away: 'W M100'   },
+  // ── Final / 3rd place ────────────────────────────────────────────────────
+  103: { home: 'W M101',  away: 'W M102'   },
+  104: { home: 'L M101',  away: 'L M102'   },
+}
+
+// Reverse lookup: "round_half_pos" → matchNum
+// Lets the bracket know which match a TBD slot corresponds to.
+export const SLOT_MATCH_NUM: ReadonlyMap<string, number> = new Map(
+  ENTRIES.map(([, bp]) => [`${bp.round}_${bp.half}_${bp.pos}`, bp.matchNum])
+)
+
+// Converts a raw slot code from MATCH_LABELS into a human-readable, translated label.
+// Codes:
+//   "1E"      → "Group E 1st" / "Grupo E 1º" / "Grupo E 1°"
+//   "2A"      → "Group A 2nd" / "Grupo A 2º" / "Grupo A 2°"
+//   "Best 3rd"→ "Best 3rd Place" / "Melhor 3º Lugar" / "Mejor 3er Lugar"
+//   "W M74"   → "Winner M74" / "Vencedor M74" / "Ganador M74"
+//   "L M101"  → "Runner-up M101" / "Vice M101" / "Finalista M101"
+export function formatSlotLabel(code: string, t: Translations): string {
+  const groupMatch = code.match(/^([12])([A-L])$/)
+  if (groupMatch) {
+    const rank = groupMatch[1] === '1' ? t.bracket.groupRank1 : t.bracket.groupRank2
+    return `${t.bracket.groupPrefix} ${groupMatch[2]} ${rank}`
+  }
+  if (code === 'Best 3rd') return t.bracket.bestThird
+  const winnerMatch = code.match(/^W M(\d+)$/)
+  if (winnerMatch) return `${t.bracket.winner} M${winnerMatch[1]}`
+  const loserMatch = code.match(/^L M(\d+)$/)
+  if (loserMatch) return `${t.bracket.runnerUp} M${loserMatch[1]}`
+  return code
+}
