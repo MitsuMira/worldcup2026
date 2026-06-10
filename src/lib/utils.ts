@@ -188,13 +188,17 @@ export function getPredictionResult(
   return 'wrong'
 }
 
-export function groupGamesByDate(games: EnrichedGame[]): Map<string, EnrichedGame[]> {
+export function groupGamesByDate(games: EnrichedGame[], timezone?: string): Map<string, EnrichedGame[]> {
   const map = new Map<string, EnrichedGame[]>()
   for (const g of games) {
-    const date = g.local_date?.split(' ')[0] ?? 'Unknown'
-    const list = map.get(date) ?? []
+    const d = parseMatchDate(g.local_date)
+    // Use 'sv-SE' locale which always returns YYYY-MM-DD — correct for lexicographic sort
+    const dateKey = d
+      ? d.toLocaleDateString('sv-SE', timezone ? { timeZone: timezone } : undefined)
+      : 'Unknown'
+    const list = map.get(dateKey) ?? []
     list.push(g)
-    map.set(date, list)
+    map.set(dateKey, list)
   }
   return map
 }

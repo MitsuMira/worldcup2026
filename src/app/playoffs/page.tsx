@@ -100,90 +100,45 @@ function BracketRound({ label, games, timezone }: { label: string; games: Enrich
   )
 }
 
-function BracketView({ games, timezone }: { games: EnrichedGame[]; timezone: string }) {
-  const qf = games.filter((g) => g.type === 'qf').slice(0, 4)
-  const sf = games.filter((g) => g.type === 'sf').slice(0, 2)
-  const final = games.filter((g) => g.type === 'final').slice(0, 1)
-  const third = games.filter((g) => g.type === 'third').slice(0, 1)
+function BracketView({ games, timezone, t }: { games: EnrichedGame[]; timezone: string; t: import('@/lib/i18n').Translations }) {
+  const byType = (type: string) =>
+    games.filter((g) => g.type === type).sort((a, b) => a.local_date.localeCompare(b.local_date))
 
-  const padToLength = (arr: EnrichedGame[], len: number): (EnrichedGame | undefined)[] => {
-    const result: (EnrichedGame | undefined)[] = [...arr]
-    while (result.length < len) result.push(undefined)
-    return result
-  }
+  const r32 = byType('r32')
+  const r16 = byType('r16')
+  const qf  = byType('qf')
+  const sf  = byType('sf')
+  const finalGame = byType('final')[0]
+  const thirdGame = byType('third')[0]
 
-  const qfGames = padToLength(qf, 4)
-  const sfGames = padToLength(sf, 2)
-  const finalGame = padToLength(final, 1)[0]
-  const thirdGame = padToLength(third, 1)[0]
+  const rounds: Array<{ label: string; games: EnrichedGame[] }> = [
+    ...(r32.length ? [{ label: t.playoffs.r32, games: r32 }] : []),
+    ...(r16.length ? [{ label: t.playoffs.r16, games: r16 }] : []),
+    ...(qf.length  ? [{ label: t.playoffs.qf,  games: qf  }] : []),
+    ...(sf.length  ? [{ label: t.playoffs.sf,  games: sf  }] : []),
+  ]
 
   return (
     <div className="overflow-x-auto pb-4">
-      {/* Full bracket tree */}
-      <div className="flex items-start gap-0 min-w-[760px]">
-        {/* QF Left (1 & 2) */}
-        <div className="flex flex-col justify-around" style={{ gap: '12px', paddingTop: '32px', paddingBottom: '32px' }}>
-          {qfGames.slice(0, 2).map((g, i) => (
-            <BracketMatchCard key={g?.id ?? `qf-left-${i}`} game={g} timezone={timezone} />
-          ))}
-        </div>
+      <div className="flex gap-3 min-w-max items-start">
+        {rounds.map(({ label, games: rGames }) => (
+          <BracketRound key={label} label={label} games={rGames} timezone={timezone} />
+        ))}
 
-        {/* Connector left → SF1 */}
-        <div className="flex flex-col justify-center shrink-0" style={{ height: '100%', minHeight: '280px' }}>
-          <div className="relative w-8 h-full flex flex-col justify-around" style={{ paddingTop: '72px', paddingBottom: '72px' }}>
-            <div className="absolute left-0 top-1/4 bottom-1/4 w-px bg-slate-700" />
-            <div className="h-px w-8 bg-slate-700 absolute top-1/4" />
-            <div className="h-px w-8 bg-slate-700 absolute bottom-1/4" />
-            <div className="h-px w-4 bg-slate-700 absolute" style={{ top: 'calc(50%)', left: '50%' }} />
-          </div>
-        </div>
-
-        {/* SF left */}
-        <div className="flex flex-col justify-center" style={{ paddingTop: '64px', paddingBottom: '64px' }}>
-          <BracketMatchCard key={sfGames[0]?.id ?? 'sf-1'} game={sfGames[0]} timezone={timezone} />
-        </div>
-
-        {/* Connector SF1 → Final */}
-        <div className="flex items-center shrink-0">
-          <div className="h-px w-8 bg-slate-700" />
-        </div>
-
-        {/* Final + 3rd Place */}
-        <div className="flex flex-col gap-6 justify-center" style={{ paddingTop: '32px', paddingBottom: '32px' }}>
+        {/* Final + 3rd Place column */}
+        <div className="flex flex-col gap-4 min-w-[200px]">
           <div>
-            <div className="text-xs font-bold text-amber-400/70 uppercase tracking-widest text-center mb-2">Final</div>
+            <div className="text-xs font-bold text-amber-400/70 uppercase tracking-widest text-center mb-2">
+              {t.playoffs.final}
+            </div>
             <BracketMatchCard game={finalGame} timezone={timezone} />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest text-center mb-2">3rd Place</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest text-center mb-2">
+              {t.playoffs.third}
+            </div>
             <BracketMatchCard game={thirdGame} timezone={timezone} />
           </div>
-        </div>
-
-        {/* Connector Final ← SF2 */}
-        <div className="flex items-center shrink-0">
-          <div className="h-px w-8 bg-slate-700" />
-        </div>
-
-        {/* SF right */}
-        <div className="flex flex-col justify-center" style={{ paddingTop: '64px', paddingBottom: '64px' }}>
-          <BracketMatchCard key={sfGames[1]?.id ?? 'sf-2'} game={sfGames[1]} timezone={timezone} />
-        </div>
-
-        {/* Connector right → QF 3&4 */}
-        <div className="flex flex-col justify-center shrink-0" style={{ height: '100%', minHeight: '280px' }}>
-          <div className="relative w-8 h-full flex flex-col justify-around" style={{ paddingTop: '72px', paddingBottom: '72px' }}>
-            <div className="absolute right-0 top-1/4 bottom-1/4 w-px bg-slate-700" />
-            <div className="h-px w-8 bg-slate-700 absolute top-1/4 right-0" />
-            <div className="h-px w-8 bg-slate-700 absolute bottom-1/4 right-0" />
-          </div>
-        </div>
-
-        {/* QF Right (3 & 4) */}
-        <div className="flex flex-col justify-around" style={{ gap: '12px', paddingTop: '32px', paddingBottom: '32px' }}>
-          {qfGames.slice(2, 4).map((g, i) => (
-            <BracketMatchCard key={g?.id ?? `qf-right-${i}`} game={g} timezone={timezone} />
-          ))}
         </div>
       </div>
     </div>
@@ -266,7 +221,7 @@ export default function PlayoffsPage() {
               {knockoutGames.length === 0 ? (
                 <div className="text-slate-500 text-center py-20">{t.playoffs.noGames}</div>
               ) : (
-                <BracketView games={knockoutGames} timezone={timezone} />
+                <BracketView games={knockoutGames} timezone={timezone} t={t} />
               )}
             </div>
           ) : (

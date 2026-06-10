@@ -131,17 +131,24 @@ function mapEvent(event: EspnEvent): EnrichedGame {
 
   let { type, group } = parseRound(comp)
 
-  // If parseRound() hit the default, check team display names for knockout hints.
-  // ESPN uses placeholder names like "Group A Winner", "Semifinal 1 Loser" for TBD slots.
+  // If parseRound() hit the default, detect knockout stage from team display names.
+  // ESPN placeholder names describe where teams COME FROM, so the logic is inverted:
+  //   "Semifinal X Winner/Loser" teams → current game is Final or 3rd Place
+  //   "Quarterfinal X Winner" teams    → current game is SF
+  //   "Round of 16 / R16" teams        → current game is QF
+  //   "Round of 32 / R32" teams        → current game is R16
+  //   "Group X Winner/2nd Place" teams → current game is R32
   if (type === 'group' && !group) {
     const combined = `${home.team.displayName} ${away.team.displayName}`.toLowerCase()
-    if (/semifinal|semi-final/.test(combined)) {
-      type = /loser/.test(combined) ? 'third' : 'sf'
-    } else if (/quarterfinal|quarter-final|quarter final/.test(combined)) {
+    if (/\bsemifinal\b|\bsemi-final\b/.test(combined)) {
+      type = /loser/.test(combined) ? 'third' : 'final'
+    } else if (/\bquarterfinal\b|\bquarter-final\b|\bquarter final\b/.test(combined)) {
+      type = 'sf'
+    } else if (/round.of.16|\br16\b/.test(combined)) {
       type = 'qf'
-    } else if (/\bfinal\b/.test(combined) && !/semi|quarter/.test(combined)) {
-      type = 'final'
-    } else if (/\b(winner|loser|runner|2nd place|3rd place)\b/.test(combined)) {
+    } else if (/round.of.32|\br32\b/.test(combined)) {
+      type = 'r16'
+    } else if (/\b(winner|loser|2nd place|3rd place|runner)\b/.test(combined)) {
       type = 'r32'
     }
   }
