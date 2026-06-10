@@ -10,7 +10,7 @@ export default function Footer() {
       <div className="max-w-[480px] mx-auto px-4 py-3 text-[12px] text-slate-500 space-y-1">
 
         {/* Row 1 — standard across MitsuMira apps */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[44px]">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 min-h-[44px]">
           <a
             href={t.footer.madeByUrl}
             target="_blank"
@@ -24,7 +24,7 @@ export default function Footer() {
         </div>
 
         {/* Row 2 — data source + privacy + github */}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[44px]">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 min-h-[44px]">
           <span>{t.footer.dataVia}</span>
           <span aria-hidden>·</span>
           <Link href="/privacy" className="hover:text-slate-300 transition-colors">
