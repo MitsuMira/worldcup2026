@@ -2,8 +2,6 @@
 
 [![Built with Claude](https://img.shields.io/badge/Built%20with-Claude%20AI-blueviolet?logo=anthropic)](https://claude.ai) [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)](https://vercel.com) [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-> Built with [Claude](https://claude.ai) via vibe coding
-
 Live scores, standings, schedule, knockout bracket, and predictions for the **FIFA World Cup 2026** (48 teams, June 11 – July 19, 2026).
 
 ## Features
