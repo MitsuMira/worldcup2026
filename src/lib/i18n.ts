@@ -24,6 +24,14 @@ export interface Translations {
     bracket: string; r32: string; r16: string; qf: string; sf: string; third: string; final: string
     tbd: string; noGames: string
   }
+  bracket: {
+    groupPrefix: string
+    groupRank1: string
+    groupRank2: string
+    bestThird: string
+    winner: string
+    runnerUp: string
+  }
   settings: {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
     theme: string; themeLight: string; themeDark: string
@@ -54,7 +62,7 @@ export interface Translations {
     myPick: string; editPick: string
   }
   group: { top2: string }
-  footer: { dataVia: string; madeWith: string; madeByName: string; madeByUrl: string }
+  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; analyticsNote: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -128,8 +136,22 @@ export const en: Translations = {
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
     myPick: 'My pick', editPick: 'Edit',
   },
+  bracket: {
+    groupPrefix: 'Group',
+    groupRank1: '1st',
+    groupRank2: '2nd',
+    bestThird: 'Best 3rd Place',
+    winner: 'Winner',
+    runnerUp: 'Runner-up',
+  },
   group: { top2: 'Top 2 advance' },
-  footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Made with ♥ by MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: '3D printing & robotics services',
+    dataVia: 'Data via ESPN',
+    analyticsNote: 'Cookieless analytics by Vercel',
+  },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
   errors: {
     games: 'Failed to load matches. Check your API credentials.',
@@ -207,8 +229,22 @@ export const pt: Translations = {
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
     myPick: 'Meu palpite', editPick: 'Editar',
   },
+  bracket: {
+    groupPrefix: 'Grupo',
+    groupRank1: '1º',
+    groupRank2: '2º',
+    bestThird: 'Melhor 3º Lugar',
+    winner: 'Vencedor',
+    runnerUp: 'Vice',
+  },
   group: { top2: 'Top 2 avançam' },
-  footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Feito com ♥ por MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: 'Impressão 3D e robótica',
+    dataVia: 'Dados via ESPN',
+    analyticsNote: 'Analytics sem cookies pela Vercel',
+  },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
   errors: {
     games: 'Falha ao carregar partidas. Verifique suas credenciais de API.',
@@ -286,8 +322,22 @@ export const es: Translations = {
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
     myPick: 'Mi pronóstico', editPick: 'Editar',
   },
+  bracket: {
+    groupPrefix: 'Grupo',
+    groupRank1: '1°',
+    groupRank2: '2°',
+    bestThird: 'Mejor 3er Lugar',
+    winner: 'Ganador',
+    runnerUp: 'Finalista',
+  },
   group: { top2: 'Top 2 avanzan' },
-  footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Hecho con ♥ por MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: 'Impresión 3D y robótica',
+    dataVia: 'Datos via ESPN',
+    analyticsNote: 'Análisis sin cookies por Vercel',
+  },
   loading: { matches: 'Cargando partidos…', schedule: 'Cargando calendario…', standings: 'Cargando clasificación…', teams: 'Cargando selecciones…', generic: 'Cargando…' },
   errors: {
     games: 'Error al cargar partidos. Verifica tus credenciales de API.',

@@ -1,3 +1,5 @@
+import type { Translations } from './i18n'
+
 /**
  * WC 2026 official knockout bracket positions.
  *
@@ -41,7 +43,9 @@ const ENTRIES: [string, BracketPos][] = [
   ['2026-06-28_Los Angeles',                     { round: 'r32', half: 0, pos: 2, matchNum: 73 }],
   ['2026-06-28_Los Angeles (Inglewood)',          { round: 'r32', half: 0, pos: 2, matchNum: 73 }],
   // M75  1F vs 2C  →  R16-M90 bottom
+  // ESPN returns city_en="Guadalupe" (Estadio BBVA is in Guadalupe, NL, not Monterrey)
   ['2026-06-29_Monterrey',                       { round: 'r32', half: 0, pos: 3, matchNum: 75 }],
+  ['2026-06-29_Guadalupe',                       { round: 'r32', half: 0, pos: 3, matchNum: 75 }],
 
   // LEFT HALF  →  QF2-M98 (LA) via R16 M93 (Dallas) and M94 (Seattle)
 
@@ -172,3 +176,24 @@ export const MATCH_LABELS: Record<number, { home: string; away: string }> = {
 export const SLOT_MATCH_NUM: ReadonlyMap<string, number> = new Map(
   ENTRIES.map(([, bp]) => [`${bp.round}_${bp.half}_${bp.pos}`, bp.matchNum])
 )
+
+// Converts a raw slot code from MATCH_LABELS into a human-readable, translated label.
+// Codes:
+//   "1E"      → "Group E 1st" / "Grupo E 1º" / "Grupo E 1°"
+//   "2A"      → "Group A 2nd" / "Grupo A 2º" / "Grupo A 2°"
+//   "Best 3rd"→ "Best 3rd Place" / "Melhor 3º Lugar" / "Mejor 3er Lugar"
+//   "W M74"   → "Winner M74" / "Vencedor M74" / "Ganador M74"
+//   "L M101"  → "Runner-up M101" / "Vice M101" / "Finalista M101"
+export function formatSlotLabel(code: string, t: Translations): string {
+  const groupMatch = code.match(/^([12])([A-L])$/)
+  if (groupMatch) {
+    const rank = groupMatch[1] === '1' ? t.bracket.groupRank1 : t.bracket.groupRank2
+    return `${t.bracket.groupPrefix} ${groupMatch[2]} ${rank}`
+  }
+  if (code === 'Best 3rd') return t.bracket.bestThird
+  const winnerMatch = code.match(/^W M(\d+)$/)
+  if (winnerMatch) return `${t.bracket.winner} M${winnerMatch[1]}`
+  const loserMatch = code.match(/^L M(\d+)$/)
+  if (loserMatch) return `${t.bracket.runnerUp} M${loserMatch[1]}`
+  return code
+}

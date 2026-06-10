@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { fetchEnrichedGames } from '@/lib/apiClient'
+import { fetchEnrichedGames } from '@/lib/espnClient'
 
 export const dynamic = 'force-dynamic'
 
