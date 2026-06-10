@@ -47,6 +47,12 @@ function halfTop(absIdx: number, idx: number): number {
 }
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
+// Detect ESPN's verbose placeholder team names so we can replace them with our
+// compact slot labels ("1E", "W M74") in the space-constrained bracket cards.
+function isEspnPlaceholder(name: string) {
+  return /^(group\s|round\s?of\s|tbd$|semifinal|quarterfinal|third\s?place)/i.test(name)
+}
+
 function BracketSlot({ game, side, label }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string }) {
   if (!game) {
     return (
@@ -58,8 +64,8 @@ function BracketSlot({ game, side, label }: { game?: EnrichedGame; side: 'home' 
   }
 
   const rawName = getTeamName(game, side)
-  // Fall back to static slot label if ESPN hasn't assigned a team yet
-  const name = rawName === 'TBD' && label ? label : rawName
+  // Prefer our compact label ("1E", "W M74") over ESPN's verbose placeholders
+  const name = (isEspnPlaceholder(rawName) && label) ? label : rawName
   const team = side === 'home' ? game.homeTeam : game.awayTeam
   const score = side === 'home' ? game.home_score : game.away_score
   const otherScore = side === 'home' ? game.away_score : game.home_score
