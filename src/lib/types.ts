@@ -20,6 +20,7 @@ export interface ApiGame {
   finished: string       // "TRUE" | "FALSE"
   time_elapsed: string   // "notstarted" | minute as string, e.g. "45"
   type: string           // "group"|"r32"|"r16"|"qf"|"sf"|"third"|"final"
+  name?: string          // ESPN event name e.g. "Group A Winner vs Group B Runner-up"
   home_team_name_en?: string
   home_team_name_fa?: string
   away_team_name_en?: string

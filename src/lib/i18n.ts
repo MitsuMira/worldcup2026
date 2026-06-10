@@ -7,6 +7,7 @@ export interface Translations {
     liveNow: string; today: string; upNext: string; firstMatches: string
     recentResults: string; groupStandings: string; viewAllGroups: string
     upcoming48h: string; noUpcoming48h: string
+    tournamentName: string; tournamentDates: string; tournamentHosts: string
   }
   schedule: {
     title: string; subtitle: string
@@ -25,6 +26,7 @@ export interface Translations {
   }
   settings: {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
+    theme: string; themeLight: string; themeDark: string
   }
   teams: { title: string; subtitle: string; search: string; all: string; noTeams: string }
   favorites: {
@@ -65,6 +67,9 @@ export const en: Translations = {
     firstMatches: '🗓 First Matches', recentResults: '📊 Recent Results',
     groupStandings: '🏆 Group Standings', viewAllGroups: 'View all 12 groups →',
     upcoming48h: '🗓 Next 48 Hours', noUpcoming48h: 'No matches in the next 48 hours.',
+    tournamentName: 'FIFA World Cup 2026',
+    tournamentDates: 'June 11 – July 19, 2026',
+    tournamentHosts: 'United States, Canada & Mexico',
   },
   schedule: {
     title: 'Schedule', subtitle: 'All 104 matches · June 11 – July 19, 2026',
@@ -92,6 +97,7 @@ export const en: Translations = {
     title: 'Settings', language: 'Language', timezone: 'Timezone',
     timezoneHint: 'Match times are converted to your selected timezone.',
     close: 'Close',
+    theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
   teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.' },
   favorites: {
@@ -140,6 +146,9 @@ export const pt: Translations = {
     firstMatches: '🗓 Primeiras Partidas', recentResults: '📊 Resultados Recentes',
     groupStandings: '🏆 Classificação dos Grupos', viewAllGroups: 'Ver todos os 12 grupos →',
     upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'Nenhuma partida nas próximas 48 horas.',
+    tournamentName: 'Copa do Mundo FIFA 2026',
+    tournamentDates: '11 Jun – 19 Jul, 2026',
+    tournamentHosts: 'Estados Unidos, Canadá e México',
   },
   schedule: {
     title: 'Calendário', subtitle: 'Todos os 104 jogos · 11 Jun – 19 Jul, 2026',
@@ -167,6 +176,7 @@ export const pt: Translations = {
     title: 'Configurações', language: 'Idioma', timezone: 'Fuso horário',
     timezoneHint: 'Os horários das partidas são convertidos para o fuso selecionado.',
     close: 'Fechar',
+    theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
   teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.' },
   favorites: {
@@ -215,6 +225,9 @@ export const es: Translations = {
     firstMatches: '🗓 Primeros Partidos', recentResults: '📊 Resultados Recientes',
     groupStandings: '🏆 Clasificación de Grupos', viewAllGroups: 'Ver los 12 grupos →',
     upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'No hay partidos en las próximas 48 horas.',
+    tournamentName: 'Copa Mundial de la FIFA 2026',
+    tournamentDates: '11 Jun – 19 Jul, 2026',
+    tournamentHosts: 'Estados Unidos, Canadá y México',
   },
   schedule: {
     title: 'Calendario', subtitle: 'Los 104 partidos · 11 Jun – 19 Jul, 2026',
@@ -242,6 +255,7 @@ export const es: Translations = {
     title: 'Configuración', language: 'Idioma', timezone: 'Zona horaria',
     timezoneHint: 'Los horarios de los partidos se convierten a la zona horaria seleccionada.',
     close: 'Cerrar',
+    theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
   teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.' },
   favorites: {

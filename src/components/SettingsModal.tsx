@@ -6,6 +6,7 @@ import { X, Settings } from 'lucide-react'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Lang } from '@/lib/i18n'
+import type { Theme } from '@/contexts/SettingsContext'
 
 const LANG_OPTIONS: { code: Lang; flag: string; label: string }[] = [
   { code: 'en', flag: '🇬🇧', label: 'English' },
@@ -51,7 +52,12 @@ interface Props {
 
 export default function SettingsModal({ onClose }: Props) {
   const { t, lang, setLang } = useT()
-  const { timezone, setTimezone } = useSettings()
+  const { timezone, setTimezone, theme, setTheme } = useSettings()
+
+  const THEME_OPTIONS: { code: Theme; label: string }[] = [
+    { code: 'dark',  label: t.settings.themeDark },
+    { code: 'light', label: t.settings.themeLight },
+  ]
   const backdropRef = useRef<HTMLDivElement>(null)
   const [tzSearch, setTzSearch] = useState('')
 
@@ -109,6 +115,28 @@ export default function SettingsModal({ onClose }: Props) {
                 >
                   <span>{flag}</span>
                   <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Theme */}
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block">
+              {t.settings.theme}
+            </label>
+            <div className="flex gap-2">
+              {THEME_OPTIONS.map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => setTheme(code)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                    theme === code
+                      ? 'bg-blue-600 border-blue-500 text-white'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+                  }`}
+                >
+                  {label}
                 </button>
               ))}
             </div>

@@ -89,13 +89,18 @@ export default function Home() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-1 text-amber-400 text-sm font-medium mb-4">
-          <span>⚽</span> FIFA World Cup 2026
+        <div className="mx-auto mb-4 w-24 h-24 bg-white rounded-2xl shadow-md flex items-center justify-center p-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/e/ef/2026_FIFA_World_Cup_ensign_%28PD_version%29.png"
+            alt="FIFA World Cup 2026"
+            className="w-full h-full object-contain"
+          />
         </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-white mb-2">
-          <span className="text-amber-400">WC</span> 2026
+        <h1 className="text-3xl sm:text-4xl font-black text-white mb-1">
+          {t.home.tournamentName}
         </h1>
-        <p className="text-slate-400 text-sm">June 11 – July 19 · United States, Canada &amp; Mexico</p>
+        <p className="text-slate-400 text-sm">{t.home.tournamentDates} · {t.home.tournamentHosts}</p>
         {!tournamentStarted && (
           <div className="mt-6">
             <p className="text-slate-400 text-sm mb-2 uppercase tracking-widest font-medium">

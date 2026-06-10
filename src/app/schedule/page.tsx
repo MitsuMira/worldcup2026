@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, groupGamesByDate, formatMatchDate } from '@/lib/utils'
+import { getMatchStatus, groupGamesByDate, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import { Loader2 } from 'lucide-react'
@@ -21,12 +21,16 @@ export default function SchedulePage() {
 
   const allGames = data?.games ?? []
   const now = new Date()
-  const todayStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`
+  // today in user's timezone as YYYY-MM-DD (sv-SE locale)
+  const todayKey = now.toLocaleDateString('sv-SE', timezone ? { timeZone: timezone } : undefined)
 
   const filters = [
     { label: t.schedule.all, fn: () => true },
     { label: t.schedule.live, fn: (g: EnrichedGame) => getMatchStatus(g) === 'live' },
-    { label: t.schedule.today, fn: (g: EnrichedGame) => !!g.local_date?.startsWith(todayStr) },
+    { label: t.schedule.today, fn: (g: EnrichedGame) => {
+      const d = parseMatchDate(g.local_date)
+      return !!d && d.toLocaleDateString('sv-SE', timezone ? { timeZone: timezone } : undefined) === todayKey
+    }},
     { label: t.schedule.upcoming, fn: (g: EnrichedGame) => getMatchStatus(g) === 'scheduled' },
     { label: t.schedule.finished, fn: (g: EnrichedGame) => getMatchStatus(g) === 'finished' },
     { label: t.schedule.groupStage, fn: (g: EnrichedGame) => g.type === 'group' },
@@ -39,12 +43,9 @@ export default function SchedulePage() {
     return true
   })
 
-  const byDate = groupGamesByDate(filtered)
-  const sortedDates = [...byDate.keys()].sort((a, b) => {
-    const [am, ad, ay] = a.split('/').map(Number)
-    const [bm, bd, by] = b.split('/').map(Number)
-    return new Date(ay, am - 1, ad).getTime() - new Date(by, bm - 1, bd).getTime()
-  })
+  // groupGamesByDate returns YYYY-MM-DD keys — sort lexicographically (works correctly)
+  const byDate = groupGamesByDate(filtered, timezone)
+  const sortedDates = [...byDate.keys()].filter(k => k !== 'Unknown').sort()
 
   const showGroupFilter = filter === 0 || filter === 5
 
@@ -113,7 +114,7 @@ export default function SchedulePage() {
           <div key={dateKey} className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wide">
-                {formatMatchDate(dateKey + ' 00:00', timezone)}
+                {new Date(dateKey + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
               </h2>
               <div className="flex-1 h-px bg-slate-800" />
               <span className="text-xs text-slate-600">

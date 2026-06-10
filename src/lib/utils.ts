@@ -109,7 +109,7 @@ export function parseMatchDate(localDate: string, venueTimezone?: string): Date 
 export function formatMatchDateTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
-  return d.toLocaleString('en-US', {
+  return d.toLocaleString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
@@ -119,7 +119,7 @@ export function formatMatchDateTime(localDate: string, displayTz?: string, venue
 export function formatMatchDate(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
@@ -128,7 +128,7 @@ export function formatMatchDate(localDate: string, displayTz?: string, venueTime
 export function formatTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return ''
-  return d.toLocaleTimeString('en-US', {
+  return d.toLocaleTimeString(undefined, {
     hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
@@ -188,13 +188,17 @@ export function getPredictionResult(
   return 'wrong'
 }
 
-export function groupGamesByDate(games: EnrichedGame[]): Map<string, EnrichedGame[]> {
+export function groupGamesByDate(games: EnrichedGame[], timezone?: string): Map<string, EnrichedGame[]> {
   const map = new Map<string, EnrichedGame[]>()
   for (const g of games) {
-    const date = g.local_date?.split(' ')[0] ?? 'Unknown'
-    const list = map.get(date) ?? []
+    const d = parseMatchDate(g.local_date)
+    // Use 'sv-SE' locale which always returns YYYY-MM-DD — correct for lexicographic sort
+    const dateKey = d
+      ? d.toLocaleDateString('sv-SE', timezone ? { timeZone: timezone } : undefined)
+      : 'Unknown'
+    const list = map.get(dateKey) ?? []
     list.push(g)
-    map.set(date, list)
+    map.set(dateKey, list)
   }
   return map
 }

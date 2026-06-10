@@ -7,8 +7,16 @@
     background-color: #020617;
     color-scheme: dark;
   }
+  html.light {
+    background-color: #f1f5f9;
+    color-scheme: light;
+  }
   body {
     @apply bg-slate-950 text-white antialiased;
+  }
+  html.light body {
+    background-color: #f1f5f9;
+    color: #0f172a;
   }
   * {
     @apply box-border;
@@ -23,4 +31,44 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* ── Light mode overrides ─────────────────────────────────────────────────── */
+  /* These remap the dark Tailwind utilities used throughout the app so that
+     switching html.light gives a usable light theme without touching each component. */
+
+  /* Backgrounds */
+  html.light .bg-slate-950     { background-color: #f1f5f9; }
+  html.light .bg-slate-950\/95 { background-color: rgb(241 245 249 / 0.95); }
+  html.light .bg-slate-900     { background-color: #ffffff; }
+  html.light .bg-slate-900\/50 { background-color: rgb(255 255 255 / 0.5); }
+  html.light .bg-slate-900\/90 { background-color: rgb(255 255 255 / 0.9); }
+  html.light .bg-slate-800     { background-color: #f1f5f9; }
+  html.light .bg-slate-800\/50 { background-color: rgb(241 245 249 / 0.5); }
+  html.light .bg-slate-800\/30 { background-color: rgb(241 245 249 / 0.3); }
+  html.light .bg-slate-700     { background-color: #e2e8f0; }
+  html.light .bg-slate-700\/50 { background-color: rgb(226 232 240 / 0.5); }
+  html.light .bg-black\/60     { background-color: rgb(0 0 0 / 0.35); }
+
+  /* Text */
+  html.light .text-white    { color: #0f172a; }
+  html.light .text-slate-300 { color: #334155; }
+  html.light .text-slate-400 { color: #475569; }
+  html.light .text-slate-500 { color: #64748b; }
+  html.light .text-slate-600 { color: #94a3b8; }
+  html.light .text-slate-700 { color: #cbd5e1; }
+
+  /* Borders */
+  html.light .border-slate-950 { border-color: #e2e8f0; }
+  html.light .border-slate-800 { border-color: #e2e8f0; }
+  html.light .border-slate-700 { border-color: #cbd5e1; }
+  html.light .border-slate-700\/50 { border-color: rgb(203 213 225 / 0.5); }
+  html.light .border-slate-600 { border-color: #94a3b8; }
+
+  /* Hover backgrounds */
+  html.light .hover\:bg-slate-800:hover     { background-color: #e2e8f0; }
+  html.light .hover\:bg-slate-800\/50:hover { background-color: rgb(226 232 240 / 0.5); }
+  html.light .hover\:bg-slate-700:hover     { background-color: #cbd5e1; }
+
+  /* Inline dividers (bg-slate-800 used as <div class="h-px bg-slate-800"> etc.) */
+  html.light .h-px.bg-slate-800 { background-color: #e2e8f0; }
 }
