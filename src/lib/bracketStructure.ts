@@ -177,6 +177,11 @@ export const SLOT_MATCH_NUM: ReadonlyMap<string, number> = new Map(
   ENTRIES.map(([, bp]) => [`${bp.round}_${bp.half}_${bp.pos}`, bp.matchNum])
 )
 
+// Detect ESPN's verbose placeholder team names (not yet determined teams).
+export function isEspnPlaceholder(name: string): boolean {
+  return /^(group\s|round\s?of\s|tbd$|semifinal|quarterfinal|third\s?place)/i.test(name)
+}
+
 // Converts a raw slot code from MATCH_LABELS into a human-readable, translated label.
 // Codes:
 //   "1E"      → "Group E 1st" / "Grupo E 1º" / "Grupo E 1°"

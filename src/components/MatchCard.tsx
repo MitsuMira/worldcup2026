@@ -4,11 +4,30 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime } from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
+import { isEspnPlaceholder, BRACKET_POSITIONS, MATCH_LABELS, formatSlotLabel } from '@/lib/bracketStructure'
+import type { Translations } from '@/lib/i18n'
 import { useSettings } from '@/contexts/SettingsContext'
 import { MapPin } from 'lucide-react'
+
+function resolveTeamName(game: EnrichedGame, side: 'home' | 'away', t: Translations): string {
+  const rawName = getTeamName(game, side)
+  if (!isEspnPlaceholder(rawName)) return rawName
+  const tz = getVenueTimezone(game)
+  const d = parseMatchDate(game.local_date)
+  if (!d) return rawName
+  const dateStr = d.toLocaleDateString('sv-SE', { timeZone: tz })
+  const rawCity = game.stadium?.city_en ?? ''
+  const bp =
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity}`) ??
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity.split(',')[0].trim()}`)
+  if (!bp) return rawName
+  const labels = MATCH_LABELS[bp.matchNum]
+  const code = side === 'home' ? labels?.home : labels?.away
+  return code ? formatSlotLabel(code, t) : rawName
+}
 
 interface Props {
   game: EnrichedGame
@@ -22,8 +41,8 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const statusLabel = getStatusLabel(game, timezone)
   const homeScorers = getScorers(game.home_scorers)
   const awayScorers = getScorers(game.away_scorers)
-  const homeName = getTeamName(game, 'home')
-  const awayName = getTeamName(game, 'away')
+  const homeName = resolveTeamName(game, 'home', t)
+  const awayName = resolveTeamName(game, 'away', t)
   const stageLabel = localStageLabel(game.type, game.group, t)
 
   const [prediction, setPrediction] = useState<import('@/lib/types').Prediction | null>(null)

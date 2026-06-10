@@ -6,7 +6,7 @@ import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, getTeamName, formatTime, parseMatchDate, getVenueTimezone } from '@/lib/utils'
-import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel } from '@/lib/bracketStructure'
+import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel, isEspnPlaceholder } from '@/lib/bracketStructure'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
@@ -47,11 +47,6 @@ function halfTop(absIdx: number, idx: number): number {
 }
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
-// Detect ESPN's verbose placeholder team names so we can replace them with our
-// translated slot labels in the space-constrained bracket cards.
-function isEspnPlaceholder(name: string) {
-  return /^(group\s|round\s?of\s|tbd$|semifinal|quarterfinal|third\s?place)/i.test(name)
-}
 
 function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations }) {
   if (!game) {
