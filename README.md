@@ -1,5 +1,9 @@
 # WC 2026 Tracker
 
+[![Built with Claude](https://img.shields.io/badge/Built%20with-Claude%20AI-blueviolet?logo=anthropic)](https://claude.ai) [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)](https://vercel.com) [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+> Built with [Claude](https://claude.ai) via vibe coding
+
 Live scores, standings, schedule, knockout bracket, and predictions for the **FIFA World Cup 2026** (48 teams, June 11 – July 19, 2026).
 
 ## Features
@@ -70,6 +74,10 @@ src/
 The project is designed for one-click deployment on **Vercel**. No environment variables are required.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MitsuMira/worldcup2026)
+
+## Built with AI
+
+This project was built with [Claude](https://claude.ai) (vibe coding) — the entire codebase was developed through conversational prompts with no manual coding.
 
 ## License
 
