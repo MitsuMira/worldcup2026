@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useT } from '@/contexts/LanguageContext'
 
 export default function Footer() {
@@ -22,11 +23,22 @@ export default function Footer() {
           <span>{t.footer.tagline}</span>
         </div>
 
-        {/* Row 2 — app-specific: data source + privacy */}
+        {/* Row 2 — data source + privacy + github */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[44px]">
           <span>{t.footer.dataVia}</span>
           <span aria-hidden>·</span>
-          <span>{t.footer.analyticsNote}</span>
+          <Link href="/privacy" className="hover:text-slate-300 transition-colors">
+            {t.footer.privacy}
+          </Link>
+          <span aria-hidden>·</span>
+          <a
+            href="https://github.com/MitsuMira/worldcup2026"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-slate-300 transition-colors"
+          >
+            {t.footer.github}
+          </a>
         </div>
 
       </div>

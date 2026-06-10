@@ -62,7 +62,7 @@ export interface Translations {
     myPick: string; editPick: string
   }
   group: { top2: string }
-  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; analyticsNote: string }
+  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -150,7 +150,8 @@ export const en: Translations = {
     madeByUrl: 'https://mitsumira.com',
     tagline: '3D printing & robotics services',
     dataVia: 'Data via ESPN',
-    analyticsNote: 'Cookieless analytics by Vercel',
+    privacy: 'Privacy',
+    github: 'GitHub',
   },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
   errors: {
@@ -243,7 +244,8 @@ export const pt: Translations = {
     madeByUrl: 'https://mitsumira.com',
     tagline: 'Impressão 3D e robótica',
     dataVia: 'Dados via ESPN',
-    analyticsNote: 'Analytics sem cookies pela Vercel',
+    privacy: 'Privacidade',
+    github: 'GitHub',
   },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
   errors: {
@@ -336,7 +338,8 @@ export const es: Translations = {
     madeByUrl: 'https://mitsumira.com',
     tagline: 'Impresión 3D y robótica',
     dataVia: 'Datos via ESPN',
-    analyticsNote: 'Análisis sin cookies por Vercel',
+    privacy: 'Privacidad',
+    github: 'GitHub',
   },
   loading: { matches: 'Cargando partidos…', schedule: 'Cargando calendario…', standings: 'Cargando clasificación…', teams: 'Cargando selecciones…', generic: 'Cargando…' },
   errors: {
