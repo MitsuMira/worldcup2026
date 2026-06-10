@@ -5,7 +5,7 @@ import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getTeamName, formatTime } from '@/lib/utils'
+import { getMatchStatus, getTeamName, formatTime, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
@@ -17,8 +17,8 @@ type Round = 'bracket' | 'r32' | 'r16' | 'qf' | 'sf' | 'third' | 'final'
 
 // ─── Bracket layout constants ────────────────────────────────────────────────
 // CARD_H must match the actual rendered height of BracketCard.
-// p-2 (16px) + h-4 status (16px) + 3×space-y-1 (12px) + 2×slot-py-1 (2×32px) + divider (1px) = 109px → round to 112
-const CARD_H = 112
+// p-2 (16px) + h-5 date/status (20px) + 3×space-y-1 (12px) + 2×slot-py-1 (2×32px) + divider (1px) = 113px → round to 116
+const CARD_H = 116
 const CARD_GAP = 8
 const BASE = CARD_H + CARD_GAP // vertical step per game in the first round
 
@@ -84,6 +84,12 @@ function BracketSlot({ game, side }: { game?: EnrichedGame; side: 'home' | 'away
 // Fixed height (CARD_H) so the alignment formula stays accurate.
 function BracketCard({ game, timezone }: { game?: EnrichedGame; timezone: string }) {
   const status = game ? getMatchStatus(game) : null
+  const d = game ? parseMatchDate(game.local_date) : null
+  const dateStr = d?.toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric',
+    ...(timezone ? { timeZone: timezone } : {}),
+  })
+  const timeStr = game ? formatTime(game.local_date, timezone) : ''
 
   return (
     <div
@@ -92,8 +98,8 @@ function BracketCard({ game, timezone }: { game?: EnrichedGame; timezone: string
       }`}
       style={{ height: CARD_H }}
     >
-      {/* Status line — always rendered (h-4) so card height stays constant */}
-      <div className="h-4 flex items-center">
+      {/* Date/status line — always rendered (h-5) so card height stays constant */}
+      <div className="h-5 flex items-center">
         {status === 'live' && game && (
           <span className="flex items-center gap-1 text-[10px] text-green-400 font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
@@ -101,10 +107,12 @@ function BracketCard({ game, timezone }: { game?: EnrichedGame; timezone: string
           </span>
         )}
         {status === 'scheduled' && game && (
-          <span className="text-[10px] text-blue-400/70">{formatTime(game.local_date, timezone)}</span>
+          <span className="text-[10px] text-blue-400/70 font-medium">
+            {dateStr} · {timeStr}
+          </span>
         )}
         {status === 'finished' && (
-          <span className="text-[10px] text-slate-500 font-bold">FT</span>
+          <span className="text-[10px] text-slate-500 font-bold">FT · {dateStr}</span>
         )}
       </div>
 

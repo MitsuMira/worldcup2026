@@ -26,6 +26,7 @@ export interface Translations {
   }
   settings: {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
+    theme: string; themeLight: string; themeDark: string
   }
   teams: { title: string; subtitle: string; search: string; all: string; noTeams: string }
   favorites: {
@@ -96,6 +97,7 @@ export const en: Translations = {
     title: 'Settings', language: 'Language', timezone: 'Timezone',
     timezoneHint: 'Match times are converted to your selected timezone.',
     close: 'Close',
+    theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
   teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.' },
   favorites: {
@@ -174,6 +176,7 @@ export const pt: Translations = {
     title: 'Configurações', language: 'Idioma', timezone: 'Fuso horário',
     timezoneHint: 'Os horários das partidas são convertidos para o fuso selecionado.',
     close: 'Fechar',
+    theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
   teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.' },
   favorites: {
@@ -252,6 +255,7 @@ export const es: Translations = {
     title: 'Configuración', language: 'Idioma', timezone: 'Zona horaria',
     timezoneHint: 'Los horarios de los partidos se convierten a la zona horaria seleccionada.',
     close: 'Cerrar',
+    theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
   teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.' },
   favorites: {

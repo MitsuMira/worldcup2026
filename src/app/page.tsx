@@ -89,12 +89,14 @@ export default function Home() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero */}
       <div className="text-center mb-10">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/e/ef/2026_FIFA_World_Cup_ensign_%28PD_version%29.png"
-          alt="FIFA World Cup 2026"
-          className="mx-auto mb-4 w-24 h-24 object-contain"
-        />
+        <div className="mx-auto mb-4 w-24 h-24 bg-white rounded-2xl shadow-md flex items-center justify-center p-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/e/ef/2026_FIFA_World_Cup_ensign_%28PD_version%29.png"
+            alt="FIFA World Cup 2026"
+            className="w-full h-full object-contain"
+          />
+        </div>
         <h1 className="text-3xl sm:text-4xl font-black text-white mb-1">
           {t.home.tournamentName}
         </h1>

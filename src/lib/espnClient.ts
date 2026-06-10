@@ -189,6 +189,7 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     away_scorers: extractScorers(comp, away.id),
     group,
     matchday: '',
+    name: event.name,
     local_date: event.date,   // UTC ISO 8601 — display timezone handled by formatters
     persian_date: '',
     stadium_id: comp.venue?.id ?? '',
