@@ -91,7 +91,7 @@ export default function Home() {
       <div className="text-center mb-10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://upload.wikimedia.org/wikipedia/en/7/7b/2026_FIFA_World_Cup_emblem.svg"
+          src="https://upload.wikimedia.org/wikipedia/commons/e/ef/2026_FIFA_World_Cup_ensign_%28PD_version%29.png"
           alt="FIFA World Cup 2026"
           className="mx-auto mb-4 w-24 h-24 object-contain"
         />

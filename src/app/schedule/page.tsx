@@ -114,7 +114,7 @@ export default function SchedulePage() {
           <div key={dateKey} className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wide">
-                {new Date(dateKey + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {new Date(dateKey + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
               </h2>
               <div className="flex-1 h-px bg-slate-800" />
               <span className="text-xs text-slate-600">

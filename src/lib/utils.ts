@@ -109,7 +109,7 @@ export function parseMatchDate(localDate: string, venueTimezone?: string): Date 
 export function formatMatchDateTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
-  return d.toLocaleString('en-US', {
+  return d.toLocaleString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
@@ -119,7 +119,7 @@ export function formatMatchDateTime(localDate: string, displayTz?: string, venue
 export function formatMatchDate(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return localDate
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
@@ -128,7 +128,7 @@ export function formatMatchDate(localDate: string, displayTz?: string, venueTime
 export function formatTime(localDate: string, displayTz?: string, venueTimezone?: string): string {
   const d = parseMatchDate(localDate, venueTimezone)
   if (!d) return ''
-  return d.toLocaleTimeString('en-US', {
+  return d.toLocaleTimeString(undefined, {
     hour: '2-digit', minute: '2-digit', hour12: false,
     ...(displayTz ? { timeZone: displayTz } : {}),
   })
