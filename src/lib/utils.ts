@@ -43,7 +43,11 @@ const CITY_TIMEZONE: Record<string, string> = {
 
 export function getVenueTimezone(game: { stadium?: ApiStadium | null }): string {
   const city = game.stadium?.city_en
-  return (city && CITY_TIMEZONE[city]) ?? 'America/New_York'
+  if (!city) return 'America/New_York'
+  if (CITY_TIMEZONE[city]) return CITY_TIMEZONE[city]
+  // ESPN appends US state to city_en (e.g. "Inglewood, California") — try bare city name
+  const shortCity = city.split(',')[0].trim()
+  return CITY_TIMEZONE[shortCity] ?? 'America/New_York'
 }
 
 /**

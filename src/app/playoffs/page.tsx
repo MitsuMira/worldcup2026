@@ -25,13 +25,18 @@ const BASE = CARD_H + CARD_GAP
 const HALF_COUNT: Record<string, number> = { r32: 8, r16: 4, qf: 2, sf: 1 }
 
 // Resolve a game's bracket position by venue date + city.
+// ESPN appends US state to city_en ("Inglewood, California") so we try both
+// the raw value and the bare city name before the comma.
 function getBracketPos(game: EnrichedGame) {
   const tz = getVenueTimezone(game)
   const d = parseMatchDate(game.local_date)
   if (!d) return undefined
   const dateStr = d.toLocaleDateString('sv-SE', { timeZone: tz })
-  const city = game.stadium?.city_en ?? ''
-  return BRACKET_POSITIONS.get(`${dateStr}_${city}`)
+  const rawCity = game.stadium?.city_en ?? ''
+  return (
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity}`) ??
+    BRACKET_POSITIONS.get(`${dateStr}_${rawCity.split(',')[0].trim()}`)
+  )
 }
 
 // Vertical top position for game[idx] in a round.
