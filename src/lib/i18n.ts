@@ -62,7 +62,7 @@ export interface Translations {
     myPick: string; editPick: string
   }
   group: { top2: string }
-  footer: { dataVia: string; madeWith: string; madeByName: string; madeByUrl: string }
+  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; analyticsNote: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -145,7 +145,13 @@ export const en: Translations = {
     runnerUp: 'Runner-up',
   },
   group: { top2: 'Top 2 advance' },
-  footer: { dataVia: 'Data via', madeWith: 'Made with ❤️ by', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Made with ♥ by MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: '3D printing & robotics services',
+    dataVia: 'Data via ESPN',
+    analyticsNote: 'Cookieless analytics by Vercel',
+  },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
   errors: {
     games: 'Failed to load matches. Check your API credentials.',
@@ -232,7 +238,13 @@ export const pt: Translations = {
     runnerUp: 'Vice',
   },
   group: { top2: 'Top 2 avançam' },
-  footer: { dataVia: 'Dados via', madeWith: 'Feito com ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Feito com ♥ por MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: 'Impressão 3D e robótica',
+    dataVia: 'Dados via ESPN',
+    analyticsNote: 'Analytics sem cookies pela Vercel',
+  },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
   errors: {
     games: 'Falha ao carregar partidas. Verifique suas credenciais de API.',
@@ -319,7 +331,13 @@ export const es: Translations = {
     runnerUp: 'Finalista',
   },
   group: { top2: 'Top 2 avanzan' },
-  footer: { dataVia: 'Datos via', madeWith: 'Hecho con ❤️ por', madeByName: 'MitsuMira', madeByUrl: 'https://mitsumira.com' },
+  footer: {
+    madeWith: 'Hecho con ♥ por MitsuMira',
+    madeByUrl: 'https://mitsumira.com',
+    tagline: 'Impresión 3D y robótica',
+    dataVia: 'Datos via ESPN',
+    analyticsNote: 'Análisis sin cookies por Vercel',
+  },
   loading: { matches: 'Cargando partidos…', schedule: 'Cargando calendario…', standings: 'Cargando clasificación…', teams: 'Cargando selecciones…', generic: 'Cargando…' },
   errors: {
     games: 'Error al cargar partidos. Verifica tus credenciales de API.',
