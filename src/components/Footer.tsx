@@ -43,7 +43,7 @@ export default function Footer() {
 
         {/* Row 3 — cross-promotion */}
         <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 min-h-[44px]">
-          <span>Also by MitsuMira:</span>
+          <span>{t.footer.alsoBy}</span>
           <a
             href="https://partygames.mitsumira.com/"
             target="_blank"

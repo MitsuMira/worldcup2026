@@ -188,13 +188,21 @@ export default function SettingsModal({ onClose }: Props) {
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-800">
+        <div className="px-5 py-4 border-t border-slate-800 space-y-3">
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors"
           >
             {t.settings.close}
           </button>
+          <a
+            href="https://partygames.mitsumira.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+          >
+            🎉 <span>{t.footer.alsoBy} <strong className="text-slate-400">Party Games</strong></span>
+          </a>
         </div>
       </div>
       </div>

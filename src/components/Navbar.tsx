@@ -81,6 +81,14 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
+          <a
+            href="https://partygames.mitsumira.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 px-3 py-3 mt-2 border-t border-slate-800 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+          >
+            🎉 <span>{t.footer.alsoBy} <strong className="text-slate-400">Party Games</strong></span>
+          </a>
         </div>
       )}
     </nav>

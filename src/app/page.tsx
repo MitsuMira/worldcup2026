@@ -109,17 +109,6 @@ export default function Home() {
             <CountdownTimer kickoff={firstKickoff ?? undefined} />
           </div>
         )}
-        {/* Also by MitsuMira pill */}
-        <div className="mt-5">
-          <a
-            href="https://partygames.mitsumira.com/"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400 hover:border-amber-500/50 hover:text-amber-400 transition-colors"
-          >
-            🎉 <span>Also by MitsuMira: <strong className="text-slate-300">Party Games</strong></span>
-          </a>
-        </div>
       </div>
 
       {gamesError && (

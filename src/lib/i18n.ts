@@ -70,7 +70,7 @@ export interface Translations {
     statCorners: string; statFouls: string; statOffsides: string; statSaves: string
   }
   group: { top2: string }
-  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string }
+  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string; alsoBy: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -169,6 +169,7 @@ export const en: Translations = {
     dataVia: 'Data via ESPN',
     privacy: 'Privacy',
     github: 'GitHub',
+    alsoBy: 'Also by MitsuMira:',
   },
   loading: { matches: 'Loading matches…', schedule: 'Loading schedule…', standings: 'Loading standings…', teams: 'Loading teams…', generic: 'Loading…' },
   errors: {
@@ -272,6 +273,7 @@ export const pt: Translations = {
     dataVia: 'Dados via ESPN',
     privacy: 'Privacidade',
     github: 'GitHub',
+    alsoBy: 'Também da MitsuMira:',
   },
   loading: { matches: 'Carregando partidas…', schedule: 'Carregando calendário…', standings: 'Carregando classificação…', teams: 'Carregando seleções…', generic: 'Carregando…' },
   errors: {
@@ -375,6 +377,7 @@ export const es: Translations = {
     dataVia: 'Datos via ESPN',
     privacy: 'Privacidad',
     github: 'GitHub',
+    alsoBy: 'También de MitsuMira:',
   },
   loading: { matches: 'Cargando partidos…', schedule: 'Cargando calendario…', standings: 'Cargando clasificación…', teams: 'Cargando selecciones…', generic: 'Cargando…' },
   errors: {
