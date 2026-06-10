@@ -64,7 +64,7 @@ export const en: Translations = {
   countdown: { label: 'Kickoff countdown', days: 'Days', hours: 'Hours', min: 'Min', sec: 'Sec' },
   home: {
     liveNow: '🔴 Live Now', today: '📅 Today', upNext: '⏭ Up Next',
-    firstMatches: '🗓 First Matches', recentResults: '📊 Recent Results',
+    firstMatches: '🗓 Upcoming Matches', recentResults: '📊 Recent Results',
     groupStandings: '🏆 Group Standings', viewAllGroups: 'View all 12 groups →',
     upcoming48h: '🗓 Next 48 Hours', noUpcoming48h: 'No matches in the next 48 hours.',
     tournamentName: 'FIFA World Cup 2026',
@@ -143,7 +143,7 @@ export const pt: Translations = {
   countdown: { label: 'Contagem regressiva', days: 'Dias', hours: 'Horas', min: 'Min', sec: 'Seg' },
   home: {
     liveNow: '🔴 Ao Vivo', today: '📅 Hoje', upNext: '⏭ A Seguir',
-    firstMatches: '🗓 Primeiras Partidas', recentResults: '📊 Resultados Recentes',
+    firstMatches: '🗓 Próximas Partidas', recentResults: '📊 Resultados Recentes',
     groupStandings: '🏆 Classificação dos Grupos', viewAllGroups: 'Ver todos os 12 grupos →',
     upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'Nenhuma partida nas próximas 48 horas.',
     tournamentName: 'Copa do Mundo FIFA 2026',
@@ -222,7 +222,7 @@ export const es: Translations = {
   countdown: { label: 'Cuenta regresiva', days: 'Días', hours: 'Horas', min: 'Min', sec: 'Seg' },
   home: {
     liveNow: '🔴 En Vivo', today: '📅 Hoy', upNext: '⏭ Próximos',
-    firstMatches: '🗓 Primeros Partidos', recentResults: '📊 Resultados Recientes',
+    firstMatches: '🗓 Próximos Partidos', recentResults: '📊 Resultados Recientes',
     groupStandings: '🏆 Clasificación de Grupos', viewAllGroups: 'Ver los 12 grupos →',
     upcoming48h: '🗓 Próximas 48 Horas', noUpcoming48h: 'No hay partidos en las próximas 48 horas.',
     tournamentName: 'Copa Mundial de la FIFA 2026',
