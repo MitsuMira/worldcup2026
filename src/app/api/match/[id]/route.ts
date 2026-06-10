@@ -157,7 +157,7 @@ export async function GET(
   const { id } = await params
   try {
     const res = await fetch(`${SUMMARY}?event=${id}`, {
-      next: { revalidate: 60 },
+      next: { revalidate: 30 },
       headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
     })
     if (!res.ok) return NextResponse.json({ error: `ESPN ${res.status}` }, { status: res.status })

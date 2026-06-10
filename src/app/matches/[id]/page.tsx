@@ -74,7 +74,7 @@ function StatRow({ label, home, away }: { label: string; home?: string; away?: s
 
 // ── Lineup column ─────────────────────────────────────────────────────────────
 
-function LineupColumn({ lineup, color }: { lineup: NonNullable<MatchDetail['homeLineup']>; color: 'blue' | 'amber' }) {
+function LineupColumn({ lineup, color, subsLabel }: { lineup: NonNullable<MatchDetail['homeLineup']>; color: 'blue' | 'amber'; subsLabel: string }) {
   const accent = color === 'blue' ? 'text-blue-400' : 'text-amber-400'
   return (
     <div className="flex-1 min-w-0">
@@ -92,7 +92,7 @@ function LineupColumn({ lineup, color }: { lineup: NonNullable<MatchDetail['home
       </div>
       {lineup.subs.length > 0 && (
         <>
-          <div className="text-xs text-slate-600 uppercase tracking-widest mt-3 mb-1">Subs</div>
+          <div className="text-xs text-slate-600 uppercase tracking-widest mt-3 mb-1">{subsLabel}</div>
           <div className="space-y-1">
             {lineup.subs.map((p, i) => (
               <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
@@ -138,8 +138,8 @@ export default function MatchDetailPage() {
   if (!game) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <p className="text-slate-400 mb-4">Match not found.</p>
-        <Link href="/" className="text-blue-400 hover:underline">← Home</Link>
+        <p className="text-slate-400 mb-4">{t.matchDetail.notFound}</p>
+        <Link href="/" className="text-blue-400 hover:underline">{t.matchDetail.homeLink}</Link>
       </div>
     )
   }
@@ -154,16 +154,16 @@ export default function MatchDetailPage() {
   const allEvents = detail?.events ?? []
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'timeline', label: 'Timeline' },
-    { key: 'stats', label: 'Stats' },
-    { key: 'lineups', label: 'Lineups' },
+    { key: 'timeline', label: t.matchDetail.tabTimeline },
+    { key: 'stats', label: t.matchDetail.tabStats },
+    { key: 'lineups', label: t.matchDetail.tabLineups },
   ]
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       {/* Back */}
       <Link href="/" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white mb-6">
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={14} /> {t.matchDetail.back}
       </Link>
 
       {/* Match header */}
@@ -174,10 +174,10 @@ export default function MatchDetailPage() {
           {status === 'live' ? (
             <span className="flex items-center gap-1.5 text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              LIVE {game.time_elapsed}&apos;
+              {t.match.live} {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${game.time_elapsed}'`}
             </span>
           ) : status === 'finished' ? (
-            <span>FT</span>
+            <span>{t.matchDetail.ft}</span>
           ) : kickoff ? (
             <span className="text-blue-400">{formatMatchDateTime(game.local_date, timezone)}</span>
           ) : null}
@@ -267,13 +267,13 @@ export default function MatchDetailPage() {
 
       {detailLoading && (
         <div className="flex items-center justify-center gap-2 text-slate-400 py-12">
-          <Loader2 size={18} className="animate-spin" /> Loading match data…
+          <Loader2 size={18} className="animate-spin" /> {t.matchDetail.loadingDetail}
         </div>
       )}
 
       {!detailLoading && detailError && (
         <div className="text-slate-500 text-center py-10 text-sm">
-          Match details unavailable.
+          {t.matchDetail.detailUnavailable}
         </div>
       )}
 
@@ -283,7 +283,7 @@ export default function MatchDetailPage() {
           {tab === 'timeline' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               {allEvents.length === 0 ? (
-                <p className="text-slate-500 text-center py-10 text-sm">No events yet.</p>
+                <p className="text-slate-500 text-center py-10 text-sm">{t.matchDetail.noEvents}</p>
               ) : (
                 allEvents.map((ev, i) => {
                   const isHome = ev.teamId === detail.homeTeamId
@@ -312,21 +312,20 @@ export default function MatchDetailPage() {
           {tab === 'stats' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               {(!detail.homeStats && !detail.awayStats) ? (
-                <p className="text-slate-500 text-center py-6 text-sm">Stats not available yet.</p>
+                <p className="text-slate-500 text-center py-6 text-sm">{t.matchDetail.noStats}</p>
               ) : (
                 <>
-                  {/* Team name headers */}
                   <div className="flex justify-between text-xs font-bold mb-4">
                     <span className="text-blue-400">{homeName}</span>
                     <span className="text-amber-400">{awayName}</span>
                   </div>
-                  <StatRow label="Possession %" home={detail.homeStats?.possession} away={detail.awayStats?.possession} />
-                  <StatRow label="Total Shots" home={detail.homeStats?.shots} away={detail.awayStats?.shots} />
-                  <StatRow label="Shots on Target" home={detail.homeStats?.shotsOnTarget} away={detail.awayStats?.shotsOnTarget} />
-                  <StatRow label="Corners" home={detail.homeStats?.corners} away={detail.awayStats?.corners} />
-                  <StatRow label="Fouls" home={detail.homeStats?.fouls} away={detail.awayStats?.fouls} />
-                  <StatRow label="Offsides" home={detail.homeStats?.offsides} away={detail.awayStats?.offsides} />
-                  <StatRow label="Saves" home={detail.homeStats?.saves} away={detail.awayStats?.saves} />
+                  <StatRow label={t.matchDetail.statPossession} home={detail.homeStats?.possession} away={detail.awayStats?.possession} />
+                  <StatRow label={t.matchDetail.statShots} home={detail.homeStats?.shots} away={detail.awayStats?.shots} />
+                  <StatRow label={t.matchDetail.statShotsOnTarget} home={detail.homeStats?.shotsOnTarget} away={detail.awayStats?.shotsOnTarget} />
+                  <StatRow label={t.matchDetail.statCorners} home={detail.homeStats?.corners} away={detail.awayStats?.corners} />
+                  <StatRow label={t.matchDetail.statFouls} home={detail.homeStats?.fouls} away={detail.awayStats?.fouls} />
+                  <StatRow label={t.matchDetail.statOffsides} home={detail.homeStats?.offsides} away={detail.awayStats?.offsides} />
+                  <StatRow label={t.matchDetail.statSaves} home={detail.homeStats?.saves} away={detail.awayStats?.saves} />
                 </>
               )}
             </div>
@@ -336,7 +335,7 @@ export default function MatchDetailPage() {
           {tab === 'lineups' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               {(!detail.homeLineup && !detail.awayLineup) ? (
-                <p className="text-slate-500 text-center py-6 text-sm">Lineups not available yet.</p>
+                <p className="text-slate-500 text-center py-6 text-sm">{t.matchDetail.noLineups}</p>
               ) : (
                 <>
                   <div className="flex justify-between text-xs font-bold mb-4">
@@ -344,11 +343,11 @@ export default function MatchDetailPage() {
                     <span className="text-amber-400">{awayName}</span>
                   </div>
                   <div className="flex gap-6">
-                    {detail.homeLineup && <LineupColumn lineup={detail.homeLineup} color="blue" />}
+                    {detail.homeLineup && <LineupColumn lineup={detail.homeLineup} color="blue" subsLabel={t.matchDetail.subs} />}
                     {detail.awayLineup && (
                       <>
                         <div className="w-px bg-slate-800 shrink-0" />
-                        <LineupColumn lineup={detail.awayLineup} color="amber" />
+                        <LineupColumn lineup={detail.awayLineup} color="amber" subsLabel={t.matchDetail.subs} />
                       </>
                     )}
                   </div>

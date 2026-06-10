@@ -61,6 +61,14 @@ export interface Translations {
     stageQF: string; stageSF: string; stageThird: string; stageFinal: string
     myPick: string; editPick: string
   }
+  matchDetail: {
+    back: string; notFound: string; homeLink: string; ft: string; ht: string
+    tabTimeline: string; tabStats: string; tabLineups: string
+    loadingDetail: string; detailUnavailable: string
+    noEvents: string; noStats: string; noLineups: string; subs: string
+    statPossession: string; statShots: string; statShotsOnTarget: string
+    statCorners: string; statFouls: string; statOffsides: string; statSaves: string
+  }
   group: { top2: string }
   footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
@@ -135,6 +143,15 @@ export const en: Translations = {
     stageGroup: 'Group', stageR32: 'Round of 32', stageR16: 'Round of 16',
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
     myPick: 'My pick', editPick: 'Edit',
+  },
+  matchDetail: {
+    back: '← Back', notFound: 'Match not found.', homeLink: '← Home', ft: 'FT', ht: 'HT',
+    tabTimeline: 'Timeline', tabStats: 'Stats', tabLineups: 'Lineups',
+    loadingDetail: 'Loading match data…', detailUnavailable: 'Match details unavailable.',
+    noEvents: 'No events yet.', noStats: 'Stats not available yet.', noLineups: 'Lineups not available yet.',
+    subs: 'Subs',
+    statPossession: 'Possession %', statShots: 'Total Shots', statShotsOnTarget: 'Shots on Target',
+    statCorners: 'Corners', statFouls: 'Fouls', statOffsides: 'Offsides', statSaves: 'Saves',
   },
   bracket: {
     groupPrefix: 'Group',
@@ -230,6 +247,15 @@ export const pt: Translations = {
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
     myPick: 'Meu palpite', editPick: 'Editar',
   },
+  matchDetail: {
+    back: '← Voltar', notFound: 'Partida não encontrada.', homeLink: '← Início', ft: 'FT', ht: 'HT',
+    tabTimeline: 'Linha do Tempo', tabStats: 'Estatísticas', tabLineups: 'Escalações',
+    loadingDetail: 'Carregando dados da partida…', detailUnavailable: 'Detalhes da partida indisponíveis.',
+    noEvents: 'Nenhum evento ainda.', noStats: 'Estatísticas ainda não disponíveis.', noLineups: 'Escalações ainda não disponíveis.',
+    subs: 'Reservas',
+    statPossession: 'Posse de Bola %', statShots: 'Chutes Totais', statShotsOnTarget: 'Chutes no Alvo',
+    statCorners: 'Escanteios', statFouls: 'Faltas', statOffsides: 'Impedimentos', statSaves: 'Defesas',
+  },
   bracket: {
     groupPrefix: 'Grupo',
     groupRank1: '1º',
@@ -323,6 +349,15 @@ export const es: Translations = {
     stageGroup: 'Grupo', stageR32: 'Dieciseisavos', stageR16: 'Octavos de Final',
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
     myPick: 'Mi pronóstico', editPick: 'Editar',
+  },
+  matchDetail: {
+    back: '← Volver', notFound: 'Partido no encontrado.', homeLink: '← Inicio', ft: 'FT', ht: 'HT',
+    tabTimeline: 'Cronología', tabStats: 'Estadísticas', tabLineups: 'Alineaciones',
+    loadingDetail: 'Cargando datos del partido…', detailUnavailable: 'Detalles del partido no disponibles.',
+    noEvents: 'Sin eventos aún.', noStats: 'Estadísticas aún no disponibles.', noLineups: 'Alineaciones aún no disponibles.',
+    subs: 'Suplentes',
+    statPossession: 'Posesión %', statShots: 'Tiros Totales', statShotsOnTarget: 'Tiros a Puerta',
+    statCorners: 'Córneres', statFouls: 'Faltas', statOffsides: 'Fueras de Juego', statSaves: 'Paradas',
   },
   bracket: {
     groupPrefix: 'Grupo',
