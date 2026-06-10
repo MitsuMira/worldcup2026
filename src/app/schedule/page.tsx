@@ -47,7 +47,7 @@ export default function SchedulePage() {
   const byDate = groupGamesByDate(filtered, timezone)
   const sortedDates = [...byDate.keys()].filter(k => k !== 'Unknown').sort()
 
-  const showGroupFilter = filter === 0 || filter === 5
+  const showGroupFilter = filter !== filters.length - 1  // hide only for Knockout
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

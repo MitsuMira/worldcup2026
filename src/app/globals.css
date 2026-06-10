@@ -42,14 +42,15 @@
   html.light .bg-slate-900     { background-color: #ffffff; }
   html.light .bg-slate-900\/50 { background-color: rgb(255 255 255 / 0.5); }
   html.light .bg-slate-900\/90 { background-color: rgb(255 255 255 / 0.9); }
-  html.light .bg-slate-800     { background-color: #f1f5f9; }
-  html.light .bg-slate-800\/50 { background-color: rgb(241 245 249 / 0.5); }
-  html.light .bg-slate-800\/30 { background-color: rgb(241 245 249 / 0.3); }
-  html.light .bg-slate-700     { background-color: #e2e8f0; }
-  html.light .bg-slate-700\/50 { background-color: rgb(226 232 240 / 0.5); }
+  html.light .bg-slate-800     { background-color: #e8edf2; }
+  html.light .bg-slate-800\/50 { background-color: rgb(232 237 242 / 0.5); }
+  html.light .bg-slate-800\/30 { background-color: rgb(232 237 242 / 0.3); }
+  html.light .bg-slate-700     { background-color: #d1d9e0; }
+  html.light .bg-slate-700\/50 { background-color: rgb(209 217 224 / 0.5); }
+  html.light .bg-slate-600     { background-color: #cbd5e1; }  /* selected pill fallback */
   html.light .bg-black\/60     { background-color: rgb(0 0 0 / 0.35); }
 
-  /* Text */
+  /* Text — global remap of dark-on-dark text to dark-on-light */
   html.light .text-white    { color: #0f172a; }
   html.light .text-slate-300 { color: #334155; }
   html.light .text-slate-400 { color: #475569; }
@@ -57,18 +58,30 @@
   html.light .text-slate-600 { color: #94a3b8; }
   html.light .text-slate-700 { color: #cbd5e1; }
 
+  /* Restore white text for colored (non-slate) accent backgrounds so buttons/badges
+     that use bg-blue-600, bg-green-*, bg-red-*, bg-amber-* keep their white labels. */
+  html.light .bg-blue-600,
+  html.light .bg-blue-700,
+  html.light .bg-green-500,
+  html.light .bg-green-600,
+  html.light .bg-red-600,
+  html.light .bg-amber-500 { color: white; }
+
+  /* Active filter pills: keep white text on the blue selected state */
+  html.light button.bg-blue-600 { color: white; }
+
   /* Borders */
   html.light .border-slate-950 { border-color: #e2e8f0; }
-  html.light .border-slate-800 { border-color: #e2e8f0; }
+  html.light .border-slate-800 { border-color: #dde3ea; }
   html.light .border-slate-700 { border-color: #cbd5e1; }
   html.light .border-slate-700\/50 { border-color: rgb(203 213 225 / 0.5); }
   html.light .border-slate-600 { border-color: #94a3b8; }
 
   /* Hover backgrounds */
-  html.light .hover\:bg-slate-800:hover     { background-color: #e2e8f0; }
-  html.light .hover\:bg-slate-800\/50:hover { background-color: rgb(226 232 240 / 0.5); }
+  html.light .hover\:bg-slate-800:hover     { background-color: #d1d9e0; }
+  html.light .hover\:bg-slate-800\/50:hover { background-color: rgb(209 217 224 / 0.5); }
   html.light .hover\:bg-slate-700:hover     { background-color: #cbd5e1; }
 
   /* Inline dividers (bg-slate-800 used as <div class="h-px bg-slate-800"> etc.) */
-  html.light .h-px.bg-slate-800 { background-color: #e2e8f0; }
+  html.light .h-px.bg-slate-800 { background-color: #dde3ea; }
 }
