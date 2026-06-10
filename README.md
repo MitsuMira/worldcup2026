@@ -35,7 +35,7 @@ Match data is fetched from the **ESPN public soccer API**. No API key or account
 ## Quick start
 
 ```bash
-git clone https://github.com/redacted/worldcup2026.git
+git clone https://github.com/MitsuMira/worldcup2026.git
 cd worldcup2026
 npm install
 npm run dev
@@ -69,7 +69,7 @@ src/
 
 The project is designed for one-click deployment on **Vercel**. No environment variables are required.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/redacted/worldcup2026)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MitsuMira/worldcup2026)
 
 ## License
 
