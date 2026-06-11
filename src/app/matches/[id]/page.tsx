@@ -332,12 +332,12 @@ export default function MatchDetailPage() {
           <div className="flex justify-between mt-4 text-xs text-slate-400 gap-4">
             <div className="flex-1 space-y-0.5">
               {homeEvents.filter(e => e.type !== 'sub').map((e, i) => (
-                <div key={i}>{eventIcon(e.type)} {e.minuteDisplay} {['goal','owngoal','penalty'].includes(e.type) ? e.primaryPlayer : ''}</div>
+                <div key={i}>{eventIcon(e.type)} {e.minuteDisplay} {e.primaryPlayer}</div>
               ))}
             </div>
             <div className="flex-1 space-y-0.5 text-right">
               {awayEvents.filter(e => e.type !== 'sub').map((e, i) => (
-                <div key={i}>{['goal','owngoal','penalty'].includes(e.type) ? e.primaryPlayer : ''} {e.minuteDisplay} {eventIcon(e.type)}</div>
+                <div key={i}>{e.primaryPlayer} {e.minuteDisplay} {eventIcon(e.type)}</div>
               ))}
             </div>
           </div>
@@ -361,19 +361,6 @@ export default function MatchDetailPage() {
                 <Users size={11} /> {detail.attendance.toLocaleString()}
               </span>
             )}
-          </div>
-        )}
-
-        {/* Form */}
-        {(detail?.homeForm || detail?.awayForm) && (
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-            <div className="flex flex-col items-start gap-1">
-              {detail.homeForm && <FormBadges form={detail.homeForm} />}
-            </div>
-            <span className="text-slate-600">{t.matchDetail.formTitle}</span>
-            <div className="flex flex-col items-end gap-1">
-              {detail.awayForm && <FormBadges form={detail.awayForm} />}
-            </div>
           </div>
         )}
 
@@ -546,9 +533,25 @@ export default function MatchDetailPage() {
             </div>
           )}
 
-          {/* ── H2H ── */}
+          {/* ── Pre-Game (Form + H2H) ── */}
           {tab === 'h2h' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              {/* Form */}
+              {(detail.homeForm || detail.awayForm) && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-white mb-3">{t.matchDetail.formTitle}</h3>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-xs text-slate-500 mb-1">{homeName}</span>
+                      {detail.homeForm && <FormBadges form={detail.homeForm} />}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs text-slate-500 mb-1">{awayName}</span>
+                      {detail.awayForm && <FormBadges form={detail.awayForm} />}
+                    </div>
+                  </div>
+                </div>
+              )}
               <h3 className="text-sm font-bold text-white mb-4">{t.matchDetail.h2hTitle}</h3>
               {(!detail.h2h || detail.h2h.length === 0) ? (
                 <p className="text-slate-500 text-center py-6 text-sm">{t.matchDetail.noH2H}</p>
