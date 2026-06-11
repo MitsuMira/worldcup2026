@@ -7,14 +7,21 @@ import { useState } from 'react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
+type Mode = 'parsed' | 'raw'
+
 export default function DebugPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [mode, setMode] = useState<Mode>('parsed')
 
   const { data: gamesData, isLoading: gamesLoading, error: gamesError } =
     useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
 
   const { data: detail, isLoading: detailLoading } =
-    useSWR<MatchDetail>(selectedId ? `/api/match/${selectedId}` : null, fetcher)
+    useSWR<MatchDetail>(selectedId && mode === 'parsed' ? `/api/match/${selectedId}` : null, fetcher)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawDetail, isLoading: rawLoading } =
+    useSWR<unknown>(selectedId && mode === 'raw' ? `/api/debug/raw-summary/${selectedId}` : null, fetcher)
 
   const games = gamesData?.games ?? []
   const firstLiveOrUpcoming = games.find(g => g.time_elapsed !== 'notstarted' || g.finished === 'FALSE')
@@ -57,12 +64,18 @@ export default function DebugPage() {
                     <td className="py-1 pr-3">{g.home_score}–{g.away_score}</td>
                     <td className="py-1 pr-3">{g.finished}</td>
                     <td className={`py-1 pr-3 ${g.time_elapsed !== 'notstarted' && g.finished === 'FALSE' ? 'text-green-400 font-bold' : ''}`}>{g.time_elapsed}</td>
-                    <td className="py-1">
+                    <td className="py-1 flex gap-2">
                       <button
-                        onClick={() => setSelectedId(g.id === selectedId ? null : g.id)}
-                        className="text-blue-400 hover:underline"
+                        onClick={() => { setSelectedId(g.id); setMode('parsed') }}
+                        className={`hover:underline ${selectedId === g.id && mode === 'parsed' ? 'text-amber-400' : 'text-blue-400'}`}
                       >
-                        {g.id === selectedId ? 'hide' : 'load'}
+                        parsed
+                      </button>
+                      <button
+                        onClick={() => { setSelectedId(g.id); setMode('raw') }}
+                        className={`hover:underline ${selectedId === g.id && mode === 'raw' ? 'text-amber-400' : 'text-green-400'}`}
+                      >
+                        raw ESPN
                       </button>
                     </td>
                   </tr>
@@ -89,13 +102,29 @@ export default function DebugPage() {
       {/* Match detail */}
       {selectedId && (
         <section>
-          <h2 className="text-sm font-bold text-amber-400 mb-2">
-            /api/match/{selectedId} → {detailLoading ? 'loading…' : 'loaded'}
-          </h2>
-          {detail && (
-            <pre className="bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed">
-              {JSON.stringify(detail, null, 2)}
-            </pre>
+          {mode === 'parsed' && (
+            <>
+              <h2 className="text-sm font-bold text-amber-400 mb-2">
+                /api/match/{selectedId} (parsed) → {detailLoading ? 'loading…' : 'loaded'}
+              </h2>
+              {detail && (
+                <pre className="bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed">
+                  {JSON.stringify(detail, null, 2)}
+                </pre>
+              )}
+            </>
+          )}
+          {mode === 'raw' && (
+            <>
+              <h2 className="text-sm font-bold text-green-400 mb-2">
+                /api/debug/raw-summary/{selectedId} (raw ESPN) → {rawLoading ? 'loading…' : 'loaded'}
+              </h2>
+              {rawDetail && (
+                <pre className="bg-slate-900 border border-green-900/30 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed">
+                  {JSON.stringify(rawDetail, null, 2)}
+                </pre>
+              )}
+            </>
           )}
         </section>
       )}
