@@ -52,6 +52,7 @@
 
   /* Text — global remap of dark-on-dark text to dark-on-light */
   html.light .text-white    { color: #0f172a; }
+  html.light .text-slate-200 { color: #1e293b; }
   html.light .text-slate-300 { color: #334155; }
   html.light .text-slate-400 { color: #475569; }
   html.light .text-slate-500 { color: #64748b; }

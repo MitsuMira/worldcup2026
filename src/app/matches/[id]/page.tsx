@@ -75,17 +75,20 @@ function StatRow({ label, home, away }: { label: string; home?: string; away?: s
 // ── Player event badges ───────────────────────────────────────────────────────
 
 function playerEventBadges(name: string, events: MatchEvent[]): string {
-  const mine = events.filter(e => e.primaryPlayer === name || e.secondaryPlayer === name)
-  return mine.map(e => {
-    if (e.type === 'goal' || e.type === 'penalty') return '⚽'
-    if (e.type === 'owngoal') return '⚽(OG)'
-    if (e.type === 'yellow') return '🟨'
-    if (e.type === 'red') return '🟥'
-    if (e.type === 'yellowred') return '🟨🟥'
-    if (e.type === 'sub' && e.secondaryPlayer === name) return '↑'
-    if (e.type === 'sub' && e.primaryPlayer === name) return '↓'
-    return ''
-  }).filter(Boolean).join(' ')
+  const badges: string[] = []
+  for (const e of events) {
+    const isPrimary = e.primaryPlayer === name
+    const isSecondary = e.secondaryPlayer === name
+    if (!isPrimary && !isSecondary) continue
+    if (isPrimary && (e.type === 'goal' || e.type === 'penalty')) badges.push('⚽')
+    else if (isPrimary && e.type === 'owngoal') badges.push('⚽(OG)')
+    else if (isPrimary && e.type === 'yellow') badges.push('🟨')
+    else if (isPrimary && e.type === 'red') badges.push('🟥')
+    else if (isPrimary && e.type === 'yellowred') badges.push('🟨🟥')
+    else if (e.type === 'sub' && isSecondary) badges.push('↑')
+    else if (e.type === 'sub' && isPrimary) badges.push('↓')
+  }
+  return badges.join(' ')
 }
 
 // ── Lineup column ─────────────────────────────────────────────────────────────
@@ -103,10 +106,10 @@ function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullabl
           return (
             <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
               {p.headshot ? (
-                <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
-              ) : (
-                <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
-              )}
+                <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+              ) : null}
+              <span className={`text-xs text-slate-600 w-5 text-right shrink-0 ${p.headshot ? 'hidden' : ''}`}>{p.jersey}</span>
               <span className="truncate">{p.name}</span>
               {badges && <span className="text-xs shrink-0">{badges}</span>}
               <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
@@ -195,6 +198,11 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
 // ── Form badges ───────────────────────────────────────────────────────────────
 
 function FormBadges({ form }: { form: string }) {
+  const { t } = useT()
+  const label = (r: string) =>
+    r === 'W' ? t.standings.won[0] :
+    r === 'L' ? t.standings.lost[0] :
+    t.standings.drawn[0]
   return (
     <div className="flex gap-1">
       {[...form].map((r, i) => (
@@ -206,7 +214,7 @@ function FormBadges({ form }: { form: string }) {
             'bg-slate-600 text-slate-300'
           }`}
         >
-          {r}
+          {label(r)}
         </span>
       ))}
     </div>
