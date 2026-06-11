@@ -3,6 +3,13 @@ import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer,
 
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
+// ── Commentary-based event parsing (fallback when details[] is empty) ─────────
+const COMMENTARY_GOAL_RE = /^Goal!\s+(.+?)\s+(\d+),\s+(.+?)\s+(\d+)\.\s+(.+?)\s+\((\d+)'?\)/i
+const COMMENTARY_OWN_GOAL_RE = /own\s*goal/i
+const COMMENTARY_YELLOW_RE = /^Yellow card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i
+const COMMENTARY_RED_RE = /^Red card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i
+const COMMENTARY_SUB_RE = /^Substitution[^.]*\.\s*(.+?)\s+(?:replaces|is replaced by)\s+(.+?)\s+\((\d+)'?\)/i
+
 export const dynamic = 'force-dynamic'
 
 // ── ESPN raw shapes (summary endpoint) ───────────────────────────────────────
@@ -61,6 +68,10 @@ interface EspnSummary {
       status?: { type?: { state?: string; completed?: boolean } }
       details?: EspnDetailEntry[]
       attendance?: number
+      broadcasts?: Array<{
+        media?: { shortName?: string }
+        region?: string
+      }>
       geoBroadcasts?: Array<{
         market?: { type?: string }
         media?: { shortName?: string }
@@ -70,14 +81,23 @@ interface EspnSummary {
   boxscore?: { teams?: EspnBoxTeam[] }
   rosters?: EspnRoster[]
   officials?: EspnOfficial[]
+  commentary?: Array<{
+    sequence?: number
+    time?: { displayValue?: string }
+    text?: string
+  }>
   headToHeadGames?: Array<{
-    competitions?: Array<{
-      date?: string
-      competitors?: Array<{
-        homeAway?: string
-        team?: { displayName?: string; abbreviation?: string }
-        score?: { displayValue?: string }
-      }>
+    team?: { id: string; abbreviation?: string; displayName?: string }
+    events?: Array<{
+      id?: string
+      gameDate?: string
+      score?: string
+      homeTeamId?: string
+      awayTeamId?: string
+      homeTeamScore?: string
+      awayTeamScore?: string
+      gameResult?: string
+      opponent?: { id?: string; abbreviation?: string; displayName?: string }
     }>
   }>
 }
@@ -167,21 +187,66 @@ function parseLineup(roster: EspnRoster): TeamLineup {
 
 function parseH2H(raw: EspnSummary['headToHeadGames']): H2HGame[] {
   if (!raw) return []
-  return raw.slice(0, 5).flatMap(g => {
-    const comp = g.competitions?.[0]
-    if (!comp) return []
-    const home = comp.competitors?.find(c => c.homeAway === 'home')
-    const away = comp.competitors?.find(c => c.homeAway === 'away')
-    if (!home || !away) return []
-    const date = comp.date ? comp.date.slice(0, 10) : ''
-    return [{
-      date,
-      homeTeam: home.team?.abbreviation ?? home.team?.displayName ?? '',
-      awayTeam: away.team?.abbreviation ?? away.team?.displayName ?? '',
-      homeScore: home.score?.displayValue ?? '',
-      awayScore: away.score?.displayValue ?? '',
-    }]
-  })
+  const results: H2HGame[] = []
+  for (const entry of raw) {
+    if (!entry.events || !entry.team) continue
+    for (const ev of entry.events) {
+      if (results.length >= 5) break
+      const isHome = ev.homeTeamId === entry.team.id
+      const teamAbbrev = entry.team.abbreviation ?? entry.team.displayName ?? ''
+      const opponentAbbrev = ev.opponent?.abbreviation ?? ev.opponent?.displayName ?? ''
+      results.push({
+        date: ev.gameDate ? ev.gameDate.slice(0, 10) : '',
+        homeTeam: isHome ? teamAbbrev : opponentAbbrev,
+        awayTeam: isHome ? opponentAbbrev : teamAbbrev,
+        homeScore: ev.homeTeamScore ?? '',
+        awayScore: ev.awayTeamScore ?? '',
+      })
+    }
+    if (results.length >= 5) break
+  }
+  return results
+}
+
+function parseEventsFromCommentary(
+  commentary: NonNullable<EspnSummary['commentary']>,
+  homeId: string,
+  awayId: string,
+): MatchEvent[] {
+  const events: MatchEvent[] = []
+  for (const c of commentary) {
+    const text = c.text ?? ''
+    const timeStr = c.time?.displayValue ?? ''
+    const min = parseInt(timeStr) || 0
+    const display = timeStr.includes("'") ? timeStr : `${min}'`
+
+    const goalMatch = text.match(/^Goal!\s+(\S+)\s+(\d+),\s+(\S+)\s+(\d+)\.\s+(.+?)\s+\((\d+)'?\)/i)
+    if (goalMatch) {
+      const scoringTeamName = goalMatch[1]
+      const playerName = goalMatch[5]
+      const minute = parseInt(goalMatch[6]) || min
+      const isOwn = COMMENTARY_OWN_GOAL_RE.test(text)
+      // Match scoring team name against known abbreviations
+      const teamId = scoringTeamName.toUpperCase() === homeId.toUpperCase() ? homeId : awayId
+      events.push({ type: isOwn ? 'owngoal' : 'goal', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: playerName })
+      continue
+    }
+
+    const yellowMatch = text.match(/^Yellow card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i)
+    if (yellowMatch) {
+      const minute = parseInt(yellowMatch[2]) || min
+      events.push({ type: 'yellow', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: yellowMatch[1].trim() })
+      continue
+    }
+
+    const redMatch = text.match(/^Red card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i)
+    if (redMatch) {
+      const minute = parseInt(redMatch[2]) || min
+      events.push({ type: 'red', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: redMatch[1].trim() })
+      continue
+    }
+  }
+  return events.sort((a, b) => a.minute - b.minute)
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -206,7 +271,10 @@ export async function GET(
     const homeId = teamAbbr(homeComp?.team)
     const awayId = teamAbbr(awayComp?.team)
 
-    const events = parseEvents(comp?.details ?? [], homeId)
+    const details = comp?.details ?? []
+    const events = details.length > 0
+      ? parseEvents(details, homeId)
+      : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId)
     const boxTeams = data.boxscore?.teams ?? []
 
     // Adjust cache based on match state
@@ -216,7 +284,7 @@ export async function GET(
 
     const homeForm = competitors.find(c => c.homeAway === 'home')?.team.form
     const awayForm = competitors.find(c => c.homeAway === 'away')?.team.form
-    const broadcasts = (comp?.geoBroadcasts ?? [])
+    const broadcasts = (comp?.broadcasts ?? comp?.geoBroadcasts ?? [])
       .map(b => b.media?.shortName)
       .filter((n): n is string => !!n)
       .filter((n, i, arr) => arr.indexOf(n) === i)  // deduplicate
