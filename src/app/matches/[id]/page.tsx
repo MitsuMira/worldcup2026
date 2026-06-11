@@ -200,9 +200,9 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
 function FormBadges({ form }: { form: string }) {
   const { t } = useT()
   const label = (r: string) =>
-    r === 'W' ? t.standings.won[0] :
-    r === 'L' ? t.standings.lost[0] :
-    t.standings.drawn[0]
+    r === 'W' ? t.teamDetail.won[0] :
+    r === 'L' ? t.teamDetail.lost[0] :
+    t.teamDetail.drawn[0]
   return (
     <div className="flex gap-1">
       {[...form].map((r, i) => (
