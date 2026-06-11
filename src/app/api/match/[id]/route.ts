@@ -229,6 +229,26 @@ function parseH2H(raw: EspnSummary['headToHeadGames']): H2HGame[] {
   return results
 }
 
+const STAT_CODES: Record<string, string> = {
+  SOG: 'shots on goal',
+  xG: 'xG',
+  PASS: 'passes',
+  TKLW: 'tackles won',
+  DUELW: 'duels won',
+  SOGA: 'shots faced',
+  xGC: 'xG conceded',
+  INTER: 'interceptions',
+  CLEAR: 'clearances',
+  BLOCK: 'blocks',
+  FOULW: 'fouls won',
+  FAUL: 'fouls',
+}
+
+function expandLeaderSummary(summary?: string): string | undefined {
+  if (!summary) return undefined
+  return summary.replace(/\b([A-Z]{2,6})\b/g, (code) => STAT_CODES[code] ?? code)
+}
+
 function parseLeaders(raw: EspnSummary['leaders'], homeEspnId: string, awayEspnId: string, homeId: string, awayId: string): MatchLeaders {
   const result: MatchLeaders = {}
   if (!raw) return result
@@ -243,7 +263,7 @@ function parseLeaders(raw: EspnSummary['leaders'], homeEspnId: string, awayEspnI
         category: cat.displayName ?? cat.name ?? '',
         playerName: top.athlete.displayName,
         value: top.displayValue ?? '',
-        summary: top.summary,
+        summary: expandLeaderSummary(top.summary),
       })
     }
     result[teamKey] = leaders

@@ -268,9 +268,11 @@ export default function MatchDetailPage() {
   const allEvents = detail?.events ?? []
 
   const hasFeed = (detail?.commentary?.length ?? 0) > 0
+  const kickoffMs = kickoff?.getTime() ?? 0
+  const showFeedTab = hasFeed || (kickoffMs > 0 && Date.now() >= kickoffMs - 5 * 60 * 1000 && status !== 'finished')
   const TABS: { key: Tab; label: string; hide?: boolean }[] = [
     { key: 'timeline', label: t.matchDetail.tabTimeline },
-    { key: 'feed', label: t.matchDetail.tabFeed, hide: !hasFeed },
+    { key: 'feed', label: t.matchDetail.tabFeed, hide: !showFeedTab },
     { key: 'stats', label: t.matchDetail.tabStats },
     { key: 'lineups', label: t.matchDetail.tabLineups },
     { key: 'h2h', label: t.matchDetail.tabH2H },
@@ -291,7 +293,7 @@ export default function MatchDetailPage() {
           {status === 'live' ? (
             <span className="flex items-center gap-1.5 text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              {t.match.live} {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${game.time_elapsed}'`}
+              {game.time_elapsed === 'HT' ? t.matchDetail.ht : t.match.live}
             </span>
           ) : status === 'finished' ? (
             <span>{t.matchDetail.ft}</span>
