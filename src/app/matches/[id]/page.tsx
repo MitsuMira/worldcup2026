@@ -329,6 +329,33 @@ export default function MatchDetailPage() {
             )}
           </div>
         )}
+
+        {/* Form */}
+        {(detail?.homeForm || detail?.awayForm) && (
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <div className="flex flex-col items-start gap-1">
+              {detail.homeForm && <FormBadges form={detail.homeForm} />}
+            </div>
+            <span className="text-slate-600">{t.matchDetail.formTitle}</span>
+            <div className="flex flex-col items-end gap-1">
+              {detail.awayForm && <FormBadges form={detail.awayForm} />}
+            </div>
+          </div>
+        )}
+
+        {/* Broadcasts — only for Americas timezones */}
+        {detail?.broadcasts && detail.broadcasts.length > 0 && (() => {
+          const tz = timezone ?? ''
+          const isAmericas = tz.startsWith('America/')
+          if (!isAmericas) return null
+          return (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="text-slate-600">📺</span>
+              <span>{t.matchDetail.watching}:</span>
+              <span className="text-slate-400">{detail.broadcasts.join(' · ')}</span>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Detail tabs */}
@@ -425,6 +452,12 @@ export default function MatchDetailPage() {
                     <span className="text-blue-400">{homeName}</span>
                     <span className="text-amber-400">{awayName}</span>
                   </div>
+                  {(detail.homeLineup || detail.awayLineup) && (
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      {detail.homeLineup && <FormationField lineup={detail.homeLineup} />}
+                      {detail.awayLineup && <FormationField lineup={detail.awayLineup} mirror />}
+                    </div>
+                  )}
                   <div className="flex gap-6">
                     {detail.homeLineup && <LineupColumn lineup={detail.homeLineup} color="blue" subsLabel={t.matchDetail.subs} />}
                     {detail.awayLineup && (
@@ -435,6 +468,33 @@ export default function MatchDetailPage() {
                     )}
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {/* ── H2H ── */}
+          {tab === 'h2h' && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <h3 className="text-sm font-bold text-white mb-4">{t.matchDetail.h2hTitle}</h3>
+              {(!detail.h2h || detail.h2h.length === 0) ? (
+                <p className="text-slate-500 text-center py-6 text-sm">{t.matchDetail.noH2H}</p>
+              ) : (
+                <div className="space-y-2">
+                  {detail.h2h.map((g, i) => {
+                    const hScore = parseInt(g.homeScore)
+                    const aScore = parseInt(g.awayScore)
+                    const homeWon = !isNaN(hScore) && !isNaN(aScore) && hScore > aScore
+                    const awayWon = !isNaN(hScore) && !isNaN(aScore) && aScore > hScore
+                    return (
+                      <div key={i} className="flex items-center gap-3 text-sm py-2 border-b border-slate-800 last:border-b-0">
+                        <span className="text-xs text-slate-600 w-20 shrink-0">{g.date}</span>
+                        <span className={`flex-1 text-right truncate ${homeWon ? 'text-white font-semibold' : 'text-slate-400'}`}>{g.homeTeam}</span>
+                        <span className="text-white font-black tabular-nums shrink-0">{g.homeScore} – {g.awayScore}</span>
+                        <span className={`flex-1 truncate ${awayWon ? 'text-white font-semibold' : 'text-slate-400'}`}>{g.awayTeam}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
