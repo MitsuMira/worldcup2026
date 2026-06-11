@@ -3,6 +3,10 @@ export type Lang = 'en' | 'pt' | 'es'
 export interface Translations {
   nav: { home: string; schedule: string; standings: string; playoffs: string; teams: string; predictions: string }
   countdown: { label: string; days: string; hours: string; min: string; sec: string }
+  ceremony: {
+    title: string; subtitle: string; countdownLabel: string
+    mexico: string; canada: string; usa: string
+  }
   home: {
     liveNow: string; today: string; upNext: string; firstMatches: string
     recentResults: string; groupStandings: string; viewAllGroups: string
@@ -78,6 +82,14 @@ export interface Translations {
 export const en: Translations = {
   nav: { home: 'Home', schedule: 'Schedule', standings: 'Standings', playoffs: 'Playoffs', teams: 'Teams', predictions: 'Predictions' },
   countdown: { label: 'Kickoff countdown', days: 'Days', hours: 'Hours', min: 'Min', sec: 'Sec' },
+  ceremony: {
+    title: '🎭 Opening Ceremony',
+    subtitle: 'Across all three host nations',
+    countdownLabel: 'Ceremony starts in',
+    mexico: 'Mexico City · Estadio Azteca',
+    canada: 'Toronto · BMO Field',
+    usa: 'Los Angeles · SoFi Stadium',
+  },
   home: {
     liveNow: '🔴 Live Now', today: '📅 Today', upNext: '⏭ Up Next',
     firstMatches: '🗓 Upcoming Matches', recentResults: '📊 Recent Results',
@@ -182,6 +194,14 @@ export const en: Translations = {
 export const pt: Translations = {
   nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', predictions: 'Previsões' },
   countdown: { label: 'Contagem regressiva', days: 'Dias', hours: 'Horas', min: 'Min', sec: 'Seg' },
+  ceremony: {
+    title: '🎭 Cerimônia de Abertura',
+    subtitle: 'Nos três países anfitriões',
+    countdownLabel: 'Cerimônia começa em',
+    mexico: 'Cidade do México · Estadio Azteca',
+    canada: 'Toronto · BMO Field',
+    usa: 'Los Angeles · SoFi Stadium',
+  },
   home: {
     liveNow: '🔴 Ao Vivo', today: '📅 Hoje', upNext: '⏭ A Seguir',
     firstMatches: '🗓 Próximas Partidas', recentResults: '📊 Resultados Recentes',
@@ -286,6 +306,14 @@ export const pt: Translations = {
 export const es: Translations = {
   nav: { home: 'Inicio', schedule: 'Calendario', standings: 'Clasificación', playoffs: 'Playoffs', teams: 'Selecciones', predictions: 'Predicciones' },
   countdown: { label: 'Cuenta regresiva', days: 'Días', hours: 'Horas', min: 'Min', sec: 'Seg' },
+  ceremony: {
+    title: '🎭 Ceremonia de Inauguración',
+    subtitle: 'En los tres países anfitriones',
+    countdownLabel: 'La ceremonia comienza en',
+    mexico: 'Ciudad de México · Estadio Azteca',
+    canada: 'Toronto · BMO Field',
+    usa: 'Los Ángeles · SoFi Stadium',
+  },
   home: {
     liveNow: '🔴 En Vivo', today: '📅 Hoy', upNext: '⏭ Próximos',
     firstMatches: '🗓 Próximos Partidos', recentResults: '📊 Resultados Recientes',

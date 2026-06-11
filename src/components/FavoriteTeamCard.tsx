@@ -5,6 +5,7 @@ import TeamFlag from './TeamFlag'
 import type { ApiTeam, EnrichedGame, EnrichedGroup } from '@/lib/types'
 import { getMatchStatus, getTeamName, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
+import MiniCountdown from './MiniCountdown'
 
 interface Props {
   team: ApiTeam
@@ -79,11 +80,21 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
           <span className="text-slate-400 truncate">
             {getTeamName(nextGame, 'home')} {t.match.vs} {getTeamName(nextGame, 'away')}
           </span>
-          {getMatchStatus(nextGame) === 'live' && (
+          {getMatchStatus(nextGame) === 'live' ? (
             <span className="ml-auto text-green-400 font-bold shrink-0 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
               {t.match.live}
             </span>
+          ) : (
+            (() => {
+              const d = parseMatchDate(nextGame.local_date)
+              return d ? (
+                <MiniCountdown
+                  target={d}
+                  className="ml-auto text-slate-500 font-mono shrink-0 tabular-nums"
+                />
+              ) : null
+            })()
           )}
         </div>
       )}

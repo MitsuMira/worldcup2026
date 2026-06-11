@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import MatchCard from '@/components/MatchCard'
 import GroupTable from '@/components/GroupTable'
 import CountdownTimer from '@/components/CountdownTimer'
+import OpeningCeremony from '@/components/OpeningCeremony'
 import FavoriteTeamCard from '@/components/FavoriteTeamCard'
 import type { EnrichedGame, EnrichedGroup, ApiTeam } from '@/lib/types'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
@@ -110,6 +111,8 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      <OpeningCeremony />
 
       {gamesError && (
         <div className="bg-red-900/30 border border-red-800 rounded-xl p-4 mb-6 text-red-400 text-sm">
