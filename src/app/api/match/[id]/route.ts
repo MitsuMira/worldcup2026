@@ -28,7 +28,7 @@ interface EspnBoxTeam {
 }
 
 interface EspnRosterEntry {
-  athlete?: { id: string; displayName: string; jersey?: string; headshot?: { href: string } }
+  athlete?: { id: string; displayName: string; jersey?: string; headshot?: { href: string }; position?: { displayName: string; abbreviation: string } }
   starter?: boolean
   position?: { displayName: string; abbreviation: string }
   subbedIn?: boolean
@@ -136,7 +136,7 @@ function parseLineup(roster: EspnRoster): TeamLineup {
   const toPlayer = (r: EspnRosterEntry): RosterPlayer => ({
     name: r.athlete?.displayName ?? '',
     jersey: r.athlete?.jersey,
-    position: r.position?.abbreviation ?? r.position?.displayName,
+    position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
   })
   const all = roster.roster ?? []
   return {
