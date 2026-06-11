@@ -67,11 +67,12 @@ export interface Translations {
   }
   matchDetail: {
     back: string; notFound: string; homeLink: string; ft: string; ht: string
-    tabTimeline: string; tabStats: string; tabLineups: string
+    tabTimeline: string; tabStats: string; tabLineups: string; tabH2H: string
     loadingDetail: string; detailUnavailable: string
     noEvents: string; noStats: string; noLineups: string; subs: string
     statPossession: string; statShots: string; statShotsOnTarget: string
     statCorners: string; statFouls: string; statOffsides: string; statSaves: string
+    h2hTitle: string; noH2H: string; formTitle: string; watching: string
   }
   group: { top2: string }
   footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string; alsoBy: string }
@@ -158,12 +159,13 @@ export const en: Translations = {
   },
   matchDetail: {
     back: '← Back', notFound: 'Match not found.', homeLink: '← Home', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Timeline', tabStats: 'Stats', tabLineups: 'Lineups',
+    tabTimeline: 'Timeline', tabStats: 'Stats', tabLineups: 'Lineups', tabH2H: 'H2H',
     loadingDetail: 'Loading match data…', detailUnavailable: 'Match details unavailable.',
     noEvents: 'No events yet.', noStats: 'Stats not available yet.', noLineups: 'Lineups not available yet.',
     subs: 'Subs',
     statPossession: 'Possession %', statShots: 'Total Shots', statShotsOnTarget: 'Shots on Target',
     statCorners: 'Corners', statFouls: 'Fouls', statOffsides: 'Offsides', statSaves: 'Saves',
+    h2hTitle: 'Head to Head', noH2H: 'No previous meetings found', formTitle: 'Recent Form', watching: 'Watching',
   },
   bracket: {
     groupPrefix: 'Group',
@@ -270,12 +272,13 @@ export const pt: Translations = {
   },
   matchDetail: {
     back: '← Voltar', notFound: 'Partida não encontrada.', homeLink: '← Início', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Linha do Tempo', tabStats: 'Estatísticas', tabLineups: 'Escalações',
+    tabTimeline: 'Linha do Tempo', tabStats: 'Estatísticas', tabLineups: 'Escalações', tabH2H: 'H2H',
     loadingDetail: 'Carregando dados da partida…', detailUnavailable: 'Detalhes da partida indisponíveis.',
     noEvents: 'Nenhum evento ainda.', noStats: 'Estatísticas ainda não disponíveis.', noLineups: 'Escalações ainda não disponíveis.',
     subs: 'Reservas',
     statPossession: 'Posse de Bola %', statShots: 'Chutes Totais', statShotsOnTarget: 'Chutes no Alvo',
     statCorners: 'Escanteios', statFouls: 'Faltas', statOffsides: 'Impedimentos', statSaves: 'Defesas',
+    h2hTitle: 'Confronto Direto', noH2H: 'Nenhum confronto anterior encontrado', formTitle: 'Forma Recente', watching: 'Onde assistir',
   },
   bracket: {
     groupPrefix: 'Grupo',
@@ -382,12 +385,13 @@ export const es: Translations = {
   },
   matchDetail: {
     back: '← Volver', notFound: 'Partido no encontrado.', homeLink: '← Inicio', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Cronología', tabStats: 'Estadísticas', tabLineups: 'Alineaciones',
+    tabTimeline: 'Cronología', tabStats: 'Estadísticas', tabLineups: 'Alineaciones', tabH2H: 'H2H',
     loadingDetail: 'Cargando datos del partido…', detailUnavailable: 'Detalles del partido no disponibles.',
     noEvents: 'Sin eventos aún.', noStats: 'Estadísticas aún no disponibles.', noLineups: 'Alineaciones aún no disponibles.',
     subs: 'Suplentes',
     statPossession: 'Posesión %', statShots: 'Tiros Totales', statShotsOnTarget: 'Tiros a Puerta',
     statCorners: 'Córneres', statFouls: 'Faltas', statOffsides: 'Fueras de Juego', statSaves: 'Paradas',
+    h2hTitle: 'Historial', noH2H: 'Sin encuentros anteriores', formTitle: 'Forma Reciente', watching: 'Dónde ver',
   },
   bracket: {
     groupPrefix: 'Grupo',

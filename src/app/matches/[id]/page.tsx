@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-type Tab = 'timeline' | 'stats' | 'lineups'
+type Tab = 'timeline' | 'stats' | 'lineups' | 'h2h'
 
 // ── Event icons & labels ──────────────────────────────────────────────────────
 
@@ -84,7 +84,11 @@ function LineupColumn({ lineup, color, subsLabel }: { lineup: NonNullable<MatchD
       <div className="space-y-1">
         {lineup.starters.map((p, i) => (
           <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-            <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
+            {p.headshot ? (
+              <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+            ) : (
+              <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
+            )}
             <span className="truncate">{p.name}</span>
             <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
           </div>
@@ -103,6 +107,84 @@ function LineupColumn({ lineup, color, subsLabel }: { lineup: NonNullable<MatchD
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+// ── Formation field ───────────────────────────────────────────────────────────
+
+function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['homeLineup']>; mirror?: boolean }) {
+  const formation = lineup.formation ?? ''
+  const nums = formation.split('-').map(Number).filter(n => !isNaN(n) && n > 0)
+  if (nums.length === 0 || lineup.starters.length < 11) return null
+
+  const sorted = [...lineup.starters].sort((a, b) => (a.formationPlace ?? 99) - (b.formationPlace ?? 99))
+  // rows: [GK], then groups from formation (e.g. 4,3,3), then optionally reverse for mirror
+  const rows: typeof sorted[number][][] = [[sorted[0]]]
+  let idx = 1
+  for (const count of nums) {
+    rows.push(sorted.slice(idx, idx + count))
+    idx += count
+  }
+  const displayRows = mirror ? [...rows].reverse() : rows
+
+  return (
+    <div
+      className="relative w-full rounded-lg overflow-hidden"
+      style={{ background: 'linear-gradient(to bottom, #166534, #15803d, #166534)', minHeight: 280, paddingTop: 12, paddingBottom: 12 }}
+    >
+      {/* Field lines */}
+      <div className="absolute inset-0 flex flex-col items-center justify-between pointer-events-none opacity-20">
+        <div className="w-full border-b border-white/60 h-0" style={{ marginTop: '50%' }} />
+      </div>
+      <div className="absolute inset-x-0 top-1/2 -translate-y-px h-px bg-white/20" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-white/20" />
+
+      <div className="relative flex flex-col justify-between h-full gap-1 px-1" style={{ minHeight: 280 }}>
+        {displayRows.map((row, ri) => (
+          <div key={ri} className="flex justify-around items-center flex-1">
+            {row.map((p, pi) => (
+              <div key={pi} className="flex flex-col items-center gap-0.5 w-12">
+                {p.headshot ? (
+                  <img
+                    src={p.headshot}
+                    alt={p.name}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-white/40 bg-slate-700"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white text-xs font-bold">
+                    {p.jersey ?? '?'}
+                  </div>
+                )}
+                <span className="text-white text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full text-center" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                  {p.name.split(' ').slice(-1)[0]}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Form badges ───────────────────────────────────────────────────────────────
+
+function FormBadges({ form }: { form: string }) {
+  return (
+    <div className="flex gap-1">
+      {[...form].map((r, i) => (
+        <span
+          key={i}
+          className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+            r === 'W' ? 'bg-green-500 text-white' :
+            r === 'L' ? 'bg-red-500 text-white' :
+            'bg-slate-600 text-slate-300'
+          }`}
+        >
+          {r}
+        </span>
+      ))}
     </div>
   )
 }
@@ -157,6 +239,7 @@ export default function MatchDetailPage() {
     { key: 'timeline', label: t.matchDetail.tabTimeline },
     { key: 'stats', label: t.matchDetail.tabStats },
     { key: 'lineups', label: t.matchDetail.tabLineups },
+    { key: 'h2h', label: t.matchDetail.tabH2H },
   ]
 
   return (

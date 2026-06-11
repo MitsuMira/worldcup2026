@@ -100,6 +100,16 @@ export interface RosterPlayer {
   name: string
   jersey?: string
   position?: string
+  headshot?: string
+  formationPlace?: number
+}
+
+export interface H2HGame {
+  date: string          // "YYYY-MM-DD"
+  homeTeam: string
+  awayTeam: string
+  homeScore: string
+  awayScore: string
 }
 
 export interface TeamLineup {
@@ -121,6 +131,10 @@ export interface MatchDetail {
   awayLineup?: TeamLineup
   referee?: string
   attendance?: number
+  homeForm?: string   // "WWLDD"
+  awayForm?: string
+  h2h?: H2HGame[]
+  broadcasts?: string[]  // network names e.g. ["FOX", "Telemundo"]
 }
 
 // Prediction stored in localStorage

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer } from '@/lib/types'
+import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame } from '@/lib/types'
 
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
@@ -32,6 +32,7 @@ interface EspnRosterEntry {
   starter?: boolean
   position?: { displayName: string; abbreviation: string }
   subbedIn?: boolean
+  formationPlace?: number
 }
 
 interface EspnRoster {
@@ -49,7 +50,7 @@ interface EspnOfficial {
 interface EspnCompetitor {
   id: string
   homeAway: 'home' | 'away'
-  team: { id: string; abbreviation?: string; displayName?: string }
+  team: { id: string; abbreviation?: string; displayName?: string; form?: string }
   score?: string
 }
 
@@ -60,11 +61,25 @@ interface EspnSummary {
       status?: { type?: { state?: string; completed?: boolean } }
       details?: EspnDetailEntry[]
       attendance?: number
+      geoBroadcasts?: Array<{
+        market?: { type?: string }
+        media?: { shortName?: string }
+      }>
     }>
   }
   boxscore?: { teams?: EspnBoxTeam[] }
   rosters?: EspnRoster[]
   officials?: EspnOfficial[]
+  headToHeadGames?: Array<{
+    competitions?: Array<{
+      date?: string
+      competitors?: Array<{
+        homeAway?: string
+        team?: { displayName?: string; abbreviation?: string }
+        score?: { displayValue?: string }
+      }>
+    }>
+  }>
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -137,6 +152,8 @@ function parseLineup(roster: EspnRoster): TeamLineup {
     name: r.athlete?.displayName ?? '',
     jersey: r.athlete?.jersey,
     position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
+    headshot: r.athlete?.headshot?.href,
+    formationPlace: r.formationPlace,
   })
   const all = roster.roster ?? []
   return {
@@ -146,6 +163,25 @@ function parseLineup(roster: EspnRoster): TeamLineup {
     starters: all.filter(r => r.starter).map(toPlayer),
     subs: all.filter(r => !r.starter).map(toPlayer),
   }
+}
+
+function parseH2H(raw: EspnSummary['headToHeadGames']): H2HGame[] {
+  if (!raw) return []
+  return raw.slice(0, 5).flatMap(g => {
+    const comp = g.competitions?.[0]
+    if (!comp) return []
+    const home = comp.competitors?.find(c => c.homeAway === 'home')
+    const away = comp.competitors?.find(c => c.homeAway === 'away')
+    if (!home || !away) return []
+    const date = comp.date ? comp.date.slice(0, 10) : ''
+    return [{
+      date,
+      homeTeam: home.team?.abbreviation ?? home.team?.displayName ?? '',
+      awayTeam: away.team?.abbreviation ?? away.team?.displayName ?? '',
+      homeScore: home.score?.displayValue ?? '',
+      awayScore: away.score?.displayValue ?? '',
+    }]
+  })
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -178,6 +214,13 @@ export async function GET(
     const revalidate = state === 'in' ? 30 : state === 'post' ? 86400 : 3600
     // (Next.js per-fetch revalidate is set at fetch time; we return a header as hint)
 
+    const homeForm = competitors.find(c => c.homeAway === 'home')?.team.form
+    const awayForm = competitors.find(c => c.homeAway === 'away')?.team.form
+    const broadcasts = (comp?.geoBroadcasts ?? [])
+      .map(b => b.media?.shortName)
+      .filter((n): n is string => !!n)
+      .filter((n, i, arr) => arr.indexOf(n) === i)  // deduplicate
+
     const result: MatchDetail = {
       id,
       homeTeamId: homeId,
@@ -193,6 +236,10 @@ export async function GET(
         : undefined,
       referee: data.officials?.find(o => o.position?.name?.toLowerCase().includes('referee') && o.order === 1)?.fullName,
       attendance: comp?.attendance,
+      homeForm,
+      awayForm,
+      h2h: parseH2H(data.headToHeadGames),
+      broadcasts: broadcasts.length > 0 ? broadcasts : undefined,
     }
 
     return NextResponse.json(result, {
