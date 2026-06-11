@@ -120,9 +120,16 @@ export interface TeamLineup {
   subs: RosterPlayer[]
 }
 
+export interface CommentaryEntry {
+  sequence: number
+  minute?: string   // e.g. "23'"
+  text: string
+}
+
 export interface MatchDetail {
   id: string
   events: MatchEvent[]
+  commentary?: CommentaryEntry[]
   homeTeamId: string
   awayTeamId: string
   homeStats?: TeamMatchStats

@@ -6,7 +6,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, MapPin, User, Users } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGame, MatchDetail, MatchEvent } from '@/lib/types'
+import type { EnrichedGame, MatchDetail, MatchEvent, CommentaryEntry } from '@/lib/types'
 import { getMatchStatus, getStageLabel, formatMatchDateTime, parseMatchDate } from '@/lib/utils'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useT } from '@/contexts/LanguageContext'
@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-type Tab = 'timeline' | 'stats' | 'lineups' | 'h2h'
+type Tab = 'timeline' | 'feed' | 'stats' | 'lineups' | 'h2h'
 
 // ── Event icons & labels ──────────────────────────────────────────────────────
 
@@ -267,8 +267,10 @@ export default function MatchDetailPage() {
   const awayEvents = detail?.events.filter(e => e.teamId === detail.awayTeamId) ?? []
   const allEvents = detail?.events ?? []
 
-  const TABS: { key: Tab; label: string }[] = [
+  const hasFeed = (detail?.commentary?.length ?? 0) > 0
+  const TABS: { key: Tab; label: string; hide?: boolean }[] = [
     { key: 'timeline', label: t.matchDetail.tabTimeline },
+    { key: 'feed', label: t.matchDetail.tabFeed, hide: !hasFeed },
     { key: 'stats', label: t.matchDetail.tabStats },
     { key: 'lineups', label: t.matchDetail.tabLineups },
     { key: 'h2h', label: t.matchDetail.tabH2H },
@@ -392,7 +394,7 @@ export default function MatchDetailPage() {
 
       {/* Detail tabs */}
       <div className="flex gap-2 mb-4">
-        {TABS.map(({ key, label }) => (
+        {TABS.filter(tab => !tab.hide).map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -447,6 +449,18 @@ export default function MatchDetailPage() {
                   )
                 })
               )}
+            </div>
+          )}
+
+          {/* ── Live Feed ── */}
+          {tab === 'feed' && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/50">
+              {(detail.commentary ?? []).map((c: CommentaryEntry) => (
+                <div key={c.sequence} className="flex gap-3 px-4 py-3 text-sm">
+                  <span className="text-xs text-slate-500 w-8 shrink-0 pt-0.5 tabular-nums">{c.minute ?? ''}</span>
+                  <span className="text-slate-200 leading-snug">{c.text}</span>
+                </div>
+              ))}
             </div>
           )}
 

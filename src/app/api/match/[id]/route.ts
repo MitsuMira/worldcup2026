@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame } from '@/lib/types'
+import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame, CommentaryEntry } from '@/lib/types'
 
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
@@ -386,6 +386,16 @@ export async function GET(
       awayForm,
       h2h: parseH2H(data.headToHeadGames),
       broadcasts: broadcasts.length > 0 ? broadcasts : undefined,
+      commentary: data.commentary
+        ? data.commentary
+            .filter(c => c.text)
+            .map((c, i): CommentaryEntry => ({
+              sequence: c.sequence ?? i,
+              minute: c.time?.displayValue,
+              text: c.text!,
+            }))
+            .reverse()   // newest first
+        : undefined,
     }
 
     return NextResponse.json(result, {
