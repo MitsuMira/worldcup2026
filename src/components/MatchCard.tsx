@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate, canPredict } from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { isEspnPlaceholder, BRACKET_POSITIONS, MATCH_LABELS, formatSlotLabel } from '@/lib/bracketStructure'
@@ -157,31 +157,33 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
 
       <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
         {/* Predict link (scheduled only) */}
-        {showPredictLink && canPredict(game) && (
-          prediction ? (
-            <div className="flex items-center gap-2">
+        {showPredictLink && canPredict(game) && (() => {
+          const minsLeft = minutesUntilLock(game)
+          const lockLabel = minsLeft !== null && minsLeft > 0
+            ? `⏳ ${formatLockCountdown(minsLeft)}`
+            : null
+          return prediction ? (
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
               <span className="text-sm font-black text-amber-300 tabular-nums">
                 {prediction.homeScore} – {prediction.awayScore}
               </span>
-              <Link
-                href={`/predictions?match=${game.id}`}
-                className="text-xs text-slate-500 hover:text-amber-400"
-              >
+              <Link href={`/predictions?match=${game.id}`} className="text-xs text-slate-500 hover:text-amber-400">
                 {t.match.editPick}
               </Link>
+              {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
             </div>
           ) : (
-            <Link
-              href={`/predictions?match=${game.id}`}
-              className="text-xs text-amber-400 hover:text-amber-300 font-medium"
-            >
-              {t.match.predict}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href={`/predictions?match=${game.id}`} className="text-xs text-amber-400 hover:text-amber-300 font-medium">
+                {t.match.predict}
+              </Link>
+              {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
+            </div>
           )
-        )}
+        })()}
         {/* Spacer when no predict link */}
-        {(!showPredictLink || status !== 'scheduled') && <span />}
+        {(!showPredictLink || !canPredict(game)) && <span />}
         {/* Match detail link */}
         <Link
           href={`/matches/${game.id}`}

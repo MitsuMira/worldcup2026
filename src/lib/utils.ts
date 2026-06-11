@@ -160,12 +160,31 @@ export function canPredict(game: ApiGame): boolean {
 
 export function minutesUntilLock(game: ApiGame): number | null {
   const status = getMatchStatus(game)
-  if (status !== 'live') return null
-  const elapsed = game.time_elapsed
-  if (!elapsed || elapsed === 'HT' || elapsed === 'notstarted') return null
-  const min = parseInt(elapsed)
-  if (isNaN(min)) return null
-  return Math.max(0, 15 - min)
+  if (status === 'finished') return null
+  if (status === 'live') {
+    const elapsed = game.time_elapsed
+    if (!elapsed || elapsed === 'HT' || elapsed === 'notstarted') return null
+    const min = parseInt(elapsed)
+    if (isNaN(min) || min > 15) return null
+    return 15 - min
+  }
+  if (status === 'scheduled') {
+    const kickoff = parseMatchDate(game.local_date)
+    if (!kickoff) return null
+    const minsUntilKickoff = (kickoff.getTime() - Date.now()) / 60000
+    if (minsUntilKickoff < 0) return null
+    const total = Math.round(minsUntilKickoff + 15)
+    return total <= 120 ? total : null
+  }
+  return null
+}
+
+export function formatLockCountdown(minutes: number): string {
+  if (minutes <= 0) return '0m'
+  if (minutes < 60) return `${minutes}m`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 export function getStatusLabel(game: ApiGame, timezone?: string): string {

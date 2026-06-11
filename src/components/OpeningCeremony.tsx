@@ -6,7 +6,7 @@ import MiniCountdown from './MiniCountdown'
 
 // UTC times for each ceremony
 const CEREMONIES = [
-  { utc: '2026-06-11T16:30:00Z', flag: '🇲🇽', labelKey: 'mexico' as const },
+  { utc: '2026-06-11T17:30:00Z', flag: '🇲🇽', labelKey: 'mexico' as const },
   { utc: '2026-06-12T17:30:00Z', flag: '🇨🇦', labelKey: 'canada' as const },
   { utc: '2026-06-12T23:30:00Z', flag: '🇺🇸', labelKey: 'usa' as const },
 ]

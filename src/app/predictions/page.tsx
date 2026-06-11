@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { useState, useEffect, useCallback } from 'react'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame, Prediction, PredictionResult } from '@/lib/types'
-import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock } from '@/lib/utils'
+import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, CheckCircle2, XCircle, Minus, Trophy } from 'lucide-react'
@@ -128,15 +128,16 @@ export default function PredictionsPage() {
             const inp = inputs[game.id] ?? { home: '', away: '' }
             const isLive = getMatchStatus(game) === 'live'
             const minsLeft = minutesUntilLock(game)
+            const showLockWarning = minsLeft !== null
             return (
-              <div key={game.id} className={`bg-slate-900 border rounded-xl p-4 transition-colors ${isLive ? 'border-orange-500/50 shadow-lg shadow-orange-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
+              <div key={game.id} className={`bg-slate-900 border rounded-xl p-4 transition-colors ${showLockWarning ? 'border-orange-500/50 shadow-lg shadow-orange-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-slate-500 uppercase tracking-wide">{localStageLabel(game.type, game.group, t)}</span>
-                  {isLive ? (
+                  {showLockWarning ? (
                     <span className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                      {minsLeft !== null && minsLeft > 0
-                        ? `${t.predictions.locksIn} ${minsLeft}min`
+                      {minsLeft > 0
+                        ? `${t.predictions.locksIn} ${isLive ? `${minsLeft}m` : formatLockCountdown(minsLeft)}`
                         : t.predictions.locked}
                     </span>
                   ) : (
