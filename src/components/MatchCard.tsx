@@ -73,7 +73,9 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
             {game.time_elapsed === 'HT' ? 'HT' : `${t.match.live} ${game.time_elapsed}'`}
           </span>
         ) : status === 'finished' ? (
-          <span className="text-xs text-slate-500 font-semibold">FT</span>
+          <span className="text-xs text-slate-600 font-medium">
+            FT · {formatMatchDateTime(game.local_date, timezone).split(',').slice(0, 2).join(',')}
+          </span>
         ) : (
           <span className="text-xs text-blue-400 font-medium">
             {formatMatchDateTime(game.local_date, timezone)}
@@ -156,34 +158,47 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
       )}
 
       <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-        {/* Predict link (scheduled only) */}
-        {showPredictLink && canPredict(game) && (() => {
-          const minsLeft = minutesUntilLock(game)
-          const lockLabel = minsLeft !== null && minsLeft > 0
-            ? `⏳ ${formatLockCountdown(minsLeft)}`
-            : null
-          return prediction ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
-              <span className="text-sm font-black text-amber-300 tabular-nums">
-                {prediction.homeScore} – {prediction.awayScore}
-              </span>
-              <Link href={`/predictions?match=${game.id}`} className="text-xs text-slate-500 hover:text-amber-400">
-                {t.match.editPick}
-              </Link>
-              {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link href={`/predictions?match=${game.id}`} className="text-xs text-amber-400 hover:text-amber-300 font-medium">
-                {t.match.predict}
-              </Link>
-              {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
-            </div>
-          )
+        {/* Prediction: editable before game, read-only after */}
+        {showPredictLink && (() => {
+          if (canPredict(game)) {
+            const minsLeft = minutesUntilLock(game)
+            const lockLabel = minsLeft !== null && minsLeft > 0
+              ? `⏳ ${formatLockCountdown(minsLeft)}`
+              : null
+            return prediction ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
+                <span className="text-sm font-black text-amber-300 tabular-nums">
+                  {prediction.homeScore} – {prediction.awayScore}
+                </span>
+                <Link href={`/predictions?match=${game.id}`} className="text-xs text-slate-500 hover:text-amber-400">
+                  {t.match.editPick}
+                </Link>
+                {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href={`/predictions?match=${game.id}`} className="text-xs text-amber-400 hover:text-amber-300 font-medium">
+                  {t.match.predict}
+                </Link>
+                {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
+              </div>
+            )
+          }
+          // Game started/finished — show prediction read-only if exists
+          if (prediction) {
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
+                <span className="text-sm font-black text-amber-300/70 tabular-nums">
+                  {prediction.homeScore} – {prediction.awayScore}
+                </span>
+              </div>
+            )
+          }
+          return <span />
         })()}
-        {/* Spacer when no predict link */}
-        {(!showPredictLink || !canPredict(game)) && <span />}
+        {!showPredictLink && <span />}
         {/* Match detail link */}
         <Link
           href={`/matches/${game.id}`}

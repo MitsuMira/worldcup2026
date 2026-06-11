@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, MapPin, User, Users } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGame, MatchDetail, MatchEvent, CommentaryEntry } from '@/lib/types'
+import type { EnrichedGame, MatchDetail, MatchEvent, CommentaryEntry, Prediction } from '@/lib/types'
 import { getMatchStatus, getStageLabel, formatMatchDateTime, parseMatchDate } from '@/lib/utils'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useT } from '@/contexts/LanguageContext'
@@ -228,6 +228,16 @@ export default function MatchDetailPage() {
   const { timezone } = useSettings()
   const { t } = useT()
   const [tab, setTab] = useState<Tab>('timeline')
+  const [prediction, setPrediction] = useState<Prediction | null>(null)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('wc2026_predictions')
+      if (raw) {
+        const preds: Record<string, Prediction> = JSON.parse(raw)
+        setPrediction(preds[id] ?? null)
+      }
+    } catch { /* ignore */ }
+  }, [id])
 
   const { data: gamesData, isLoading: gamesLoading } = useSWR<{ games: EnrichedGame[] }>(
     '/api/games', fetcher, { refreshInterval: 30_000 },
@@ -305,8 +315,17 @@ export default function MatchDetailPage() {
         {/* Teams and score */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-            <TeamFlag team={game.homeTeam} name={homeName} size="xl" />
-            <span className="text-sm font-bold text-white text-center leading-tight">{homeName}</span>
+            {game.homeTeam?.id ? (
+              <Link href={`/teams/${game.homeTeam.id}`} className="flex flex-col items-center gap-2 group">
+                <TeamFlag team={game.homeTeam} name={homeName} size="xl" />
+                <span className="text-sm font-bold text-white text-center leading-tight group-hover:underline">{homeName}</span>
+              </Link>
+            ) : (
+              <>
+                <TeamFlag team={game.homeTeam} name={homeName} size="xl" />
+                <span className="text-sm font-bold text-white text-center leading-tight">{homeName}</span>
+              </>
+            )}
             <span className="text-xs text-slate-500">{game.homeTeam?.fifa_code}</span>
           </div>
 
@@ -320,11 +339,27 @@ export default function MatchDetailPage() {
                 <span className="text-5xl font-black tabular-nums text-white">{game.away_score}</span>
               </div>
             )}
+            {/* Prediction */}
+            {prediction && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                <span>🎯</span>
+                <span className="text-amber-300/70 font-bold tabular-nums">{prediction.homeScore} – {prediction.awayScore}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-            <TeamFlag team={game.awayTeam} name={awayName} size="xl" />
-            <span className="text-sm font-bold text-white text-center leading-tight">{awayName}</span>
+            {game.awayTeam?.id ? (
+              <Link href={`/teams/${game.awayTeam.id}`} className="flex flex-col items-center gap-2 group">
+                <TeamFlag team={game.awayTeam} name={awayName} size="xl" />
+                <span className="text-sm font-bold text-white text-center leading-tight group-hover:underline">{awayName}</span>
+              </Link>
+            ) : (
+              <>
+                <TeamFlag team={game.awayTeam} name={awayName} size="xl" />
+                <span className="text-sm font-bold text-white text-center leading-tight">{awayName}</span>
+              </>
+            )}
             <span className="text-xs text-slate-500">{game.awayTeam?.fifa_code}</span>
           </div>
         </div>
