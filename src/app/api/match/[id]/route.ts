@@ -56,6 +56,16 @@ interface EspnCompetitor {
   score?: string
 }
 
+interface EspnKeyEvent {
+  type?: { id: string; text: string; type: string }
+  clock?: EspnClock
+  team?: { id: string; displayName?: string; abbreviation?: string }
+  participants?: Array<{ athlete?: { id: string; displayName: string } }>
+  scoringPlay?: boolean
+  penaltyKick?: boolean
+  ownGoal?: boolean
+}
+
 interface EspnSummary {
   header?: {
     competitions?: Array<{
@@ -73,6 +83,7 @@ interface EspnSummary {
       }>
     }>
   }
+  keyEvents?: EspnKeyEvent[]
   boxscore?: { teams?: EspnBoxTeam[] }
   rosters?: EspnRoster[]
   officials?: EspnOfficial[]
@@ -274,6 +285,41 @@ function parseEventsFromCommentary(
   return events.sort((a, b) => a.minute - b.minute)
 }
 
+function parseKeyEvents(
+  keyEvents: EspnKeyEvent[],
+  homeEspnId: string,
+  awayEspnId: string,
+  homeId: string,
+  awayId: string,
+): MatchEvent[] {
+  const events: MatchEvent[] = []
+  for (const ev of keyEvents) {
+    const { display, value } = formatMinute(ev.clock)
+    const espnTeamId = ev.team?.id ?? ''
+    const teamId = espnTeamId === homeEspnId ? homeId : espnTeamId === awayEspnId ? awayId : homeId
+    const participants = ev.participants ?? []
+    const primary = participants[0]?.athlete?.displayName ?? ''
+    const secondary = participants[1]?.athlete?.displayName
+
+    const typeStr = ev.type?.type?.toLowerCase() ?? ''
+    if (typeStr === 'goal' || ev.scoringPlay) {
+      const type: MatchEvent['type'] = ev.ownGoal ? 'owngoal' : ev.penaltyKick ? 'penalty' : 'goal'
+      events.push({ type, minuteDisplay: display, minute: value, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
+    } else if (typeStr === 'yellow-red-card' || typeStr === 'second-yellow-card') {
+      events.push({ type: 'yellowred', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
+    } else if (typeStr === 'yellow-card') {
+      events.push({ type: 'yellow', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
+    } else if (typeStr === 'red-card') {
+      events.push({ type: 'red', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
+    } else if (typeStr === 'substitution') {
+      events.push({ type: 'sub', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
+    } else if (typeStr === 'missed-penalty' || typeStr === 'penalty-miss') {
+      events.push({ type: 'missed_penalty', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
+    }
+  }
+  return events.sort((a, b) => a.minute - b.minute)
+}
+
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function GET(
@@ -297,11 +343,16 @@ export async function GET(
     const awayId = teamAbbr(awayComp?.team)
 
     const details = comp?.details ?? []
+    const keyEvents = data.keyEvents ?? []
     const homeName = homeComp?.team.displayName ?? homeId
     const awayName = awayComp?.team.displayName ?? awayId
-    const events = details.length > 0
-      ? parseEvents(details, homeId)
-      : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
+    const homeEspnId = homeComp?.id ?? ''
+    const awayEspnId = awayComp?.id ?? ''
+    const events = keyEvents.length > 0
+      ? parseKeyEvents(keyEvents, homeEspnId, awayEspnId, homeId, awayId)
+      : details.length > 0
+        ? parseEvents(details, homeId)
+        : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
     const boxTeams = data.boxscore?.teams ?? []
 
     // Adjust cache based on match state
