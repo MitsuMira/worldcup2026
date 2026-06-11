@@ -458,7 +458,8 @@ export default function MatchDetailPage() {
               {(detail.commentary ?? []).map((c: CommentaryEntry) => (
                 <div key={c.sequence} className="flex gap-3 px-4 py-3 text-sm">
                   <span className="text-xs text-slate-500 w-8 shrink-0 pt-0.5 tabular-nums">{c.minute ?? ''}</span>
-                  <span className="text-slate-200 leading-snug">{c.text}</span>
+                  {c.icon && <span className="shrink-0 text-sm">{c.icon}</span>}
+                  <span className="text-slate-200 leading-snug flex-1">{c.text}</span>
                 </div>
               ))}
             </div>
@@ -482,6 +483,33 @@ export default function MatchDetailPage() {
                   <StatRow label={t.matchDetail.statFouls} home={detail.homeStats?.fouls} away={detail.awayStats?.fouls} />
                   <StatRow label={t.matchDetail.statOffsides} home={detail.homeStats?.offsides} away={detail.awayStats?.offsides} />
                   <StatRow label={t.matchDetail.statSaves} home={detail.homeStats?.saves} away={detail.awayStats?.saves} />
+                  {(detail.leaders?.home || detail.leaders?.away) && (
+                    <>
+                      <div className="mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Match Leaders</div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        {/* home leaders */}
+                        <div className="space-y-2">
+                          {(detail.leaders?.home ?? []).map((l, i) => (
+                            <div key={i} className="text-xs">
+                              <div className="text-slate-500 mb-0.5">{l.category}</div>
+                              <div className="text-white font-semibold truncate">{l.playerName}</div>
+                              {l.summary && <div className="text-slate-400">{l.summary}</div>}
+                            </div>
+                          ))}
+                        </div>
+                        {/* away leaders */}
+                        <div className="space-y-2">
+                          {(detail.leaders?.away ?? []).map((l, i) => (
+                            <div key={i} className="text-xs">
+                              <div className="text-slate-500 mb-0.5">{l.category}</div>
+                              <div className="text-white font-semibold truncate">{l.playerName}</div>
+                              {l.summary && <div className="text-slate-400">{l.summary}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>

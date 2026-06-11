@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame, CommentaryEntry } from '@/lib/types'
+import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame, CommentaryEntry, MatchLeader, MatchLeaders } from '@/lib/types'
 
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
@@ -91,6 +91,7 @@ interface EspnSummary {
     sequence?: number
     time?: { displayValue?: string }
     text?: string
+    play?: { id?: string; type?: { type?: string } }
   }>
   headToHeadGames?: Array<{
     team?: { id: string; abbreviation?: string; displayName?: string }
@@ -104,6 +105,20 @@ interface EspnSummary {
       awayTeamScore?: string
       gameResult?: string
       opponent?: { id?: string; abbreviation?: string; displayName?: string }
+    }>
+  }>
+  leaders?: Array<{
+    team?: { id: string; abbreviation?: string; displayName?: string }
+    leaders?: Array<{
+      name?: string
+      displayName?: string
+      leaders?: Array<{
+        displayValue?: string
+        athlete?: { id: string; displayName: string; shortName?: string }
+        statistics?: Array<{ name: string; displayValue: string; abbreviation: string }>
+        mainStat?: { value: string; label: string }
+        summary?: string
+      }>
     }>
   }>
 }
@@ -212,6 +227,28 @@ function parseH2H(raw: EspnSummary['headToHeadGames']): H2HGame[] {
     if (results.length >= 5) break
   }
   return results
+}
+
+function parseLeaders(raw: EspnSummary['leaders'], homeEspnId: string, awayEspnId: string, homeId: string, awayId: string): MatchLeaders {
+  const result: MatchLeaders = {}
+  if (!raw) return result
+  for (const entry of raw) {
+    const espnTeamId = entry.team?.id ?? ''
+    const teamKey = espnTeamId === homeEspnId ? 'home' : 'away'
+    const leaders: MatchLeader[] = []
+    for (const cat of entry.leaders ?? []) {
+      const top = cat.leaders?.[0]
+      if (!top?.athlete) continue
+      leaders.push({
+        category: cat.displayName ?? cat.name ?? '',
+        playerName: top.athlete.displayName,
+        value: top.displayValue ?? '',
+        summary: top.summary,
+      })
+    }
+    result[teamKey] = leaders
+  }
+  return result
 }
 
 function parseEventsFromCommentary(
@@ -386,15 +423,48 @@ export async function GET(
       awayForm,
       h2h: parseH2H(data.headToHeadGames),
       broadcasts: broadcasts.length > 0 ? broadcasts : undefined,
+      leaders: parseLeaders(data.leaders, homeEspnId, awayEspnId, homeId, awayId),
       commentary: data.commentary
-        ? data.commentary
-            .filter(c => c.text)
-            .map((c, i): CommentaryEntry => ({
-              sequence: c.sequence ?? i,
-              minute: c.time?.displayValue,
-              text: c.text!,
-            }))
-            .reverse()   // newest first
+        ? (() => {
+            const seenIds = new Set<string>()
+            const iconForType = (type?: string): string => {
+              switch (type) {
+                case 'goal': return '⚽'
+                case 'yellow-card': return '🟨'
+                case 'red-card': return '🟥'
+                case 'shot-on-target': return '🎯'
+                case 'shot-off-target': return '↗️'
+                case 'shot-blocked': return '🛡️'
+                case 'shot-hit-woodwork': return '🪵'
+                case 'corner-awarded': return '🚩'
+                case 'foul': return '⚠️'
+                case 'offside': return '🚫'
+                case 'handball': return '✋'
+                case 'start-delay': return '⏸️'
+                case 'end-delay': return '▶️'
+                case 'halftime': return '⏱️'
+                case 'kickoff': return '⏱️'
+                default: return ''
+              }
+            }
+            return data.commentary!
+              .filter(c => {
+                if (!c.text) return false
+                const playId = c.play?.id
+                if (playId) {
+                  if (seenIds.has(playId)) return false
+                  seenIds.add(playId)
+                }
+                return true
+              })
+              .map((c, i): CommentaryEntry => ({
+                sequence: c.sequence ?? i,
+                minute: c.time?.displayValue,
+                text: c.text!,
+                icon: iconForType(c.play?.type?.type),
+              }))
+              .reverse()   // newest first
+          })()
         : undefined,
     }
 

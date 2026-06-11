@@ -124,6 +124,19 @@ export interface CommentaryEntry {
   sequence: number
   minute?: string   // e.g. "23'"
   text: string
+  icon?: string
+}
+
+export interface MatchLeader {
+  category: string
+  playerName: string
+  value: string
+  summary?: string
+}
+
+export interface MatchLeaders {
+  home?: MatchLeader[]
+  away?: MatchLeader[]
 }
 
 export interface MatchDetail {
@@ -142,6 +155,7 @@ export interface MatchDetail {
   awayForm?: string
   h2h?: H2HGame[]
   broadcasts?: string[]  // network names e.g. ["FOX", "Telemundo"]
+  leaders?: MatchLeaders
 }
 
 // Prediction stored in localStorage
