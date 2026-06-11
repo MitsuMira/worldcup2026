@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
-import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate } from '@/lib/utils'
+import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate, canPredict } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { isEspnPlaceholder, BRACKET_POSITIONS, MATCH_LABELS, formatSlotLabel } from '@/lib/bracketStructure'
@@ -157,7 +157,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
 
       <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
         {/* Predict link (scheduled only) */}
-        {showPredictLink && status === 'scheduled' && (
+        {showPredictLink && canPredict(game) && (
           prediction ? (
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>

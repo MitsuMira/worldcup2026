@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { useState, useEffect, useCallback } from 'react'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame, Prediction, PredictionResult } from '@/lib/types'
-import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime } from '@/lib/utils'
+import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, CheckCircle2, XCircle, Minus, Trophy } from 'lucide-react'
@@ -31,7 +31,7 @@ export default function PredictionsPage() {
   useEffect(() => { setPredictions(loadPredictions()) }, [])
 
   const games = data?.games ?? []
-  const scheduledGames = games.filter((g) => getMatchStatus(g) === 'scheduled')
+  const scheduledGames = games.filter((g) => canPredict(g))
   const finishedGames = games.filter((g) => getMatchStatus(g) === 'finished')
 
   const submit = useCallback((game: EnrichedGame) => {
@@ -69,7 +69,7 @@ export default function PredictionsPage() {
   const maxPoints = finishedPredictions.length * 3
   const pendingCount = Object.keys(predictions).filter((id) => {
     const g = games.find((g) => g.id === id)
-    return g && getMatchStatus(g) === 'scheduled'
+    return g && canPredict(g)
   }).length
 
   return (
@@ -126,11 +126,22 @@ export default function PredictionsPage() {
           {scheduledGames.map((game) => {
             const existing = predictions[game.id]
             const inp = inputs[game.id] ?? { home: '', away: '' }
+            const isLive = getMatchStatus(game) === 'live'
+            const minsLeft = minutesUntilLock(game)
             return (
-              <div key={game.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors">
+              <div key={game.id} className={`bg-slate-900 border rounded-xl p-4 transition-colors ${isLive ? 'border-orange-500/50 shadow-lg shadow-orange-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-slate-500 uppercase tracking-wide">{localStageLabel(game.type, game.group, t)}</span>
-                  <span className="text-xs text-blue-400">{formatMatchDateTime(game.local_date)}</span>
+                  {isLive ? (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                      {minsLeft !== null && minsLeft > 0
+                        ? `${t.predictions.locksIn} ${minsLeft}min`
+                        : t.predictions.locked}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-blue-400">{formatMatchDateTime(game.local_date)}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 flex-1 min-w-0">

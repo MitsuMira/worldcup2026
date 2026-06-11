@@ -57,7 +57,7 @@ export interface Translations {
     noUpcoming: string; noResults: string; waitingResults: string
     scoringTitle: string; scoringText: string
     resultCorrect: string; resultWinner: string; resultWrong: string; resultPending: string
-    actual: string; yourPick: string
+    actual: string; yourPick: string; locked: string; locksIn: string
   }
   match: {
     live: string; vs: string; predict: string
@@ -148,7 +148,7 @@ export const en: Translations = {
     waitingResults: 'Waiting for your predicted matches to finish.',
     scoringTitle: 'Scoring', scoringText: 'Exact score: 3 pts · Correct winner/draw: 1 pt · Wrong: 0 pts',
     resultCorrect: '✓ Exact score! +3', resultWinner: '~ Correct winner +1',
-    resultWrong: '✗ Wrong', resultPending: 'Pending', actual: 'Actual', yourPick: 'Your pick',
+    resultWrong: '✗ Wrong', resultPending: 'Pending', actual: 'Actual', yourPick: 'Your pick', locked: '🔒 Locked', locksIn: 'Locks in',
   },
   match: {
     live: 'LIVE', vs: 'vs', predict: '✦ Make a prediction →',
@@ -260,7 +260,7 @@ export const pt: Translations = {
     waitingResults: 'Aguardando o término das partidas previstas.',
     scoringTitle: 'Pontuação', scoringText: 'Placar exato: 3 pts · Vencedor correto/empate: 1 pt · Errado: 0 pts',
     resultCorrect: '✓ Placar exato! +3', resultWinner: '~ Vencedor correto +1',
-    resultWrong: '✗ Errado', resultPending: 'Pendente', actual: 'Real', yourPick: 'Seu palpite',
+    resultWrong: '✗ Errado', resultPending: 'Pendente', actual: 'Real', yourPick: 'Seu palpite', locked: '🔒 Bloqueado', locksIn: 'Bloqueia em',
   },
   match: {
     live: 'AO VIVO', vs: 'vs', predict: '✦ Fazer previsão →',
@@ -372,7 +372,7 @@ export const es: Translations = {
     waitingResults: 'Esperando que terminen tus partidos predichos.',
     scoringTitle: 'Puntuación', scoringText: 'Resultado exacto: 3 pts · Ganador correcto/empate: 1 pt · Incorrecto: 0 pts',
     resultCorrect: '✓ ¡Resultado exacto! +3', resultWinner: '~ Ganador correcto +1',
-    resultWrong: '✗ Incorrecto', resultPending: 'Pendiente', actual: 'Real', yourPick: 'Tu pronóstico',
+    resultWrong: '✗ Incorrecto', resultPending: 'Pendiente', actual: 'Real', yourPick: 'Tu pronóstico', locked: '🔒 Bloqueado', locksIn: 'Se bloquea en',
   },
   match: {
     live: 'EN VIVO', vs: 'vs', predict: '✦ Hacer predicción →',

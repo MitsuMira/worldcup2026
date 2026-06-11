@@ -146,6 +146,28 @@ export function getMatchStatus(game: ApiGame): MatchStatus {
   return 'scheduled'
 }
 
+export function canPredict(game: ApiGame): boolean {
+  const status = getMatchStatus(game)
+  if (status === 'scheduled') return true
+  if (status === 'live') {
+    const elapsed = game.time_elapsed
+    if (!elapsed || elapsed === 'HT' || elapsed === 'notstarted') return false
+    const min = parseInt(elapsed)
+    return !isNaN(min) && min <= 15
+  }
+  return false
+}
+
+export function minutesUntilLock(game: ApiGame): number | null {
+  const status = getMatchStatus(game)
+  if (status !== 'live') return null
+  const elapsed = game.time_elapsed
+  if (!elapsed || elapsed === 'HT' || elapsed === 'notstarted') return null
+  const min = parseInt(elapsed)
+  if (isNaN(min)) return null
+  return Math.max(0, 15 - min)
+}
+
 export function getStatusLabel(game: ApiGame, timezone?: string): string {
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
