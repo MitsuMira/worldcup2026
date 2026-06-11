@@ -4,11 +4,6 @@ import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer,
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
 // ── Commentary-based event parsing (fallback when details[] is empty) ─────────
-const COMMENTARY_GOAL_RE = /^Goal!\s+(.+?)\s+(\d+),\s+(.+?)\s+(\d+)\.\s+(.+?)\s+\((\d+)'?\)/i
-const COMMENTARY_OWN_GOAL_RE = /own\s*goal/i
-const COMMENTARY_YELLOW_RE = /^Yellow card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i
-const COMMENTARY_RED_RE = /^Red card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i
-const COMMENTARY_SUB_RE = /^Substitution[^.]*\.\s*(.+?)\s+(?:replaces|is replaced by)\s+(.+?)\s+\((\d+)'?\)/i
 
 export const dynamic = 'force-dynamic'
 
@@ -212,38 +207,68 @@ function parseEventsFromCommentary(
   commentary: NonNullable<EspnSummary['commentary']>,
   homeId: string,
   awayId: string,
+  homeName: string,
+  awayName: string,
 ): MatchEvent[] {
   const events: MatchEvent[] = []
+  const homeNameLower = homeName.toLowerCase()
+  const awayNameLower = awayName.toLowerCase()
+
+  const resolveTeam = (teamNameInText: string): string => {
+    const t = teamNameInText.trim().toLowerCase()
+    if (homeNameLower.startsWith(t) || t.startsWith(homeNameLower.split(' ')[0])) return homeId
+    if (awayNameLower.startsWith(t) || t.startsWith(awayNameLower.split(' ')[0])) return awayId
+    return homeId
+  }
+
   for (const c of commentary) {
     const text = c.text ?? ''
     const timeStr = c.time?.displayValue ?? ''
     const min = parseInt(timeStr) || 0
-    const display = timeStr.includes("'") ? timeStr : `${min}'`
 
-    const goalMatch = text.match(/^Goal!\s+(\S+)\s+(\d+),\s+(\S+)\s+(\d+)\.\s+(.+?)\s+\((\d+)'?\)/i)
+    // "Goal! Mexico 1, South Africa 0. Julián Quiñones (9')"
+    // lazy (.+?) stops at first \s+\d+, even for multi-word team names
+    const goalMatch = text.match(/^Goal!\s+(.+?)\s+\d+,\s+.+?\s+\d+\.\s+(.+?)\s+\((\d+)\+?'?\)/i)
     if (goalMatch) {
-      const scoringTeamName = goalMatch[1]
-      const playerName = goalMatch[5]
-      const minute = parseInt(goalMatch[6]) || min
-      const isOwn = COMMENTARY_OWN_GOAL_RE.test(text)
-      // Match scoring team name against known abbreviations
-      const teamId = scoringTeamName.toUpperCase() === homeId.toUpperCase() ? homeId : awayId
-      events.push({ type: isOwn ? 'owngoal' : 'goal', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: playerName })
+      const teamId = resolveTeam(goalMatch[1])
+      const player = goalMatch[2].trim()
+      const minute = parseInt(goalMatch[3]) || min
+      const isOwn = /own\s*goal/i.test(text)
+      events.push({ type: isOwn ? 'owngoal' : 'goal', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: player })
       continue
     }
 
-    const yellowMatch = text.match(/^Yellow card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i)
+    // "Yellow Card. Player Name (23')"  or  "Booking. Player Name (23')"
+    const yellowMatch = text.match(/^(?:Yellow\s+Card|Booking)[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
     if (yellowMatch) {
       const minute = parseInt(yellowMatch[2]) || min
+      // Try to find which team from next text segment — default homeId as fallback
       events.push({ type: 'yellow', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: yellowMatch[1].trim() })
       continue
     }
 
-    const redMatch = text.match(/^Red card[^.]*\.\s*(.+?)\s+\((\d+)'?\)/i)
+    // "Red Card. Player Name (67')"
+    const redMatch = text.match(/^Red\s+Card[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
     if (redMatch) {
       const minute = parseInt(redMatch[2]) || min
       events.push({ type: 'red', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: redMatch[1].trim() })
       continue
+    }
+
+    // "Second Yellow Card. Player Name (78')"
+    const secondYellowMatch = text.match(/^Second\s+Yellow[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
+    if (secondYellowMatch) {
+      const minute = parseInt(secondYellowMatch[2]) || min
+      events.push({ type: 'yellowred', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: secondYellowMatch[1].trim() })
+      continue
+    }
+
+    // "Substitution. Team. PlayerOn replaces PlayerOff (min')"
+    const subMatch = text.match(/^Substitution[^.]*\.\s*(?:(.+?)\.\s*)?(.+?)\s+replaces\s+(.+?)\s+\((\d+)\+?'?\)/i)
+    if (subMatch) {
+      const teamId = subMatch[1] ? resolveTeam(subMatch[1]) : homeId
+      const minute = parseInt(subMatch[4]) || min
+      events.push({ type: 'sub', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: subMatch[3].trim(), secondaryPlayer: subMatch[2].trim() })
     }
   }
   return events.sort((a, b) => a.minute - b.minute)
@@ -272,9 +297,11 @@ export async function GET(
     const awayId = teamAbbr(awayComp?.team)
 
     const details = comp?.details ?? []
+    const homeName = homeComp?.team.displayName ?? homeId
+    const awayName = awayComp?.team.displayName ?? awayId
     const events = details.length > 0
       ? parseEvents(details, homeId)
-      : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId)
+      : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
     const boxTeams = data.boxscore?.teams ?? []
 
     // Adjust cache based on match state

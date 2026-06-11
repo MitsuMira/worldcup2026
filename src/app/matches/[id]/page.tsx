@@ -72,9 +72,25 @@ function StatRow({ label, home, away }: { label: string; home?: string; away?: s
   )
 }
 
+// ── Player event badges ───────────────────────────────────────────────────────
+
+function playerEventBadges(name: string, events: MatchEvent[]): string {
+  const mine = events.filter(e => e.primaryPlayer === name || e.secondaryPlayer === name)
+  return mine.map(e => {
+    if (e.type === 'goal' || e.type === 'penalty') return '⚽'
+    if (e.type === 'owngoal') return '⚽(OG)'
+    if (e.type === 'yellow') return '🟨'
+    if (e.type === 'red') return '🟥'
+    if (e.type === 'yellowred') return '🟨🟥'
+    if (e.type === 'sub' && e.secondaryPlayer === name) return '↑'
+    if (e.type === 'sub' && e.primaryPlayer === name) return '↓'
+    return ''
+  }).filter(Boolean).join(' ')
+}
+
 // ── Lineup column ─────────────────────────────────────────────────────────────
 
-function LineupColumn({ lineup, color, subsLabel }: { lineup: NonNullable<MatchDetail['homeLineup']>; color: 'blue' | 'amber'; subsLabel: string }) {
+function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullable<MatchDetail['homeLineup']>; color: 'blue' | 'amber'; subsLabel: string; events: MatchEvent[] }) {
   const accent = color === 'blue' ? 'text-blue-400' : 'text-amber-400'
   return (
     <div className="flex-1 min-w-0">
@@ -82,28 +98,36 @@ function LineupColumn({ lineup, color, subsLabel }: { lineup: NonNullable<MatchD
         <div className={`text-xs font-bold ${accent} mb-3 text-center`}>{lineup.formation}</div>
       )}
       <div className="space-y-1">
-        {lineup.starters.map((p, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-            {p.headshot ? (
-              <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
-            ) : (
-              <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
-            )}
-            <span className="truncate">{p.name}</span>
-            <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
-          </div>
-        ))}
+        {lineup.starters.map((p, i) => {
+          const badges = playerEventBadges(p.name, events)
+          return (
+            <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
+              {p.headshot ? (
+                <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+              ) : (
+                <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
+              )}
+              <span className="truncate">{p.name}</span>
+              {badges && <span className="text-xs shrink-0">{badges}</span>}
+              <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
+            </div>
+          )
+        })}
       </div>
       {lineup.subs.length > 0 && (
         <>
           <div className="text-xs text-slate-600 uppercase tracking-widest mt-3 mb-1">{subsLabel}</div>
           <div className="space-y-1">
-            {lineup.subs.map((p, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="text-slate-700 w-5 text-right shrink-0">{p.jersey}</span>
-                <span className="truncate">{p.name}</span>
-              </div>
-            ))}
+            {lineup.subs.map((p, i) => {
+              const badges = playerEventBadges(p.name, events)
+              return (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="text-slate-700 w-5 text-right shrink-0">{p.jersey}</span>
+                  <span className="truncate">{p.name}</span>
+                  {badges && <span className="shrink-0">{badges}</span>}
+                </div>
+              )
+            })}
           </div>
         </>
       )}
@@ -459,11 +483,11 @@ export default function MatchDetailPage() {
                     </div>
                   )}
                   <div className="flex gap-6">
-                    {detail.homeLineup && <LineupColumn lineup={detail.homeLineup} color="blue" subsLabel={t.matchDetail.subs} />}
+                    {detail.homeLineup && <LineupColumn lineup={detail.homeLineup} color="blue" subsLabel={t.matchDetail.subs} events={homeEvents} />}
                     {detail.awayLineup && (
                       <>
                         <div className="w-px bg-slate-800 shrink-0" />
-                        <LineupColumn lineup={detail.awayLineup} color="amber" subsLabel={t.matchDetail.subs} />
+                        <LineupColumn lineup={detail.awayLineup} color="amber" subsLabel={t.matchDetail.subs} events={awayEvents} />
                       </>
                     )}
                   </div>
