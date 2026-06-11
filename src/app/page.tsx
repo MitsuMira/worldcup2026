@@ -82,7 +82,7 @@ export default function Home() {
   }).sort((a, b) => (parseMatchDate(a.local_date)?.getTime() ?? 0) - (parseMatchDate(b.local_date)?.getTime() ?? 0))
 
   const upcomingGames = games
-    .filter((g) => { const d = parseMatchDate(g.local_date); return d && d > now && getMatchStatus(g) === 'scheduled' })
+    .filter((g) => { const d = parseMatchDate(g.local_date); return d && d > now && getMatchStatus(g) === 'scheduled' && d.toISOString().slice(0, 10) !== todayUTC })
     .slice(0, 6)
   const recentResults = games.filter((g) => getMatchStatus(g) === 'finished').slice(-4).reverse()
 
