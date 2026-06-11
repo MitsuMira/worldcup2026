@@ -110,17 +110,34 @@ function computeTimeElapsed(status: EspnStatus): string {
   const period = status.period ?? 0
   const clock = status.clock ?? 0
   // clock = elapsed seconds in current period
-  const min = period <= 1 ? Math.floor(clock / 60) : 45 + Math.floor(clock / 60)
-  return String(Math.max(1, min))
+  const rawMin = period <= 1 ? Math.floor(clock / 60) : 45 + Math.floor(clock / 60)
+  const min = Math.max(1, rawMin)
+  // Show stoppage time as "45+X" or "90+X" (matches real soccer clock notation)
+  if (period <= 1 && min > 45) return `45+${min - 45}`
+  if (period >= 2 && min > 90) return `90+${min - 90}`
+  return String(min)
 }
 
 function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
   if (!comp.details) return ''
   return comp.details
-    .filter(d => d.type?.text === 'Goal' && d.team?.id === espnTeamId)
+    .filter(d => {
+      const text = d.type?.text?.toLowerCase() ?? ''
+      return (text.includes('goal') && !text.includes('missed')) && d.team?.id === espnTeamId
+    })
     .map(d => d.athletesInvolved?.[0]?.displayName ?? '')
     .filter(Boolean)
     .join(',')
+}
+
+function extractCards(comp: EspnCompetition, espnTeamId: string, cardType: 'yellow' | 'red'): number {
+  if (!comp.details) return 0
+  return comp.details.filter(d => {
+    const text = d.type?.text?.toLowerCase() ?? ''
+    const matchesTeam = d.team?.id === espnTeamId
+    if (cardType === 'yellow') return matchesTeam && (text === 'yellow card' || text === 'yellow-red card')
+    return matchesTeam && (text === 'red card' || text === 'yellow-red card')
+  }).length
 }
 
 function mapEvent(event: EspnEvent): EnrichedGame {
@@ -187,6 +204,10 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     away_score: away.score ?? '0',
     home_scorers: extractScorers(comp, home.id),
     away_scorers: extractScorers(comp, away.id),
+    home_yellow_cards: extractCards(comp, home.id, 'yellow'),
+    away_yellow_cards: extractCards(comp, away.id, 'yellow'),
+    home_red_cards: extractCards(comp, home.id, 'red'),
+    away_red_cards: extractCards(comp, away.id, 'red'),
     group,
     matchday: '',
     name: event.name,

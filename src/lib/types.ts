@@ -27,6 +27,10 @@ export interface ApiGame {
   away_team_name_fa?: string
   home_team_label?: string
   away_team_label?: string
+  home_yellow_cards?: number
+  away_yellow_cards?: number
+  home_red_cards?: number
+  away_red_cards?: number
 }
 
 export interface ApiTeam {

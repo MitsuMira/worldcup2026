@@ -70,7 +70,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         {status === 'live' ? (
           <span className="flex items-center gap-1.5 text-xs font-bold text-green-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            {t.match.live} {game.time_elapsed}&apos;
+            {game.time_elapsed === 'HT' ? 'HT' : `${t.match.live} ${game.time_elapsed}'`}
           </span>
         ) : status === 'finished' ? (
           <span className="text-xs text-slate-500 font-semibold">FT</span>

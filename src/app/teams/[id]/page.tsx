@@ -70,6 +70,14 @@ export default function TeamDetailPage() {
   }
   const topScorers = [...scorerMap.entries()].sort((a, b) => b[1] - a[1])
 
+  // Aggregate cards
+  let totalYellow = 0, totalRed = 0
+  for (const g of finishedGames) {
+    const isHome = g.home_team_id === id
+    totalYellow += (isHome ? g.home_yellow_cards : g.away_yellow_cards) ?? 0
+    totalRed += (isHome ? g.home_red_cards : g.away_red_cards) ?? 0
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 text-slate-400 py-32">
@@ -123,22 +131,43 @@ export default function TeamDetailPage() {
 
         {/* Stats bar */}
         {played > 0 && (
-          <div className="mt-5 grid grid-cols-7 gap-2 text-center">
-            {[
-              { label: t.teamDetail.played, value: played },
-              { label: t.teamDetail.won, value: won, color: 'text-green-400' },
-              { label: t.teamDetail.drawn, value: drawn, color: 'text-slate-300' },
-              { label: t.teamDetail.lost, value: lost, color: 'text-red-400' },
-              { label: 'GF', value: gf },
-              { label: 'GA', value: ga },
-              { label: 'GD', value: gd > 0 ? `+${gd}` : gd, color: gd > 0 ? 'text-green-400' : gd < 0 ? 'text-red-400' : '' },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="bg-slate-800 rounded-lg py-2">
-                <div className={`text-lg font-black ${color ?? 'text-white'}`}>{value}</div>
-                <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+          <>
+            <div className="mt-5 grid grid-cols-4 sm:grid-cols-8 gap-2 text-center">
+              {[
+                { label: t.teamDetail.played, value: played },
+                { label: t.teamDetail.won, value: won, color: 'text-green-400' },
+                { label: t.teamDetail.drawn, value: drawn, color: 'text-slate-300' },
+                { label: t.teamDetail.lost, value: lost, color: 'text-red-400' },
+                { label: 'GF', value: gf },
+                { label: 'GA', value: ga },
+                { label: 'GD', value: gd > 0 ? `+${gd}` : gd, color: gd > 0 ? 'text-green-400' : gd < 0 ? 'text-red-400' : '' },
+                { label: 'Pts', value: pts, color: 'text-blue-400' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-slate-800 rounded-lg py-2">
+                  <div className={`text-lg font-black ${color ?? 'text-white'}`}>{value}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+            {(totalYellow > 0 || totalRed > 0) && (
+              <div className="mt-3 flex gap-3">
+                {totalYellow > 0 && (
+                  <div className="flex items-center gap-1.5 bg-slate-800 rounded-lg px-3 py-1.5">
+                    <span className="text-base">🟨</span>
+                    <span className="text-white font-bold text-sm">{totalYellow}</span>
+                    <span className="text-slate-500 text-xs">cartões amarelos</span>
+                  </div>
+                )}
+                {totalRed > 0 && (
+                  <div className="flex items-center gap-1.5 bg-slate-800 rounded-lg px-3 py-1.5">
+                    <span className="text-base">🟥</span>
+                    <span className="text-white font-bold text-sm">{totalRed}</span>
+                    <span className="text-slate-500 text-xs">cartões vermelhos</span>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

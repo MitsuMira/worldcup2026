@@ -293,7 +293,7 @@ export default function MatchDetailPage() {
           {status === 'live' ? (
             <span className="flex items-center gap-1.5 text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              {game.time_elapsed === 'HT' ? t.matchDetail.ht : t.match.live}
+              {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${t.match.live} ${game.time_elapsed}'`}
             </span>
           ) : status === 'finished' ? (
             <span>{t.matchDetail.ft}</span>
@@ -474,29 +474,33 @@ export default function MatchDetailPage() {
                   <StatRow label={t.matchDetail.statSaves} home={detail.homeStats?.saves} away={detail.awayStats?.saves} />
                   {(detail.leaders?.home || detail.leaders?.away) && (
                     <>
-                      <div className="mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Match Leaders</div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                        {/* home leaders */}
-                        <div className="space-y-2">
-                          {(detail.leaders?.home ?? []).map((l, i) => (
-                            <div key={i} className="text-xs">
-                              <div className="text-slate-500 mb-0.5">{l.category}</div>
-                              <div className="text-white font-semibold truncate">{l.playerName}</div>
-                              {l.summary && <div className="text-slate-400">{l.summary}</div>}
+                      <div className="mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Destaques individuais</div>
+                      {/* Pair home and away leaders side by side per category */}
+                      {(detail.leaders?.home ?? detail.leaders?.away ?? []).map((_, ci) => {
+                        const h = detail.leaders?.home?.[ci]
+                        const a = detail.leaders?.away?.[ci]
+                        const cat = h?.category ?? a?.category ?? ''
+                        return (
+                          <div key={ci} className="mb-3 bg-slate-800/40 rounded-lg px-3 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1.5">{cat}</div>
+                            <div className="flex justify-between gap-2">
+                              {h ? (
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs text-white font-semibold truncate">{h.playerName}</div>
+                                  {h.summary && <div className="text-[10px] text-slate-400 mt-0.5">{h.summary}</div>}
+                                </div>
+                              ) : <div className="flex-1" />}
+                              {a ? (
+                                <div className="flex-1 min-w-0 text-right">
+                                  <div className="text-xs text-white font-semibold truncate">{a.playerName}</div>
+                                  {a.summary && <div className="text-[10px] text-slate-400 mt-0.5">{a.summary}</div>}
+                                </div>
+                              ) : <div className="flex-1" />}
                             </div>
-                          ))}
-                        </div>
-                        {/* away leaders */}
-                        <div className="space-y-2">
-                          {(detail.leaders?.away ?? []).map((l, i) => (
-                            <div key={i} className="text-xs">
-                              <div className="text-slate-500 mb-0.5">{l.category}</div>
-                              <div className="text-white font-semibold truncate">{l.playerName}</div>
-                              {l.summary && <div className="text-slate-400">{l.summary}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                          </div>
+                        )
+                      })}
+                      <p className="text-[10px] text-slate-600 mt-1">xG = gols esperados com base na qualidade das chances criadas</p>
                     </>
                   )}
                 </>
