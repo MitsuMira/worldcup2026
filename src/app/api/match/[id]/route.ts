@@ -31,6 +31,7 @@ interface EspnBoxTeam {
 
 interface EspnRosterEntry {
   athlete?: { id: string; displayName: string; jersey?: string; headshot?: { href: string }; position?: { displayName: string; abbreviation: string } }
+  jersey?: string   // sometimes at entry level rather than athlete level
   starter?: boolean
   position?: { displayName: string; abbreviation: string }
   subbedIn?: boolean
@@ -190,15 +191,11 @@ function parseStats(teams: EspnBoxTeam[], teamId: string): TeamMatchStats | unde
 
 function parseLineup(roster: EspnRoster): TeamLineup {
   const toPlayer = (r: EspnRosterEntry): RosterPlayer => {
-    const athleteId = r.athlete?.id
-    // Use explicit headshot href if available; otherwise try ESPN's standard headshot URL by athlete ID
-    const headshot = r.athlete?.headshot?.href
-      ?? (athleteId ? `https://a.espncdn.com/i/headshots/soccer/players/full/${athleteId}.png` : undefined)
     return {
       name: r.athlete?.displayName ?? '',
-      jersey: r.athlete?.jersey,
+      jersey: r.athlete?.jersey ?? r.jersey,   // ESPN sometimes puts jersey at entry level
       position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
-      headshot,
+      headshot: r.athlete?.headshot?.href,      // only use explicit href — fallback URLs return 404 for most players
       formationPlace: r.formationPlace,
     }
   }

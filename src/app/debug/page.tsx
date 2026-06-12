@@ -171,7 +171,7 @@ export default function DebugPage() {
                             const fallbackUrl = a?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${a.id}.png` : ''
                             return (
                               <tr key={pi} className="border-b border-slate-800/40">
-                                <td className="py-0.5 pr-2 text-slate-500">{a?.jersey ?? '—'}</td>
+                                <td className="py-0.5 pr-2 text-slate-500">{a?.jersey ?? pl?.jersey ?? '—'}</td>
                                 <td className="py-0.5 pr-2">{a?.displayName}</td>
                                 <td className="py-0.5 pr-2">{pl?.starter ? '✓' : ''}</td>
                                 <td className="py-0.5 pr-2 text-slate-500">{a?.id}</td>
