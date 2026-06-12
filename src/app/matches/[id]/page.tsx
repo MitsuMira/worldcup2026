@@ -6,7 +6,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, MapPin, User, Users } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGame, MatchDetail, MatchEvent, CommentaryEntry, Prediction } from '@/lib/types'
+import type { EnrichedGame, MatchDetail, MatchEvent, CommentaryEntry, Prediction, MatchLeader } from '@/lib/types'
 import { getMatchStatus, getStageLabel, formatMatchDateTime, parseMatchDate } from '@/lib/utils'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useT } from '@/contexts/LanguageContext'
@@ -195,6 +195,160 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
   )
 }
 
+// ── Leaders section ───────────────────────────────────────────────────────────
+
+const CAT_ICON: Record<string, string> = {
+  'Chutes Totais': '⚽',
+  'Passes Precisos': '👟',
+  'Intervenções Defensivas': '🛡️',
+  'Defesas': '🧤',
+}
+
+function xGBar({ value, max = 1.5, color }: { value: number; max?: number; color: string }) {
+  const pct = Math.min(100, (value / max) * 100)
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-[10px] text-slate-400 tabular-nums w-8 text-right">{value.toFixed(2)}</span>
+    </div>
+  )
+}
+
+function Dots({ n, max = 6, icon }: { n: number; max?: number; icon: string }) {
+  const show = Math.min(n, max)
+  return (
+    <span className="text-xs">
+      {Array.from({ length: show }).map((_, i) => <span key={i}>{icon}</span>)}
+      {n > max && <span className="text-slate-500 text-[10px]"> +{n - max}</span>}
+    </span>
+  )
+}
+
+function LeaderSide({ leader, align }: { leader: MatchLeader; align: 'left' | 'right' }) {
+  const s = leader.summary ?? ''
+  const cat = leader.category
+
+  const sogM = s.match(/(\d+)\s*shots on goal/i)
+  const xgM = s.match(/(\d+\.?\d*)\s*xG(?!C)/i)
+  const passM = s.match(/(\d+)\s*passes/i)
+  const bccM = s.match(/(\d+)\s*key chance/i)
+  const tklM = s.match(/(\d+)\s*tackles won/i)
+  const duelM = s.match(/(\d+)\s*duels won/i)
+  const sfM = s.match(/(\d+)\s*shots faced/i)
+  const xgcM = s.match(/(\d+\.?\d*)\s*xGC/i)
+
+  const sog = sogM ? parseInt(sogM[1]) : null
+  const xg = xgM ? parseFloat(xgM[1]) : null
+  const passes = passM ? parseInt(passM[1]) : null
+  const bcc = bccM ? parseInt(bccM[1]) : null
+  const tkl = tklM ? parseInt(tklM[1]) : null
+  const duel = duelM ? parseInt(duelM[1]) : null
+  const sf = sfM ? parseInt(sfM[1]) : null
+  const xgc = xgcM ? parseFloat(xgcM[1]) : null
+
+  const isRight = align === 'right'
+
+  return (
+    <div className={`flex-1 min-w-0 ${isRight ? 'text-right' : ''}`}>
+      <div className={`text-sm text-white font-semibold truncate ${isRight ? 'text-right' : ''}`}>{leader.playerName}</div>
+
+      {/* Shots category */}
+      {cat.includes('Chutes') && (
+        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
+          {sog !== null && <Dots n={sog} max={6} icon="⚽" />}
+          {xg !== null && xGBar({ value: xg, max: 1.5, color: isRight ? 'bg-amber-500' : 'bg-blue-500' })}
+          <div className="text-[10px] text-slate-500 mt-0.5">
+            xG = probabilidade de gol das chances criadas
+          </div>
+        </div>
+      )}
+
+      {/* Passes category */}
+      {cat.includes('Passes') && (
+        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
+          {passes !== null && (
+            <div className="flex items-center gap-1.5">
+              {!isRight && <span className="text-lg font-black text-white">{passes}</span>}
+              <div className="flex-1">
+                <div className={`h-1.5 rounded-full overflow-hidden ${isRight ? 'bg-slate-700 w-20' : 'bg-slate-700 w-20'}`}>
+                  <div
+                    className={`h-full rounded-full ${isRight ? 'bg-amber-500 ml-auto' : 'bg-blue-500'}`}
+                    style={{ width: `${Math.min(100, (passes / 100) * 100)}%`, marginLeft: isRight ? 'auto' : undefined }}
+                  />
+                </div>
+              </div>
+              {isRight && <span className="text-lg font-black text-white">{passes}</span>}
+            </div>
+          )}
+          {bcc !== null && bcc > 0 && (
+            <div className="text-[10px] text-amber-400 mt-0.5">{bcc} grande{bcc > 1 ? 's' : ''} chance{bcc > 1 ? 's' : ''} criada{bcc > 1 ? 's' : ''}</div>
+          )}
+        </div>
+      )}
+
+      {/* Defensive category */}
+      {cat.includes('Defensiv') && (
+        <div className={`mt-1 space-y-0.5 ${isRight ? 'flex flex-col items-end' : ''}`}>
+          {duel !== null && duel > 0 && <Dots n={duel} max={5} icon="🛡️" />}
+          {tkl !== null && tkl > 0 && <div className="text-[10px] text-slate-400">{tkl} roubada{tkl > 1 ? 's' : ''} de bola</div>}
+          {duel !== null && duel === 0 && tkl !== null && tkl === 0 && <div className="text-[10px] text-slate-500">—</div>}
+        </div>
+      )}
+
+      {/* Saves category */}
+      {cat.includes('Defesa') && (
+        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
+          {sf !== null && <Dots n={sf} max={6} icon="🧤" />}
+          {xgc !== null && xGBar({ value: xgc, max: 2.5, color: isRight ? 'bg-red-500' : 'bg-red-500' })}
+          <div className="text-[10px] text-slate-500 mt-0.5">
+            xGC = gols esperados contra (pressão sofrida)
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LeadersSection({ home, away, homeName, awayName }: {
+  home?: MatchLeader[]
+  away?: MatchLeader[]
+  homeName: string
+  awayName: string
+}) {
+  const count = Math.max(home?.length ?? 0, away?.length ?? 0)
+  if (count === 0) return null
+  return (
+    <div className="mt-6">
+      <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
+        <span className="text-blue-400">{homeName}</span>
+        <span>Destaques individuais</span>
+        <span className="text-amber-400">{awayName}</span>
+      </div>
+      {Array.from({ length: count }).map((_, ci) => {
+        const h = home?.[ci]
+        const a = away?.[ci]
+        const cat = h?.category ?? a?.category ?? ''
+        const icon = CAT_ICON[cat] ?? '📊'
+        return (
+          <div key={ci} className="mb-3 bg-slate-800/40 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-sm">{icon}</span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{cat}</span>
+            </div>
+            <div className="flex gap-4">
+              {h ? <LeaderSide leader={h} align="left" /> : <div className="flex-1" />}
+              <div className="w-px bg-slate-700 shrink-0 self-stretch" />
+              {a ? <LeaderSide leader={a} align="right" /> : <div className="flex-1" />}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Form badges ───────────────────────────────────────────────────────────────
 
 function FormBadges({ form }: { form: string }) {
@@ -279,7 +433,12 @@ export default function MatchDetailPage() {
 
   const hasFeed = (detail?.commentary?.length ?? 0) > 0
   const kickoffMs = kickoff?.getTime() ?? 0
-  const showFeedTab = hasFeed || (kickoffMs > 0 && Date.now() >= kickoffMs - 5 * 60 * 1000 && status !== 'finished')
+  // Show feed tab from 5 min before kickoff until ~10 min after the estimated end
+  // (kickoff + 140 min covers 45+15+45+35 for a typical match with stoppage)
+  const estimatedEndMs = kickoffMs + 140 * 60 * 1000
+  const withinMatchWindow = kickoffMs > 0 && Date.now() >= kickoffMs - 5 * 60 * 1000 &&
+    Date.now() < estimatedEndMs + 10 * 60 * 1000
+  const showFeedTab = (hasFeed || status === 'live') && withinMatchWindow
   const TABS: { key: Tab; label: string; hide?: boolean }[] = [
     { key: 'timeline', label: t.matchDetail.tabTimeline },
     { key: 'feed', label: t.matchDetail.tabFeed, hide: !showFeedTab },
@@ -508,35 +667,12 @@ export default function MatchDetailPage() {
                   <StatRow label={t.matchDetail.statOffsides} home={detail.homeStats?.offsides} away={detail.awayStats?.offsides} />
                   <StatRow label={t.matchDetail.statSaves} home={detail.homeStats?.saves} away={detail.awayStats?.saves} />
                   {(detail.leaders?.home || detail.leaders?.away) && (
-                    <>
-                      <div className="mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wide">Destaques individuais</div>
-                      {/* Pair home and away leaders side by side per category */}
-                      {(detail.leaders?.home ?? detail.leaders?.away ?? []).map((_, ci) => {
-                        const h = detail.leaders?.home?.[ci]
-                        const a = detail.leaders?.away?.[ci]
-                        const cat = h?.category ?? a?.category ?? ''
-                        return (
-                          <div key={ci} className="mb-3 bg-slate-800/40 rounded-lg px-3 py-2">
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1.5">{cat}</div>
-                            <div className="flex justify-between gap-2">
-                              {h ? (
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs text-white font-semibold truncate">{h.playerName}</div>
-                                  {h.summary && <div className="text-[10px] text-slate-400 mt-0.5">{h.summary}</div>}
-                                </div>
-                              ) : <div className="flex-1" />}
-                              {a ? (
-                                <div className="flex-1 min-w-0 text-right">
-                                  <div className="text-xs text-white font-semibold truncate">{a.playerName}</div>
-                                  {a.summary && <div className="text-[10px] text-slate-400 mt-0.5">{a.summary}</div>}
-                                </div>
-                              ) : <div className="flex-1" />}
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <p className="text-[10px] text-slate-600 mt-1">xG = gols esperados com base na qualidade das chances criadas</p>
-                    </>
+                    <LeadersSection
+                      home={detail.leaders.home}
+                      away={detail.leaders.away}
+                      homeName={homeName}
+                      awayName={awayName}
+                    />
                   )}
                 </>
               )}

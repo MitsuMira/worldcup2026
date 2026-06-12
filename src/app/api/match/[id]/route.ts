@@ -236,12 +236,22 @@ const STAT_CODES: Record<string, string> = {
   TKLW: 'tackles won',
   DUELW: 'duels won',
   SOGA: 'shots faced',
-  xGC: 'xG conceded',
+  xGC: 'xGC',
   INTER: 'interceptions',
   CLEAR: 'clearances',
   BLOCK: 'blocks',
   FOULW: 'fouls won',
   FAUL: 'fouls',
+  BCC: 'key chances created',
+}
+
+const CATEGORY_PT: Record<string, string> = {
+  'Total Shots': 'Chutes Totais',
+  'Accurate Passes': 'Passes Precisos',
+  'Defensive Interventions': 'Intervenções Defensivas',
+  'Saves': 'Defesas',
+  'Goals': 'Gols',
+  'Assists': 'Assistências',
 }
 
 function expandLeaderSummary(summary?: string): string | undefined {
@@ -259,8 +269,9 @@ function parseLeaders(raw: EspnSummary['leaders'], homeEspnId: string, awayEspnI
     for (const cat of entry.leaders ?? []) {
       const top = cat.leaders?.[0]
       if (!top?.athlete) continue
+      const rawCat = cat.displayName ?? cat.name ?? ''
       leaders.push({
-        category: cat.displayName ?? cat.name ?? '',
+        category: CATEGORY_PT[rawCat] ?? rawCat,
         playerName: top.athlete.displayName,
         value: top.displayValue ?? '',
         summary: expandLeaderSummary(top.summary),
