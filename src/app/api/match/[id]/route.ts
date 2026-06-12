@@ -189,13 +189,19 @@ function parseStats(teams: EspnBoxTeam[], teamId: string): TeamMatchStats | unde
 }
 
 function parseLineup(roster: EspnRoster): TeamLineup {
-  const toPlayer = (r: EspnRosterEntry): RosterPlayer => ({
-    name: r.athlete?.displayName ?? '',
-    jersey: r.athlete?.jersey,
-    position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
-    headshot: r.athlete?.headshot?.href,
-    formationPlace: r.formationPlace,
-  })
+  const toPlayer = (r: EspnRosterEntry): RosterPlayer => {
+    const athleteId = r.athlete?.id
+    // Use explicit headshot href if available; otherwise try ESPN's standard headshot URL by athlete ID
+    const headshot = r.athlete?.headshot?.href
+      ?? (athleteId ? `https://a.espncdn.com/i/headshots/soccer/players/full/${athleteId}.png` : undefined)
+    return {
+      name: r.athlete?.displayName ?? '',
+      jersey: r.athlete?.jersey,
+      position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
+      headshot,
+      formationPlace: r.formationPlace,
+    }
+  }
   const all = roster.roster ?? []
   return {
     teamId: teamAbbr(roster.team),

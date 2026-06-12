@@ -172,17 +172,25 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
           <div key={ri} className="flex justify-around items-center flex-1">
             {row.map((p, pi) => (
               <div key={pi} className="flex flex-col items-center gap-0.5 w-12">
-                {p.headshot ? (
+                <div className="relative w-8 h-8">
                   <img
-                    src={p.headshot}
+                    src={p.headshot ?? ''}
                     alt={p.name}
                     className="w-8 h-8 rounded-full object-cover border-2 border-white/40 bg-slate-700"
+                    onError={e => {
+                      const img = e.target as HTMLImageElement
+                      img.style.display = 'none'
+                      const fb = img.nextElementSibling as HTMLElement | null
+                      if (fb) fb.style.display = 'flex'
+                    }}
                   />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white text-xs font-bold">
+                  <div
+                    className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 items-center justify-center text-white text-xs font-bold absolute inset-0"
+                    style={{ display: p.headshot ? 'none' : 'flex' }}
+                  >
                     {p.jersey ?? '?'}
                   </div>
-                )}
+                </div>
                 <span className="text-white text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full text-center" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   {p.name.split(' ').slice(-1)[0]}
                 </span>
@@ -204,107 +212,118 @@ const CAT_ICON: Record<string, string> = {
   'Defesas': '🧤',
 }
 
-function xGBar({ value, max = 1.5, color }: { value: number; max?: number; color: string }) {
-  const pct = Math.min(100, (value / max) * 100)
-  return (
-    <div className="flex items-center gap-1.5 mt-1">
-      <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-[10px] text-slate-400 tabular-nums w-8 text-right">{value.toFixed(2)}</span>
-    </div>
-  )
-}
-
 function Dots({ n, max = 6, icon }: { n: number; max?: number; icon: string }) {
   const show = Math.min(n, max)
+  if (n === 0) return <span className="text-[10px] text-slate-600">—</span>
   return (
-    <span className="text-xs">
+    <span className="text-sm leading-tight">
       {Array.from({ length: show }).map((_, i) => <span key={i}>{icon}</span>)}
       {n > max && <span className="text-slate-500 text-[10px]"> +{n - max}</span>}
     </span>
   )
 }
 
-function LeaderSide({ leader, align }: { leader: MatchLeader; align: 'left' | 'right' }) {
+// xG bar with reference marker at 1.0 and a scale of 0→2
+// xG = expected goals: 0.1 = weak chance, 0.3 = decent, 1.0 = penalty/tap-in certainty
+function XGBar({ value, color }: { value: number; color: string }) {
+  const MAX = 2.0
+  const pct = Math.min(100, (value / MAX) * 100)
+  const ref = 50 // 1.0 / 2.0 * 100
+  return (
+    <div className="w-full mt-1">
+      <div className="relative h-2 bg-slate-700 rounded-full overflow-visible">
+        {/* filled bar */}
+        <div className={`absolute inset-y-0 left-0 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        {/* reference tick at xG=1.0 */}
+        <div className="absolute top-[-2px] bottom-[-2px] w-px bg-slate-400/60" style={{ left: `${ref}%` }} />
+      </div>
+      <div className="flex justify-between text-[9px] text-slate-600 mt-0.5">
+        <span>0</span>
+        <span className="text-slate-500">1.0 = 1 gol esperado</span>
+        <span>2.0</span>
+      </div>
+    </div>
+  )
+}
+
+function LeaderSide({ leader, color }: { leader: MatchLeader; color: 'blue' | 'amber' }) {
   const s = leader.summary ?? ''
   const cat = leader.category
+  const barColor = color === 'blue' ? 'bg-blue-500' : 'bg-amber-500'
 
-  const sogM = s.match(/(\d+)\s*shots on goal/i)
-  const xgM = s.match(/(\d+\.?\d*)\s*xG(?!C)/i)
-  const passM = s.match(/(\d+)\s*passes/i)
-  const bccM = s.match(/(\d+)\s*key chance/i)
-  const tklM = s.match(/(\d+)\s*tackles won/i)
-  const duelM = s.match(/(\d+)\s*duels won/i)
-  const sfM = s.match(/(\d+)\s*shots faced/i)
-  const xgcM = s.match(/(\d+\.?\d*)\s*xGC/i)
-
-  const sog = sogM ? parseInt(sogM[1]) : null
-  const xg = xgM ? parseFloat(xgM[1]) : null
-  const passes = passM ? parseInt(passM[1]) : null
-  const bcc = bccM ? parseInt(bccM[1]) : null
-  const tkl = tklM ? parseInt(tklM[1]) : null
-  const duel = duelM ? parseInt(duelM[1]) : null
-  const sf = sfM ? parseInt(sfM[1]) : null
-  const xgc = xgcM ? parseFloat(xgcM[1]) : null
-
-  const isRight = align === 'right'
+  const sog = s.match(/(\d+)\s*shots on goal/i)?.[1]
+  const xg = s.match(/(\d+\.?\d*)\s*xG(?!C)/i)?.[1]
+  const passes = s.match(/(\d+)\s*passes/i)?.[1]
+  const bcc = s.match(/(\d+)\s*key chance/i)?.[1]
+  const tkl = s.match(/(\d+)\s*tackles won/i)?.[1]
+  const duel = s.match(/(\d+)\s*duels won/i)?.[1]
+  const sf = s.match(/(\d+)\s*shots faced/i)?.[1]
+  const xgc = s.match(/(\d+\.?\d*)\s*xGC/i)?.[1]
 
   return (
-    <div className={`flex-1 min-w-0 ${isRight ? 'text-right' : ''}`}>
-      <div className={`text-sm text-white font-semibold truncate ${isRight ? 'text-right' : ''}`}>{leader.playerName}</div>
+    <div className="flex-1 min-w-0">
+      <div className="text-sm text-white font-semibold truncate">{leader.playerName}</div>
 
       {/* Shots category */}
       {cat.includes('Chutes') && (
-        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
-          {sog !== null && <Dots n={sog} max={6} icon="⚽" />}
-          {xg !== null && xGBar({ value: xg, max: 1.5, color: isRight ? 'bg-amber-500' : 'bg-blue-500' })}
-          <div className="text-[10px] text-slate-500 mt-0.5">
-            xG = probabilidade de gol das chances criadas
-          </div>
+        <div className="mt-1.5 space-y-1">
+          {sog != null && (
+            <div className="flex items-center gap-1.5">
+              <Dots n={parseInt(sog)} max={6} icon="⚽" />
+              <span className="text-[10px] text-slate-500">{sog} no gol</span>
+            </div>
+          )}
+          {xg != null && (
+            <div>
+              <div className="text-[10px] text-slate-400 font-semibold">xG <span className="font-black text-white">{parseFloat(xg).toFixed(2)}</span></div>
+              <XGBar value={parseFloat(xg)} color={barColor} />
+            </div>
+          )}
         </div>
       )}
 
       {/* Passes category */}
       {cat.includes('Passes') && (
-        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
-          {passes !== null && (
-            <div className="flex items-center gap-1.5">
-              {!isRight && <span className="text-lg font-black text-white">{passes}</span>}
-              <div className="flex-1">
-                <div className={`h-1.5 rounded-full overflow-hidden ${isRight ? 'bg-slate-700 w-20' : 'bg-slate-700 w-20'}`}>
-                  <div
-                    className={`h-full rounded-full ${isRight ? 'bg-amber-500 ml-auto' : 'bg-blue-500'}`}
-                    style={{ width: `${Math.min(100, (passes / 100) * 100)}%`, marginLeft: isRight ? 'auto' : undefined }}
-                  />
-                </div>
+        <div className="mt-1.5 space-y-0.5">
+          {passes != null && (
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-black text-white">{passes}</span>
+              <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, parseInt(passes) / 100 * 100)}%` }} />
               </div>
-              {isRight && <span className="text-lg font-black text-white">{passes}</span>}
             </div>
           )}
-          {bcc !== null && bcc > 0 && (
-            <div className="text-[10px] text-amber-400 mt-0.5">{bcc} grande{bcc > 1 ? 's' : ''} chance{bcc > 1 ? 's' : ''} criada{bcc > 1 ? 's' : ''}</div>
+          {bcc != null && parseInt(bcc) > 0 && (
+            <div className="text-[10px] text-amber-400">{bcc} grande chance criada</div>
           )}
         </div>
       )}
 
       {/* Defensive category */}
       {cat.includes('Defensiv') && (
-        <div className={`mt-1 space-y-0.5 ${isRight ? 'flex flex-col items-end' : ''}`}>
-          {duel !== null && duel > 0 && <Dots n={duel} max={5} icon="🛡️" />}
-          {tkl !== null && tkl > 0 && <div className="text-[10px] text-slate-400">{tkl} roubada{tkl > 1 ? 's' : ''} de bola</div>}
-          {duel !== null && duel === 0 && tkl !== null && tkl === 0 && <div className="text-[10px] text-slate-500">—</div>}
+        <div className="mt-1.5 space-y-0.5">
+          {duel != null && <Dots n={parseInt(duel)} max={5} icon="🛡️" />}
+          {tkl != null && parseInt(tkl) > 0 && <div className="text-[10px] text-slate-400">{tkl} roubada{parseInt(tkl) > 1 ? 's' : ''} de bola</div>}
         </div>
       )}
 
       {/* Saves category */}
       {cat.includes('Defesa') && (
-        <div className={`mt-1 ${isRight ? 'flex flex-col items-end' : ''}`}>
-          {sf !== null && <Dots n={sf} max={6} icon="🧤" />}
-          {xgc !== null && xGBar({ value: xgc, max: 2.5, color: isRight ? 'bg-red-500' : 'bg-red-500' })}
-          <div className="text-[10px] text-slate-500 mt-0.5">
-            xGC = gols esperados contra (pressão sofrida)
-          </div>
+        <div className="mt-1.5 space-y-1">
+          {sf != null && (
+            <div className="flex items-center gap-1.5">
+              <Dots n={parseInt(sf)} max={6} icon="🧤" />
+              <span className="text-[10px] text-slate-500">{sf} chutes sofridos</span>
+            </div>
+          )}
+          {xgc != null && (
+            <div>
+              <div className="text-[10px] text-slate-400 font-semibold">xGC <span className="font-black text-white">{parseFloat(xgc).toFixed(2)}</span>
+                <span className="text-slate-600 font-normal"> (pressão sofrida)</span>
+              </div>
+              <XGBar value={parseFloat(xgc)} color="bg-red-500" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -338,9 +357,9 @@ function LeadersSection({ home, away, homeName, awayName }: {
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{cat}</span>
             </div>
             <div className="flex gap-4">
-              {h ? <LeaderSide leader={h} align="left" /> : <div className="flex-1" />}
+              {h ? <LeaderSide leader={h} color="blue" /> : <div className="flex-1" />}
               <div className="w-px bg-slate-700 shrink-0 self-stretch" />
-              {a ? <LeaderSide leader={a} align="right" /> : <div className="flex-1" />}
+              {a ? <LeaderSide leader={a} color="amber" /> : <div className="flex-1" />}
             </div>
           </div>
         )
