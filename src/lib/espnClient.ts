@@ -109,12 +109,11 @@ function computeTimeElapsed(status: EspnStatus): string {
   if (status.type.name === 'STATUS_HALFTIME') return 'HT'
   const period = status.period ?? 0
   const clock = status.clock ?? 0
-  // clock = elapsed seconds in current period
-  const rawMin = period <= 1 ? Math.floor(clock / 60) : 45 + Math.floor(clock / 60)
-  const min = Math.max(1, rawMin)
-  // Show stoppage time as "45+X" or "90+X" (matches real soccer clock notation)
-  if (period <= 1 && min > 45) return `45+${min - 45}`
+  // clock = total game-time elapsed in seconds from kickoff (ESPN accumulates across periods)
+  // Do NOT add 45 for the second half — the value already reflects full game time
+  const min = Math.max(1, Math.floor(clock / 60))
   if (period >= 2 && min > 90) return `90+${min - 90}`
+  if (period <= 1 && min > 45) return `45+${min - 45}`
   return String(min)
 }
 
