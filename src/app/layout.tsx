@@ -8,13 +8,13 @@ import { FavoriteTeamsProvider } from '@/contexts/FavoriteTeamsContext'
 import { SettingsProvider } from '@/contexts/SettingsContext'
 
 export const metadata: Metadata = {
-  title: 'WC 2026 Tracker',
+  title: 'World Cup 26',
   description: 'Live scores, standings, schedule and predictions for FIFA World Cup 2026',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'WC 2026',
+    title: 'World Cup 26',
   },
   other: {
     'mobile-web-app-capable': 'yes',
@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#020617" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="theme-color" content="#0a1628" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body>
         <LanguageProvider>

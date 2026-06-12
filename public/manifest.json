@@ -1,11 +1,11 @@
 {
-  "name": "WC 2026 Tracker",
-  "short_name": "WC 2026",
+  "name": "World Cup 26",
+  "short_name": "World Cup 26",
   "description": "Live scores, standings and predictions for FIFA World Cup 2026",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
   "orientation": "portrait-primary",
   "icons": [
     {
