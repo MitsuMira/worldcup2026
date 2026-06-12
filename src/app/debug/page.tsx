@@ -21,7 +21,7 @@ export default function DebugPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawDetail, isLoading: rawLoading } =
-    useSWR<unknown>(selectedId && mode === 'raw' ? `/api/debug/raw-summary/${selectedId}` : null, fetcher)
+    useSWR<unknown>(selectedId && (mode === 'raw' || mode === 'rosters') ? `/api/debug/raw-summary/${selectedId}` : null, fetcher)
 
   const games = gamesData?.games ?? []
   const firstLiveOrUpcoming = games.find(g => g.time_elapsed !== 'notstarted' || g.finished === 'FALSE')
