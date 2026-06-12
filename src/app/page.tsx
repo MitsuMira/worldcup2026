@@ -148,7 +148,7 @@ export default function Home() {
       {liveGames.length > 0 && (
         <Section title={t.home.liveNow}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {liveGames.map((g) => <MatchCard key={g.id} game={g} />)}
+            {liveGames.map((g) => <MatchCard key={g.id} game={g} showPredictLink />)}
           </div>
         </Section>
       )}
@@ -193,7 +193,7 @@ export default function Home() {
       {recentResults.length > 0 && (
         <Section title={t.home.recentResults}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentResults.map((g) => <MatchCard key={g.id} game={g} />)}
+            {recentResults.map((g) => <MatchCard key={g.id} game={g} showPredictLink />)}
           </div>
         </Section>
       )}

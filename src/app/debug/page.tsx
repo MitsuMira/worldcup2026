@@ -7,7 +7,7 @@ import { useState } from 'react'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-type Mode = 'parsed' | 'raw'
+type Mode = 'parsed' | 'raw' | 'rosters'
 
 export default function DebugPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -77,6 +77,12 @@ export default function DebugPage() {
                       >
                         raw ESPN
                       </button>
+                      <button
+                        onClick={() => { setSelectedId(g.id); setMode('rosters') }}
+                        className={`hover:underline ${selectedId === g.id && mode === 'rosters' ? 'text-amber-400' : 'text-purple-400'}`}
+                      >
+                        rosters
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -124,6 +130,72 @@ export default function DebugPage() {
                   {JSON.stringify(rawDetail, null, 2)}
                 </pre>
               )}
+            </>
+          )}
+          {mode === 'rosters' && (
+            <>
+              <h2 className="text-sm font-bold text-purple-400 mb-2">
+                rosters (headshots) for {selectedId} → {rawLoading ? 'loading…' : 'loaded'}
+              </h2>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {rawDetail && (() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const d = rawDetail as any
+                const rosters: unknown[] = d?.rosters ?? []
+                if (!rosters.length) return <p className="text-slate-500">No rosters in payload.</p>
+                return rosters.map((r: unknown, ri: number) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const roster = r as any
+                  const team = roster?.team?.abbreviation ?? roster?.team?.displayName ?? `Team ${ri}`
+                  const players: unknown[] = roster?.roster ?? []
+                  return (
+                    <div key={ri} className="mb-6">
+                      <div className="text-purple-300 font-bold mb-2">{team} — {roster?.formation ?? 'no formation'}</div>
+                      <table className="w-full text-[10px] border-collapse">
+                        <thead>
+                          <tr className="text-slate-500 border-b border-slate-700">
+                            <th className="text-left py-0.5 pr-2">#</th>
+                            <th className="text-left py-0.5 pr-2">name</th>
+                            <th className="text-left py-0.5 pr-2">starter</th>
+                            <th className="text-left py-0.5 pr-2">id</th>
+                            <th className="text-left py-0.5 pr-2">headshot.href</th>
+                            <th className="text-left py-0.5">preview</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {players.map((p: unknown, pi: number) => {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const pl = p as any
+                            const a = pl?.athlete ?? {}
+                            const href = a?.headshot?.href ?? ''
+                            const fallbackUrl = a?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${a.id}.png` : ''
+                            return (
+                              <tr key={pi} className="border-b border-slate-800/40">
+                                <td className="py-0.5 pr-2 text-slate-500">{a?.jersey ?? '—'}</td>
+                                <td className="py-0.5 pr-2">{a?.displayName}</td>
+                                <td className="py-0.5 pr-2">{pl?.starter ? '✓' : ''}</td>
+                                <td className="py-0.5 pr-2 text-slate-500">{a?.id}</td>
+                                <td className={`py-0.5 pr-2 ${href ? 'text-green-400' : 'text-slate-600'}`}>{href ? '✓ has href' : 'no href'}</td>
+                                <td className="py-0.5">
+                                  {(href || fallbackUrl) && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={href || fallbackUrl}
+                                      alt=""
+                                      className="w-6 h-6 rounded-full object-cover bg-slate-700"
+                                      onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2' }}
+                                    />
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })
+              })()}
             </>
           )}
         </section>
