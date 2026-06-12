@@ -93,6 +93,33 @@ function playerEventBadges(name: string, events: MatchEvent[]): string {
 
 // ── Lineup column ─────────────────────────────────────────────────────────────
 
+// ── Player avatar (headshot with fallback to jersey number) ──────────────────
+
+function PlayerAvatar({ headshot, jersey, size = 5 }: { headshot: string; jersey?: string; size?: number }) {
+  const cls = `w-${size} h-${size} rounded-full object-cover shrink-0`
+  return (
+    <div className={`relative w-${size} h-${size} shrink-0`}>
+      <img
+        src={headshot}
+        alt=""
+        className={cls + ' border border-white/20 bg-slate-700'}
+        onError={e => {
+          const img = e.target as HTMLImageElement
+          img.style.display = 'none'
+          const fb = img.nextElementSibling as HTMLElement | null
+          if (fb) fb.style.display = 'flex'
+        }}
+      />
+      <div
+        className={`w-${size} h-${size} rounded-full bg-slate-700 border border-white/20 items-center justify-center text-white text-[10px] font-bold absolute inset-0`}
+        style={{ display: 'none' }}
+      >
+        {jersey ?? '?'}
+      </div>
+    </div>
+  )
+}
+
 function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullable<MatchDetail['homeLineup']>; color: 'blue' | 'amber'; subsLabel: string; events: MatchEvent[] }) {
   const accent = color === 'blue' ? 'text-blue-400' : 'text-amber-400'
   return (
@@ -105,11 +132,10 @@ function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullabl
           const badges = playerEventBadges(p.name, events)
           return (
             <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-              {p.headshot ? (
-                <img src={p.headshot} alt={p.name} className="w-5 h-5 rounded-full object-cover shrink-0"
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
-              ) : null}
-              <span className={`text-xs text-slate-600 w-5 text-right shrink-0 ${p.headshot ? 'hidden' : ''}`}>{p.jersey}</span>
+              {p.headshot
+                ? <PlayerAvatar headshot={p.headshot} jersey={p.jersey} size={5} />
+                : <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
+              }
               <span className="truncate">{p.name}</span>
               {badges && <span className="text-xs shrink-0">{badges}</span>}
               <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
@@ -125,7 +151,10 @@ function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullabl
               const badges = playerEventBadges(p.name, events)
               return (
                 <div key={i} className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="text-slate-700 w-5 text-right shrink-0">{p.jersey}</span>
+                  {p.headshot
+                    ? <PlayerAvatar headshot={p.headshot} jersey={p.jersey} size={5} />
+                    : <span className="text-slate-700 w-5 text-right shrink-0">{p.jersey}</span>
+                  }
                   <span className="truncate">{p.name}</span>
                   {badges && <span className="shrink-0">{badges}</span>}
                 </div>
@@ -172,25 +201,13 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
           <div key={ri} className="flex justify-around items-center flex-1">
             {row.map((p, pi) => (
               <div key={pi} className="flex flex-col items-center gap-0.5 w-12">
-                <div className="relative w-8 h-8">
-                  <img
-                    src={p.headshot ?? ''}
-                    alt={p.name}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-white/40 bg-slate-700"
-                    onError={e => {
-                      const img = e.target as HTMLImageElement
-                      img.style.display = 'none'
-                      const fb = img.nextElementSibling as HTMLElement | null
-                      if (fb) fb.style.display = 'flex'
-                    }}
-                  />
-                  <div
-                    className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 items-center justify-center text-white text-xs font-bold absolute inset-0"
-                    style={{ display: p.headshot ? 'none' : 'flex' }}
-                  >
+                {p.headshot ? (
+                  <PlayerAvatar headshot={p.headshot} jersey={p.jersey} size={8} />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white text-xs font-bold">
                     {p.jersey ?? '?'}
                   </div>
-                </div>
+                )}
                 <span className="text-white text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full text-center" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
                   {p.name.split(' ').slice(-1)[0]}
                 </span>
