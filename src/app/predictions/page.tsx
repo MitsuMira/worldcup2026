@@ -3,7 +3,7 @@
 import useSWR from 'swr'
 import { useState, useEffect, useCallback } from 'react'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGame, Prediction, PredictionResult } from '@/lib/types'
+import type { EnrichedGame, Prediction, PredictionResult, MatchDetail } from '@/lib/types'
 import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
@@ -175,6 +175,7 @@ export default function PredictionsPage() {
                     <TeamFlag team={game.awayTeam} name={getTeamName(game, 'away')} size="sm" />
                   </div>
                 </div>
+                <GamePreview gameId={game.id} homeName={getTeamName(game, 'home')} awayName={getTeamName(game, 'away')} />
                 <div className="mt-3 flex justify-end gap-2">
                   {existing ? (
                     <button onClick={() => clearPrediction(game.id)} className="text-xs text-slate-500 hover:text-red-400 transition-colors">
@@ -247,6 +248,66 @@ export default function PredictionsPage() {
 }
 
 import type { Translations } from '@/lib/i18n'
+
+// ── Pre-game preview (form + H2H) ────────────────────────────────────────────
+
+function FormDots({ form }: { form: string }) {
+  return (
+    <div className="flex gap-0.5">
+      {[...form].map((r, i) => (
+        <span key={i} className={`w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${
+          r === 'W' ? 'bg-green-500 text-white' :
+          r === 'L' ? 'bg-red-500 text-white' :
+          'bg-slate-700 text-slate-300'
+        }`}>
+          {r === 'W' ? 'V' : r === 'L' ? 'D' : 'E'}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function GamePreview({ gameId, homeName, awayName }: { gameId: string; homeName: string; awayName: string }) {
+  const { data } = useSWR<MatchDetail>(`/api/match/${gameId}`, fetcher, { revalidateOnFocus: false })
+  if (!data) return null
+  const hasForm = data.homeForm || data.awayForm
+  const h2h = data.h2h?.slice(0, 3) ?? []
+  if (!hasForm && h2h.length === 0) return null
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-800 text-[11px]">
+      {hasForm && (
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-slate-500">{homeName}</span>
+            {data.homeForm && <FormDots form={data.homeForm} />}
+          </div>
+          <span className="text-slate-600 text-[10px] uppercase tracking-wider">Últimos 5</span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-slate-500">{awayName}</span>
+            {data.awayForm && <FormDots form={data.awayForm} />}
+          </div>
+        </div>
+      )}
+      {h2h.length > 0 && (
+        <div className="space-y-0.5">
+          <div className="text-slate-600 text-[10px] uppercase tracking-wider mb-1">Últimos confrontos</div>
+          {h2h.map((g, i) => {
+            const hs = parseInt(g.homeScore), as_ = parseInt(g.awayScore)
+            const hWon = hs > as_, aWon = as_ > hs
+            return (
+              <div key={i} className="flex items-center gap-2 py-0.5">
+                <span className="text-slate-600 w-14 shrink-0">{g.date?.slice(0, 7)}</span>
+                <span className={`flex-1 text-right truncate ${hWon ? 'text-white font-semibold' : 'text-slate-500'}`}>{g.homeTeam}</span>
+                <span className="font-black tabular-nums text-white shrink-0 w-10 text-center">{g.homeScore}–{g.awayScore}</span>
+                <span className={`flex-1 truncate ${aWon ? 'text-white font-semibold' : 'text-slate-500'}`}>{g.awayTeam}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function ResultBadge({ result, t }: { result: PredictionResult; t: Translations }) {
   if (result === 'correct') return (

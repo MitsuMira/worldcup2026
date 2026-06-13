@@ -45,7 +45,8 @@
   html.light .bg-slate-800     { background-color: #e8edf2; }
   html.light .bg-slate-800\/50 { background-color: rgb(232 237 242 / 0.5); }
   html.light .bg-slate-800\/30 { background-color: rgb(232 237 242 / 0.3); }
-  html.light .bg-slate-700     { background-color: #d1d9e0; }
+  html.light .bg-slate-700     { background-color: #c8d3dc; }
+  html.light .bg-slate-800\/40 { background-color: rgb(226 232 240 / 0.8); }
   html.light .bg-slate-700\/50 { background-color: rgb(209 217 224 / 0.5); }
   html.light .bg-slate-600     { background-color: #cbd5e1; }  /* selected pill fallback */
   html.light .bg-black\/60     { background-color: rgb(0 0 0 / 0.35); }
@@ -56,8 +57,8 @@
   html.light .text-slate-300 { color: #334155; }
   html.light .text-slate-400 { color: #475569; }
   html.light .text-slate-500 { color: #64748b; }
-  html.light .text-slate-600 { color: #94a3b8; }
-  html.light .text-slate-700 { color: #cbd5e1; }
+  html.light .text-slate-600 { color: #475569; }
+  html.light .text-slate-700 { color: #64748b; }
 
   /* Restore white text for colored (non-slate) accent backgrounds so buttons/badges
      that use bg-blue-600, bg-green-*, bg-red-*, bg-amber-* keep their white labels. */
