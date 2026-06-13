@@ -503,7 +503,7 @@ export async function GET(
     }
 
     return NextResponse.json(result, {
-      headers: { 'Cache-Control': `s-maxage=${revalidate}, stale-while-revalidate` },
+      headers: { 'Cache-Control': `s-maxage=${revalidate}, stale-while-revalidate=${revalidate}` },
     })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

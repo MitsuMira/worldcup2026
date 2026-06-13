@@ -438,7 +438,7 @@ export default function MatchDetailPage() {
   const { data: detail, isLoading: detailLoading, error: detailError } = useSWR<MatchDetail>(
     id ? `/api/match/${id}` : null,
     fetcher,
-    { refreshInterval: status === 'live' ? 30_000 : 0 },
+    { refreshInterval: status === 'live' ? 15_000 : 0 },
   )
 
   if (gamesLoading) {

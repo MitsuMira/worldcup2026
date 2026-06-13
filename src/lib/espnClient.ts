@@ -347,7 +347,7 @@ async function fetchTeamGroupMap(numericToAbbr: Map<string, string>): Promise<Ma
 
 async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
   const res = await fetch(`${SCOREBOARD}?dates=${yearMonth}`, {
-    next: { revalidate: 30 },
+    next: { revalidate: 15 },
     headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
   })
   if (!res.ok) throw new Error(`ESPN scoreboard ${yearMonth}: ${res.status}`)
