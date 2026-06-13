@@ -201,12 +201,16 @@ export default function DebugPage() {
         </section>
       )}
 
-      {/* Raw games JSON */}
+      {/* Raw games JSON — filtered to selected game if one is picked */}
       <section className="mt-8">
         <details>
-          <summary className="text-sm font-bold text-amber-400 cursor-pointer mb-2">Raw /api/games JSON (click to expand)</summary>
+          <summary className="text-sm font-bold text-amber-400 cursor-pointer mb-2">
+            {selectedId ? `Raw /api/games → jogo ${selectedId}` : 'Raw /api/games JSON'} (click to expand)
+          </summary>
           <pre className="bg-slate-900 border border-slate-700 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap break-all text-[10px] leading-relaxed mt-2">
-            {JSON.stringify(gamesData, null, 2)}
+            {selectedId
+              ? JSON.stringify(games.find(g => g.id === selectedId) ?? null, null, 2)
+              : JSON.stringify(gamesData, null, 2)}
           </pre>
         </details>
       </section>
