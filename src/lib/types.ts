@@ -106,6 +106,7 @@ export interface RosterPlayer {
   position?: string
   headshot?: string
   formationPlace?: number
+  captain?: boolean
 }
 
 export interface H2HGame {

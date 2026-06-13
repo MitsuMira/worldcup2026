@@ -33,6 +33,7 @@ interface EspnRosterEntry {
   athlete?: { id: string; displayName: string; jersey?: string; headshot?: { href: string }; position?: { displayName: string; abbreviation: string } }
   jersey?: string   // sometimes at entry level rather than athlete level
   starter?: boolean
+  captain?: boolean
   position?: { displayName: string; abbreviation: string }
   subbedIn?: boolean
   formationPlace?: number
@@ -197,6 +198,7 @@ function parseLineup(roster: EspnRoster): TeamLineup {
       position: r.athlete?.position?.abbreviation ?? r.athlete?.position?.displayName ?? r.position?.abbreviation ?? r.position?.displayName,
       headshot: r.athlete?.headshot?.href,      // only use explicit href — fallback URLs return 404 for most players
       formationPlace: r.formationPlace,
+      captain: r.captain ?? undefined,
     }
   }
   const all = roster.roster ?? []

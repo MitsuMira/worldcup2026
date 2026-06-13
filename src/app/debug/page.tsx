@@ -157,6 +157,7 @@ export default function DebugPage() {
                             <th className="text-left py-0.5 pr-2">#</th>
                             <th className="text-left py-0.5 pr-2">name</th>
                             <th className="text-left py-0.5 pr-2">starter</th>
+                            <th className="text-left py-0.5 pr-2">cap</th>
                             <th className="text-left py-0.5 pr-2">id</th>
                             <th className="text-left py-0.5 pr-2">headshot.href</th>
                             <th className="text-left py-0.5">preview</th>
@@ -174,6 +175,7 @@ export default function DebugPage() {
                                 <td className="py-0.5 pr-2 text-slate-500">{a?.jersey ?? pl?.jersey ?? '—'}</td>
                                 <td className="py-0.5 pr-2">{a?.displayName}</td>
                                 <td className="py-0.5 pr-2">{pl?.starter ? '✓' : ''}</td>
+                                <td className={`py-0.5 pr-2 font-bold ${pl?.captain ? 'text-amber-400' : 'text-slate-700'}`}>{pl?.captain ? '©' : '—'}</td>
                                 <td className="py-0.5 pr-2 text-slate-500">{a?.id}</td>
                                 <td className={`py-0.5 pr-2 ${href ? 'text-green-400' : 'text-slate-600'}`}>{href ? '✓ has href' : 'no href'}</td>
                                 <td className="py-0.5">

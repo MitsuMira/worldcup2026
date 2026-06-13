@@ -137,6 +137,7 @@ function LineupColumn({ lineup, color, subsLabel, events }: { lineup: NonNullabl
                 : <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.jersey}</span>
               }
               <span className="truncate">{p.name}</span>
+              {p.captain && <span className="text-[10px] font-black text-amber-400 shrink-0" title="Capitão">©</span>}
               {badges && <span className="text-xs shrink-0">{badges}</span>}
               <span className="text-xs text-slate-600 shrink-0">{p.position}</span>
             </div>
