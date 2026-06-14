@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw } from 'lucide-react'
+
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
@@ -129,12 +130,6 @@ export default function GroupPage() {
   const [userId, setUserId] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [log, setLog] = useState<string[]>([])
-
-  const addLog = useCallback((msg: string) => {
-    const ts = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    setLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 30))
-  }, [])
 
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
@@ -143,11 +138,7 @@ export default function GroupPage() {
   const { data: membersData, mutate: refreshMembers } = useSWR<{ members: KvMember[] }>(
     mounted ? `group-members-${code}` : null,
     () => fetch(`/api/groups/${code}`, { method: 'POST' }).then(r => r.json()),
-    {
-      refreshInterval: 30_000,
-      onSuccess: (d) => addLog(`KV ← ${d.members?.length ?? 0} membro(s)`),
-      onError: (e) => addLog(`KV ✗ ${e}`),
-    }
+    { refreshInterval: 30_000 }
   )
   const members = membersData?.members ?? []
 
@@ -157,21 +148,16 @@ export default function GroupPage() {
     if (!uid || !uname) return
     if (upsertTimer.current) clearTimeout(upsertTimer.current)
     upsertTimer.current = setTimeout(async () => {
-      addLog(`KV → salvando ${Object.keys(preds).length} palpites…`)
       try {
         const res = await fetch(`/api/groups/${code}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: uid, name: uname, predictions: preds, groupLabel: label }),
         })
-        const json = await res.json()
-        addLog(`KV ← ${res.ok ? 'salvo com sucesso' : `erro ${res.status}: ${JSON.stringify(json)}`}`)
         if (res.ok) refreshMembers()
-      } catch (e) {
-        addLog(`KV ✗ ${e}`)
-      }
+      } catch { /* non-fatal */ }
     }, 1500)
-  }, [code, addLog, refreshMembers])
+  }, [code, refreshMembers])
 
   const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
 
@@ -182,7 +168,6 @@ export default function GroupPage() {
     setUserId(uid)
 
     const preds = loadPredictions()
-    addLog(`Grupo ${code} | uid …${uid.slice(-6)} | ${Object.keys(preds).length} palpites locais`)
 
     if (!getGroups().find(g => g.code === code)) {
       saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
@@ -197,7 +182,7 @@ export default function GroupPage() {
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [code, upsertToKv, addLog])
+  }, [code, upsertToKv])
 
   const copy = () => {
     navigator.clipboard.writeText(code)
@@ -245,15 +230,6 @@ export default function GroupPage() {
           {copied ? <Check size={13} /> : <Copy size={13} />} Copiar
         </button>
       </div>
-
-      {/* Debug log */}
-      {log.length > 0 && (
-        <div className="bg-black border border-slate-800 rounded-xl p-3 mb-4 font-mono text-[10px] text-slate-400 space-y-0.5 max-h-36 overflow-y-auto">
-          {log.map((l, i) => (
-            <div key={i} className={l.includes('✗') || l.includes('erro') ? 'text-red-400' : l.includes('sucesso') || l.includes('←') ? 'text-green-400' : ''}>{l}</div>
-          ))}
-        </div>
-      )}
 
       {/* Leaderboard */}
       {rankedMembers.length === 0 ? (

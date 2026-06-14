@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, Plus, LogIn, Trash2, Copy, Check, Pencil, Loader2 } from 'lucide-react'
+import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2 } from 'lucide-react'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
 
 const STORAGE_KEY = 'wc2026_predictions'
@@ -56,7 +56,7 @@ export default function GroupsPage() {
       })
       if (!res.ok) throw new Error('create failed')
     } catch {
-      // Non-fatal: group page still works, Supabase will get data when user opens it
+      // Non-fatal: group page will upsert to KV when user opens it
     }
     const entry: GroupEntry = { code, label, joinedAt: new Date().toISOString() }
     saveGroup(entry)
@@ -94,7 +94,13 @@ export default function GroupsPage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const leave = (code: string) => {
+  const leave = async (code: string) => {
+    // Remove from KV so others no longer see this user in the group
+    fetch(`/api/groups/${code}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).catch(() => { /* non-fatal */ })
     removeGroup(code)
     setGroups(getGroups())
   }
@@ -233,7 +239,7 @@ export default function GroupsPage() {
                     {copied === g.code ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
                   </button>
                   <button onClick={() => leave(g.code)} className="text-slate-600 hover:text-red-400 transition-colors p-1" title="Sair do grupo">
-                    <Trash2 size={15} />
+                    <LogOut size={15} />
                   </button>
                 </div>
               ))}

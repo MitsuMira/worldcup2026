@@ -20,8 +20,14 @@ export const kv = {
   async set(key: string, value: unknown): Promise<void> {
     await getRedis().set(key, JSON.stringify(value))
   },
+  async del(key: string): Promise<void> {
+    await getRedis().del(key)
+  },
   async sadd(key: string, ...members: string[]): Promise<void> {
     await getRedis().sadd(key, ...members)
+  },
+  async srem(key: string, ...members: string[]): Promise<void> {
+    await getRedis().srem(key, ...members)
   },
   async smembers(key: string): Promise<string[]> {
     return getRedis().smembers(key)

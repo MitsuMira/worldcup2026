@@ -44,6 +44,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ code: st
   }
 }
 
+// Remove a member from the group (leave)
+export async function DELETE(req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  try {
+    const { userId } = await req.json() as { userId: string }
+    if (!userId) return NextResponse.json({ error: 'missing userId' }, { status: 400 })
+    await Promise.all([
+      kv.del(memberKey(code, userId)),
+      kv.srem(membersSetKey(code), userId),
+    ])
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    console.error('[groups DELETE]', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
+}
+
 export async function POST(_req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
