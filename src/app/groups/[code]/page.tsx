@@ -128,8 +128,12 @@ export default function GroupPage() {
   const [predictions, setPredictions] = useState<Record<string, PartyPrediction>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  // Persistent members from Supabase (visible even when others are offline)
   const [persistentMembers, setPersistentMembers] = useState<Record<string, PartyMember>>({})
+  const [log, setLog] = useState<string[]>([])
+  const addLog = useCallback((msg: string) => {
+    const ts = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    setLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 30))
+  }, [])
 
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
@@ -137,27 +141,49 @@ export default function GroupPage() {
   const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
   const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions, localGroupLabel)
 
+  const prevStatus = useRef(status)
+  useEffect(() => {
+    if (status !== prevStatus.current) {
+      addLog(`Ably: ${prevStatus.current} → ${status}`)
+      prevStatus.current = status
+    }
+    if (status === 'connected') {
+      addLog(`Ably: conectado | membros ao vivo: ${Object.keys(state.members).length}`)
+    }
+  }, [status, state.members, addLog])
+
   // Debounced upsert of own predictions to KV — also restores group key after Redis restart
   const upsertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const upsertToKv = useCallback((uid: string, uname: string, preds: Record<string, PartyPrediction>, label: string) => {
     if (!uid || !uname) return
     if (upsertTimer.current) clearTimeout(upsertTimer.current)
-    upsertTimer.current = setTimeout(() => {
-      fetch(`/api/groups/${code}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: uid, name: uname, predictions: preds, groupLabel: label }),
-      }).catch(() => { /* non-fatal */ })
+    upsertTimer.current = setTimeout(async () => {
+      const nPreds = Object.keys(preds).length
+      addLog(`KV upsert → ${uname} (${nPreds} palpites, grupo "${label}")`)
+      try {
+        const res = await fetch(`/api/groups/${code}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, name: uname, predictions: preds, groupLabel: label }),
+        })
+        const json = await res.json()
+        addLog(`KV upsert ← ${res.ok ? 'ok' : `erro ${res.status}: ${JSON.stringify(json)}`}`)
+      } catch (e) {
+        addLog(`KV upsert ✗ ${e}`)
+      }
     }, 2000)
-  }, [code])
+  }, [code, addLog])
 
   // Load all group members from Supabase (persistent leaderboard)
-  const loadFromSupabase = useCallback(async () => {
+  const loadFromKv = useCallback(async () => {
+    addLog('KV load → buscando membros…')
     try {
       const res = await fetch(`/api/groups/${code}`, { method: 'POST' })
       const data = await res.json() as { members: Array<{ user_id: string; name: string; predictions: Record<string, PartyPrediction>; updated_at: string }> }
+      const members = data.members ?? []
+      addLog(`KV load ← ${members.length} membro(s) encontrado(s)`)
       const map: Record<string, PartyMember> = {}
-      for (const m of data.members ?? []) {
+      for (const m of members) {
         map[m.user_id] = {
           userId: m.user_id,
           name: m.name,
@@ -167,8 +193,10 @@ export default function GroupPage() {
         }
       }
       setPersistentMembers(map)
-    } catch { /* non-fatal */ }
-  }, [code])
+    } catch (e) {
+      addLog(`KV load ✗ ${e}`)
+    }
+  }, [code, addLog])
 
   useEffect(() => {
     setMounted(true)
@@ -187,10 +215,9 @@ export default function GroupPage() {
       saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
     }
 
-    // Load existing members from Supabase immediately (no waiting for Ably)
-    loadFromSupabase()
+    addLog(`Iniciando grupo ${code} | uid: ${uid.slice(0, 8)}… | ${Object.keys(preds).length} palpites locais`)
+    loadFromKv()
 
-    // Persist own predictions to KV (also self-heals group key after Redis restart)
     const label = getGroups().find(g => g.code === code)?.label ?? code
     upsertToKv(uid, uname, preds, label)
 
@@ -201,7 +228,7 @@ export default function GroupPage() {
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [code, loadFromSupabase, upsertToKv])
+  }, [code, loadFromKv, upsertToKv, addLog])
 
   useEffect(() => {
     if (!mounted) return
@@ -278,6 +305,15 @@ export default function GroupPage() {
           {copied ? <Check size={13} /> : <Copy size={13} />} Copiar
         </button>
       </div>
+
+      {/* Debug log */}
+      {log.length > 0 && (
+        <div className="bg-black border border-slate-800 rounded-xl p-3 mb-4 font-mono text-[10px] text-slate-400 space-y-0.5 max-h-40 overflow-y-auto">
+          {log.map((l, i) => (
+            <div key={i} className={l.includes('✗') || l.includes('erro') ? 'text-red-400' : l.includes('ok') ? 'text-green-400' : ''}>{l}</div>
+          ))}
+        </div>
+      )}
 
       {/* Leaderboard */}
       {rankedMembers.length === 0 ? (
