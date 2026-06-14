@@ -137,16 +137,16 @@ export default function GroupPage() {
   const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
   const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions, localGroupLabel)
 
-  // Debounced upsert of own predictions to Supabase
+  // Debounced upsert of own predictions to KV — also restores group key after Redis restart
   const upsertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const upsertToSupabase = useCallback((uid: string, uname: string, preds: Record<string, PartyPrediction>) => {
+  const upsertToKv = useCallback((uid: string, uname: string, preds: Record<string, PartyPrediction>, label: string) => {
     if (!uid || !uname) return
     if (upsertTimer.current) clearTimeout(upsertTimer.current)
     upsertTimer.current = setTimeout(() => {
       fetch(`/api/groups/${code}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: uid, name: uname, predictions: preds }),
+        body: JSON.stringify({ userId: uid, name: uname, predictions: preds, groupLabel: label }),
       }).catch(() => { /* non-fatal */ })
     }, 2000)
   }, [code])
@@ -190,17 +190,18 @@ export default function GroupPage() {
     // Load existing members from Supabase immediately (no waiting for Ably)
     loadFromSupabase()
 
-    // Persist own predictions to Supabase
-    upsertToSupabase(uid, uname, preds)
+    // Persist own predictions to KV (also self-heals group key after Redis restart)
+    const label = getGroups().find(g => g.code === code)?.label ?? code
+    upsertToKv(uid, uname, preds, label)
 
     const onStorage = () => {
       const updated = loadPredictions() as unknown as Record<string, PartyPrediction>
       setPredictions(updated)
-      upsertToSupabase(uid, uname, updated)
+      upsertToKv(uid, uname, updated, label)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [code, loadFromSupabase, upsertToSupabase])
+  }, [code, loadFromSupabase, upsertToKv])
 
   useEffect(() => {
     if (!mounted) return
