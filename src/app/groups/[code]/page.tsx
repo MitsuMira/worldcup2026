@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, Copy, Check, Wifi, WifiOff, ChevronDown, ChevronUp, Crown } from 'lucide-react'
-import { usePartyGroup } from '@/hooks/usePartyGroup'
+import { useAblyGroup } from '@/hooks/useAblyGroup'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { PartyMember, PartyPrediction } from '@/lib/partyTypes'
 import type { EnrichedGame, Prediction } from '@/lib/types'
@@ -134,7 +134,7 @@ export default function GroupPage() {
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
 
-  const { state, status, logs } = usePartyGroup(mounted ? code : null, userId, userName, predictions)
+  const { state, status, logs } = useAblyGroup(mounted ? code : null, userId, userName, predictions)
 
   useEffect(() => {
     setMounted(true)
@@ -251,7 +251,6 @@ export default function GroupPage() {
             Log de conexão ({logs.length})
           </summary>
           <div className="mt-2 bg-slate-900 border border-slate-800 rounded-xl p-3 font-mono text-[10px] space-y-0.5">
-            <div className="text-slate-600 mb-1">host: {process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? '(não configurado)'}</div>
             {logs.map((l, i) => (
               <div key={i} className={`flex gap-2 ${l.type === 'ok' ? 'text-green-400' : l.type === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
                 <span className="shrink-0 text-slate-600">{l.ts}</span>
