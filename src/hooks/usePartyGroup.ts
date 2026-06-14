@@ -93,14 +93,16 @@ export function usePartyGroup(
       }
     })
 
-    socket.addEventListener('close', (ev: CloseEvent) => {
+    socket.addEventListener('close', (ev) => {
       setStatus('disconnected')
-      addLog(`Conexão fechada (code=${ev.code} reason=${ev.reason || 'sem motivo'})`, 'error')
+      const ce = ev as unknown as CloseEvent
+      addLog(`Conexão fechada (code=${ce?.code ?? '?'} reason=${ce?.reason || 'sem motivo'})`, 'error')
     })
 
-    socket.addEventListener('error', (ev: Event) => {
+    socket.addEventListener('error', (ev) => {
       setStatus('disconnected')
-      addLog(`Erro WebSocket: ${(ev as ErrorEvent).message ?? 'sem detalhes'}`, 'error')
+      const ee = ev as unknown as ErrorEvent
+      addLog(`Erro WebSocket: ${ee?.message ?? JSON.stringify(ev)}`, 'error')
     })
 
     return () => {
