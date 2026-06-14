@@ -190,12 +190,25 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
       className="relative w-full rounded-lg overflow-hidden"
       style={{ background: 'linear-gradient(to bottom, #166534, #15803d, #166534)', minHeight: 280, paddingTop: 12, paddingBottom: 12 }}
     >
-      {/* Field lines */}
-      <div className="absolute inset-0 flex flex-col items-center justify-between pointer-events-none opacity-20">
-        <div className="w-full border-b border-white/60 h-0" style={{ marginTop: '50%' }} />
-      </div>
-      <div className="absolute inset-x-0 top-1/2 -translate-y-px h-px bg-white/20" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-white/20" />
+      {/* Field markings */}
+      {/* Halfway line */}
+      <div className="absolute inset-x-0 top-1/2 -translate-y-px h-px bg-white/25" />
+      {/* Centre circle */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-white/25" />
+      {/* Centre spot */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white/30" />
+      {/* Top penalty area */}
+      <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ top: 0, width: '62%', height: '18%' }} />
+      {/* Top 6-yard box */}
+      <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ top: 0, width: '32%', height: '7%' }} />
+      {/* Top goal */}
+      <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-b border-white/30" style={{ top: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
+      {/* Bottom penalty area */}
+      <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ bottom: 0, width: '62%', height: '18%' }} />
+      {/* Bottom 6-yard box */}
+      <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ bottom: 0, width: '32%', height: '7%' }} />
+      {/* Bottom goal */}
+      <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-t border-white/30" style={{ bottom: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
 
       <div className="relative flex flex-col justify-between h-full gap-1 px-1" style={{ minHeight: 280 }}>
         {displayRows.map((row, ri) => (

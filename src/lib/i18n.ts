@@ -159,7 +159,7 @@ export const en: Translations = {
   },
   matchDetail: {
     back: '← Back', notFound: 'Match not found.', homeLink: '← Home', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Timeline', tabFeed: 'Live Feed', tabStats: 'Stats', tabLineups: 'Lineups', tabH2H: 'Pre-Game',
+    tabTimeline: 'Timeline', tabFeed: 'Live Feed', tabStats: 'Stats', tabLineups: 'Lineups', tabH2H: 'Recent Form',
     loadingDetail: 'Loading match data…', detailUnavailable: 'Match details unavailable.',
     noEvents: 'No events yet.', noStats: 'Stats not available yet.', noLineups: 'Lineups not available yet.',
     subs: 'Subs',
@@ -272,7 +272,7 @@ export const pt: Translations = {
   },
   matchDetail: {
     back: '← Voltar', notFound: 'Partida não encontrada.', homeLink: '← Início', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Linha do Tempo', tabFeed: 'Ao Vivo', tabStats: 'Estatísticas', tabLineups: 'Escalações', tabH2H: 'Pré-Jogo',
+    tabTimeline: 'Linha do Tempo', tabFeed: 'Ao Vivo', tabStats: 'Estatísticas', tabLineups: 'Escalações', tabH2H: 'Últimas Partidas',
     loadingDetail: 'Carregando dados da partida…', detailUnavailable: 'Detalhes da partida indisponíveis.',
     noEvents: 'Nenhum evento ainda.', noStats: 'Estatísticas ainda não disponíveis.', noLineups: 'Escalações ainda não disponíveis.',
     subs: 'Reservas',
@@ -385,7 +385,7 @@ export const es: Translations = {
   },
   matchDetail: {
     back: '← Volver', notFound: 'Partido no encontrado.', homeLink: '← Inicio', ft: 'FT', ht: 'HT',
-    tabTimeline: 'Cronología', tabFeed: 'En Vivo', tabStats: 'Estadísticas', tabLineups: 'Alineaciones', tabH2H: 'Pre-Partido',
+    tabTimeline: 'Cronología', tabFeed: 'En Vivo', tabStats: 'Estadísticas', tabLineups: 'Alineaciones', tabH2H: 'Últimos Partidos',
     loadingDetail: 'Cargando datos del partido…', detailUnavailable: 'Detalles del partido no disponibles.',
     noEvents: 'Sin eventos aún.', noStats: 'Estadísticas aún no disponibles.', noLineups: 'Alineaciones aún no disponibles.',
     subs: 'Suplentes',
