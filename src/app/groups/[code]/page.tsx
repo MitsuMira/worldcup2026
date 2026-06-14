@@ -134,7 +134,8 @@ export default function GroupPage() {
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
 
-  const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions)
+  const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
+  const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions, localGroupLabel)
 
   useEffect(() => {
     setMounted(true)
@@ -185,7 +186,11 @@ export default function GroupPage() {
 
   if (!mounted) return null
 
-  const groupLabel = getGroups().find(g => g.code === code)?.label ?? code
+  // Use host's group label (earliest member) if available, fall back to local label
+  const members = Object.values(state.members).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hostLabel = (members.find(m => (m as any).groupLabel) as any)?.groupLabel as string | undefined
+  const groupLabel = hostLabel ?? localGroupLabel
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">

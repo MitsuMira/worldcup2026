@@ -11,6 +11,7 @@ export function useAblyGroup(
   userId: string,
   name: string,
   predictions: Record<string, PartyPrediction>,
+  groupLabel?: string,
 ) {
   const [roomState, setRoomState] = useState<PartyRoomState>({ members: {} })
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
@@ -20,23 +21,25 @@ export function useAblyGroup(
   const stateRef = useRef<Record<string, PartyMember>>({})
   const predictionsRef = useRef(predictions)
   const nameRef = useRef(name)
+  const groupLabelRef = useRef(groupLabel)
 
   useEffect(() => { predictionsRef.current = predictions }, [predictions])
   useEffect(() => { nameRef.current = name }, [name])
+  useEffect(() => { groupLabelRef.current = groupLabel }, [groupLabel])
 
-  const presenceData = useCallback((): PartyMember => ({
+  const makePresenceData = useCallback((): PartyMember & { groupLabel?: string } => ({
     userId,
     name: nameRef.current,
     predictions: predictionsRef.current,
     joinedAt: stateRef.current[userId]?.joinedAt ?? new Date().toISOString(),
     online: true,
+    groupLabel: groupLabelRef.current,
   }), [userId])
 
   const updatePresence = useCallback(() => {
-    channelRef.current?.presence.update(presenceData())
-  }, [presenceData])
+    channelRef.current?.presence.update(makePresenceData())
+  }, [makePresenceData])
 
-  // Push prediction updates while connected
   useEffect(() => {
     if (status !== 'connected' || !userId) return
     updatePresence()
@@ -62,32 +65,26 @@ export function useAblyGroup(
 
     client.connection.on('connected', () => {
       setStatus('connected')
-
       const channel = client.channels.get(`group-${code}`)
       channelRef.current = channel
 
-      // Subscribe to presence events
-      channel.presence.subscribe('enter', (msg) => {
-        applyMember(msg.data as PartyMember, true)
-      })
-      channel.presence.subscribe('update', (msg) => {
-        applyMember(msg.data as PartyMember, true)
-      })
-      channel.presence.subscribe('leave', (msg) => {
+      channel.presence.subscribe('enter', msg => applyMember(msg.data as PartyMember, true))
+      channel.presence.subscribe('update', msg => applyMember(msg.data as PartyMember, true))
+      channel.presence.subscribe('leave', msg => {
         const m = stateRef.current[msg.clientId]
         if (m) applyMember({ ...m }, false)
       })
 
-      // Announce ourselves
-      channel.presence.enter(presenceData())
-
-      // Get everyone already in the room
-      channel.presence.get().then(members => {
-        for (const m of members) {
-          applyMember(m.data as PartyMember, true)
-        }
-        setRoomState({ members: { ...stateRef.current } })
-      }).catch(() => {})
+      // Wait for channel to be fully attached before enter + get
+      // Wait for channel attached before presence operations
+      channel.on('attached', () => {
+        channel.presence.enter(makePresenceData())
+        channel.presence.get().then(members => {
+          for (const m of members) applyMember(m.data as PartyMember, true)
+          setRoomState({ members: { ...stateRef.current } })
+        }).catch(() => {})
+      })
+      channel.attach()
     })
 
     client.connection.on('disconnected', () => setStatus('disconnected'))
@@ -103,7 +100,7 @@ export function useAblyGroup(
       stateRef.current = {}
       setStatus('disconnected')
     }
-  }, [code, userId, presenceData])
+  }, [code, userId, makePresenceData])
 
   const rename = useCallback((newName: string) => {
     nameRef.current = newName

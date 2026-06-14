@@ -171,13 +171,6 @@ export default function GroupsPage() {
                   placeholder="CÓDIGO (6 letras)"
                   maxLength={6}
                 />
-                <input
-                  value={joinLabel}
-                  onChange={e => setJoinLabel(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-slate-600"
-                  placeholder="Apelido para o grupo (opcional)"
-                  maxLength={32}
-                />
                 <div className="flex gap-2">
                   <button onClick={handleJoin}
                     className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-lg transition-colors">
