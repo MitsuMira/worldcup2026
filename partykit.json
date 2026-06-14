@@ -1,0 +1,6 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "wc2026-groups",
+  "main": "party/index.ts",
+  "compatibilityDate": "2023-10-01"
+}
