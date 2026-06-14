@@ -1,10 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Ably from 'ably'
 import { Users, Plus, LogIn, Trash2, Copy, Check, Pencil, Loader2 } from 'lucide-react'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
+
+const STORAGE_KEY = 'wc2026_predictions'
+function loadPredictions() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
+}
 
 export default function GroupsPage() {
   const router = useRouter()
@@ -19,6 +23,7 @@ export default function GroupsPage() {
   const [view, setView] = useState<'list' | 'join' | 'create'>('list')
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [joining, setJoining] = useState(false)
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -38,37 +43,49 @@ export default function GroupsPage() {
     setEditingName(false)
   }
 
-  // Publish group-created marker so others can validate it exists
-  const publishGroupCreated = useCallback(async (code: string, label: string, uid: string) => {
-    const tokenRes = await fetch(`/api/ably-token?clientId=${encodeURIComponent(uid)}`)
-    const tokenReq = await tokenRes.json()
-    const client = new Ably.Realtime({ ...tokenReq })
-    await new Promise<void>(resolve => { client.connection.once('connected', () => resolve()) })
-    const channel = client.channels.get(`group-${code}`)
-    await channel.publish('group-created', { code, label, createdAt: new Date().toISOString() })
-    client.close()
-  }, [])
-
   const handleCreate = async () => {
     const label = createLabel.trim() || 'Meu grupo'
     const code = generateCode()
     setCreating(true)
     try {
-      await publishGroupCreated(code, label, userId)
-    } catch { /* not critical — group still works */ }
+      const predictions = loadPredictions()
+      const res = await fetch('/api/groups/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, label, userId, name, predictions }),
+      })
+      if (!res.ok) throw new Error('create failed')
+    } catch {
+      // Non-fatal: group page still works, Supabase will get data when user opens it
+    }
     const entry: GroupEntry = { code, label, joinedAt: new Date().toISOString() }
     saveGroup(entry)
     setGroups(getGroups())
     router.push(`/groups/${code}`)
   }
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (code.length !== 6) { setError('Código deve ter 6 caracteres'); return }
-    const entry: GroupEntry = { code, label: code, joinedAt: new Date().toISOString() }
-    saveGroup(entry)
-    setGroups(getGroups())
-    router.push(`/groups/${code}`)
+    setJoining(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/groups/${code}`)
+      const data = await res.json() as { exists: boolean; label?: string }
+      if (!data.exists) {
+        setError('Grupo não encontrado. Verifique o código.')
+        setJoining(false)
+        return
+      }
+      const label = data.label ?? code
+      const entry: GroupEntry = { code, label, joinedAt: new Date().toISOString() }
+      saveGroup(entry)
+      setGroups(getGroups())
+      router.push(`/groups/${code}`)
+    } catch {
+      setError('Erro ao verificar o grupo. Tente novamente.')
+      setJoining(false)
+    }
   }
 
   const copy = (code: string) => {
@@ -186,11 +203,11 @@ export default function GroupsPage() {
                   maxLength={6}
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleJoin} disabled={joinCode.length < 6}
-                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors">
-                    Entrar
+                  <button onClick={handleJoin} disabled={joining || joinCode.length < 6}
+                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                    {joining ? <><Loader2 size={14} className="animate-spin" /> Verificando…</> : 'Entrar'}
                   </button>
-                  <button onClick={() => { setView('list'); setError('') }}
+                  <button onClick={() => { setView('list'); setError('') }} disabled={joining}
                     className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">
                     Cancelar
                   </button>

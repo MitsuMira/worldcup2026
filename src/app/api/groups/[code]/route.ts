@@ -1,28 +1,50 @@
 import { NextResponse } from 'next/server'
-import Ably from 'ably'
+import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Check if a group exists by looking for a 'group-created' message in channel history
+// Check if a group exists
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
-  const apiKey = process.env.ABLY_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'misconfigured' }, { status: 500 })
+  const { data, error } = await supabase
+    .from('groups')
+    .select('code, label')
+    .eq('code', code)
+    .single()
 
-  const rest = new Ably.Rest(apiKey)
-  try {
-    const channel = rest.channels.get(`group-${code}`)
-    const page = await channel.history({ limit: 100, direction: 'backwards' })
-    const created = page.items.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (m: any) => m.name === 'group-created'
-    )
-    if (created) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return NextResponse.json({ exists: true, label: (created.data as any)?.label ?? code })
-    }
-    return NextResponse.json({ exists: false })
-  } catch {
-    return NextResponse.json({ exists: false })
-  }
+  if (error || !data) return NextResponse.json({ exists: false })
+  return NextResponse.json({ exists: true, label: data.label })
+}
+
+// Upsert a member's predictions into a group
+export async function PUT(req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  const body = await req.json() as { userId: string; name: string; predictions: Record<string, unknown> }
+  const { userId, name, predictions } = body
+
+  if (!userId || !name) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
+
+  const { error } = await supabase.from('group_members').upsert({
+    code,
+    user_id: userId,
+    name,
+    predictions,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'code,user_id' })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+// Get all members of a group
+export async function POST(_req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('user_id, name, predictions, updated_at')
+    .eq('code', code)
+    .order('updated_at', { ascending: true })
+
+  if (error) return NextResponse.json({ members: [] })
+  return NextResponse.json({ members: data ?? [] })
 }

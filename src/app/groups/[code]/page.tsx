@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
@@ -15,7 +15,6 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
 
 type PredictionResult = 'correct' | 'correct-winner' | 'wrong' | 'pending'
-const resultPoints: Record<PredictionResult, number> = { correct: 3, 'correct-winner': 1, wrong: 0, pending: 0 }
 
 function loadPredictions(): Record<string, Prediction> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
@@ -97,7 +96,6 @@ function MemberRow({
                 </div>
               )
             })}
-            {/* Upcoming predictions */}
             {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id]).length > 0 && (
               <>
                 <div className="text-[10px] text-slate-600 uppercase tracking-wider pt-1">Palpites futuros</div>
@@ -130,6 +128,8 @@ export default function GroupPage() {
   const [predictions, setPredictions] = useState<Record<string, PartyPrediction>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // Persistent members from Supabase (visible even when others are offline)
+  const [persistentMembers, setPersistentMembers] = useState<Record<string, PartyMember>>({})
 
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
@@ -137,16 +137,49 @@ export default function GroupPage() {
   const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
   const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions, localGroupLabel)
 
+  // Debounced upsert of own predictions to Supabase
+  const upsertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const upsertToSupabase = useCallback((uid: string, uname: string, preds: Record<string, PartyPrediction>) => {
+    if (!uid || !uname) return
+    if (upsertTimer.current) clearTimeout(upsertTimer.current)
+    upsertTimer.current = setTimeout(() => {
+      fetch(`/api/groups/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid, name: uname, predictions: preds }),
+      }).catch(() => { /* non-fatal */ })
+    }, 2000)
+  }, [code])
+
+  // Load all group members from Supabase (persistent leaderboard)
+  const loadFromSupabase = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/groups/${code}`, { method: 'POST' })
+      const data = await res.json() as { members: Array<{ user_id: string; name: string; predictions: Record<string, PartyPrediction>; updated_at: string }> }
+      const map: Record<string, PartyMember> = {}
+      for (const m of data.members ?? []) {
+        map[m.user_id] = {
+          userId: m.user_id,
+          name: m.name,
+          predictions: m.predictions,
+          joinedAt: m.updated_at,
+          online: false,
+        }
+      }
+      setPersistentMembers(map)
+    } catch { /* non-fatal */ }
+  }, [code])
+
   useEffect(() => {
     setMounted(true)
     const uid = getOrCreateUserId()
-    const name = getUserName()
+    const uname = getUserName()
     setUserId(uid)
-    setUserName(name)
+    setUserName(uname)
 
     const raw = loadPredictions()
-    // cast local Prediction → PartyPrediction (same shape)
-    setPredictions(raw as unknown as Record<string, PartyPrediction>)
+    const preds = raw as unknown as Record<string, PartyPrediction>
+    setPredictions(preds)
 
     // Ensure this group is saved locally
     const groups = getGroups()
@@ -154,16 +187,21 @@ export default function GroupPage() {
       saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
     }
 
-    // Keep predictions in sync with localStorage changes
+    // Load existing members from Supabase immediately (no waiting for Ably)
+    loadFromSupabase()
+
+    // Persist own predictions to Supabase
+    upsertToSupabase(uid, uname, preds)
+
     const onStorage = () => {
-      const updated = loadPredictions()
-      setPredictions(updated as unknown as Record<string, PartyPrediction>)
+      const updated = loadPredictions() as unknown as Record<string, PartyPrediction>
+      setPredictions(updated)
+      upsertToSupabase(uid, uname, updated)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [code])
+  }, [code, loadFromSupabase, upsertToSupabase])
 
-  // Also re-sync predictions periodically (in case same-tab changes)
   useEffect(() => {
     if (!mounted) return
     const raw = loadPredictions()
@@ -177,17 +215,29 @@ export default function GroupPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Merge Supabase baseline with Ably real-time overlay
+  const mergedMembers = useMemo(() => {
+    const merged: Record<string, PartyMember> = {}
+    // Start with persistent data (everyone who has ever been in the group)
+    for (const [uid, m] of Object.entries(persistentMembers)) {
+      merged[uid] = { ...m, online: false }
+    }
+    // Overlay real-time data (more up-to-date predictions + online flag)
+    for (const [uid, m] of Object.entries(state.members)) {
+      merged[uid] = { ...merged[uid], ...m, online: true }
+    }
+    return merged
+  }, [persistentMembers, state.members])
+
   const rankedMembers = useMemo(() => {
-    if (!state) return []
-    return Object.values(state.members)
+    return Object.values(mergedMembers)
       .map(m => ({ member: m, ...calcPoints(m, games) }))
       .sort((a, b) => b.pts - a.pts || b.exact - a.exact)
-  }, [state, games])
+  }, [mergedMembers, games])
 
   if (!mounted) return null
 
-  // Use host's group label (earliest member) if available, fall back to local label
-  const members = Object.values(state.members).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
+  const members = Object.values(mergedMembers).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hostLabel = (members.find(m => (m as any).groupLabel) as any)?.groupLabel as string | undefined
   const groupLabel = hostLabel ?? localGroupLabel
@@ -231,7 +281,7 @@ export default function GroupPage() {
       {/* Leaderboard */}
       {rankedMembers.length === 0 ? (
         <div className="text-center text-slate-500 text-sm py-12">
-          {status === 'connected' ? 'Aguardando outros membros…' : 'Conectando ao grupo…'}
+          Carregando grupo…
         </div>
       ) : (
         <div className="space-y-2">
@@ -247,6 +297,12 @@ export default function GroupPage() {
             />
           ))}
         </div>
+      )}
+
+      {rankedMembers.length > 0 && (
+        <p className="text-center text-xs text-slate-600 mt-6">
+          🟢 online agora · ⚫ visto anteriormente
+        </p>
       )}
     </div>
   )
