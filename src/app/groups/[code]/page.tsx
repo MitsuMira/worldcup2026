@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw } from 'lucide-react'
-
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
@@ -14,6 +13,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
 
 type PredictionResult = 'correct' | 'correct-winner' | 'wrong' | 'pending'
+type Tab = 'leaderboard' | 'matches'
 
 interface KvMember {
   userId: string
@@ -42,15 +42,15 @@ function calcPoints(member: KvMember, games: EnrichedGame[]) {
 }
 
 function ResultDot({ result }: { result: PredictionResult }) {
-  if (result === 'correct') return <span className="w-2 h-2 rounded-full bg-green-500 inline-block" title="Placar exato" />
-  if (result === 'correct-winner') return <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" title="Vencedor certo" />
-  if (result === 'wrong') return <span className="w-2 h-2 rounded-full bg-red-500 inline-block" title="Errou" />
-  return <span className="w-2 h-2 rounded-full bg-slate-700 inline-block" title="Aguardando" />
+  if (result === 'correct') return <span className="w-2 h-2 rounded-full bg-green-500 inline-block shrink-0" title="Placar exato" />
+  if (result === 'correct-winner') return <span className="w-2 h-2 rounded-full bg-blue-500 inline-block shrink-0" title="Vencedor certo" />
+  if (result === 'wrong') return <span className="w-2 h-2 rounded-full bg-red-500 inline-block shrink-0" title="Errou" />
+  return <span className="w-2 h-2 rounded-full bg-slate-700 inline-block shrink-0" title="Aguardando" />
 }
 
-function MemberRow({
-  member, rank, isMe, games, expanded, onToggle,
-}: {
+// ── Leaderboard tab ──────────────────────────────────────────────────────────
+
+function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
   member: KvMember; rank: number; isMe: boolean; games: EnrichedGame[]
   expanded: boolean; onToggle: () => void
 }) {
@@ -83,7 +83,7 @@ function MemberRow({
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-800">
           <div className="mt-3 space-y-2">
-            {games.filter(g => getMatchStatus(g) === 'finished').map(game => {
+            {finishedGames.map(game => {
               const pred = member.predictions[game.id]
               if (!pred) return null
               const result = getPredictionResult(
@@ -124,17 +124,75 @@ function MemberRow({
   )
 }
 
+// ── Matches tab ──────────────────────────────────────────────────────────────
+
+function MatchCompare({ game, members, rankedOrder }: {
+  game: EnrichedGame
+  members: KvMember[]
+  rankedOrder: string[] // userIds sorted by rank, for consistent column order
+}) {
+  const finished = getMatchStatus(game) === 'finished'
+  const anyPrediction = members.some(m => m.predictions[game.id])
+  if (!anyPrediction) return null
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      {/* Match header */}
+      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <span className="text-xs text-white font-semibold truncate flex-1">
+          {getTeamName(game, 'home')} vs {getTeamName(game, 'away')}
+        </span>
+        {finished ? (
+          <span className="text-xs font-black text-white ml-2 shrink-0">{game.home_score}–{game.away_score}</span>
+        ) : (
+          <span className="text-[10px] text-slate-500 ml-2 shrink-0">não iniciado</span>
+        )}
+      </div>
+      {/* Member predictions */}
+      <div className="divide-y divide-slate-800/50">
+        {rankedOrder.map((uid, i) => {
+          const member = members.find(m => m.userId === uid)
+          if (!member) return null
+          const pred = member.predictions[game.id]
+          if (!pred) return (
+            <div key={uid} className="px-4 py-2.5 flex items-center gap-3">
+              <span className="text-xs text-slate-600 w-5 text-center">{i + 1}</span>
+              <span className="text-xs text-slate-500 truncate flex-1">{member.name}</span>
+              <span className="text-xs text-slate-700">—</span>
+            </div>
+          )
+          const result = finished
+            ? getPredictionResult({ ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction, game) as PredictionResult
+            : 'pending'
+          return (
+            <div key={uid} className="px-4 py-2.5 flex items-center gap-3">
+              <span className="text-xs text-slate-500 w-5 text-center">{i + 1}</span>
+              <span className="text-xs text-white truncate flex-1">{member.name}</span>
+              <ResultDot result={result} />
+              <span className={`text-xs font-bold shrink-0 ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-amber-400'}`}>
+                {pred.homeScore}–{pred.awayScore}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
+
 export default function GroupPage() {
   const { code } = useParams<{ code: string }>()
   const [mounted, setMounted] = useState(false)
   const [userId, setUserId] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [tab, setTab] = useState<Tab>('leaderboard')
 
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
 
-  // Poll KV for group members every 30s
   const { data: membersData, mutate: refreshMembers } = useSWR<{ members: KvMember[] }>(
     mounted ? `group-members-${code}` : null,
     () => fetch(`/api/groups/${code}`, { method: 'POST' }).then(r => r.json()),
@@ -142,7 +200,6 @@ export default function GroupPage() {
   )
   const members = membersData?.members ?? []
 
-  // Debounced upsert of own predictions to KV
   const upsertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const upsertToKv = useCallback((uid: string, uname: string, preds: Record<string, Prediction>, label: string) => {
     if (!uid || !uname) return
@@ -166,23 +223,30 @@ export default function GroupPage() {
     const uid = getOrCreateUserId()
     const uname = getUserName()
     setUserId(uid)
-
     const preds = loadPredictions()
-
-    if (!getGroups().find(g => g.code === code)) {
-      saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
-    }
-
+    if (!getGroups().find(g => g.code === code)) saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
     const label = getGroups().find(g => g.code === code)?.label ?? code
     upsertToKv(uid, uname, preds, label)
-
-    const onStorage = () => {
-      const updated = loadPredictions()
-      upsertToKv(uid, uname, updated, label)
-    }
+    const onStorage = () => upsertToKv(uid, uname, loadPredictions(), label)
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [code, upsertToKv])
+
+  const rankedMembers = useMemo(() =>
+    members
+      .map(m => ({ member: m, ...calcPoints(m, games) }))
+      .sort((a, b) => b.pts - a.pts || b.exact - a.exact),
+    [members, games]
+  )
+  const rankedOrder = rankedMembers.map(r => r.member.userId)
+
+  // Games that have at least one prediction from any member
+  const gamesWithPredictions = useMemo(() =>
+    games.filter(g => members.some(m => m.predictions[g.id])),
+    [games, members]
+  )
+  const finishedWithPreds = gamesWithPredictions.filter(g => getMatchStatus(g) === 'finished')
+  const upcomingWithPreds = gamesWithPredictions.filter(g => getMatchStatus(g) !== 'finished')
 
   const copy = () => {
     navigator.clipboard.writeText(code)
@@ -190,15 +254,7 @@ export default function GroupPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const rankedMembers = useMemo(() => {
-    return members
-      .map(m => ({ member: m, ...calcPoints(m, games) }))
-      .sort((a, b) => b.pts - a.pts || b.exact - a.exact)
-  }, [members, games])
-
   if (!mounted) return null
-
-  const groupLabel = localGroupLabel
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
@@ -208,7 +264,7 @@ export default function GroupPage() {
           <ArrowLeft size={20} />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-white truncate">{groupLabel}</h1>
+          <h1 className="text-xl font-black text-white truncate">{localGroupLabel}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs font-mono text-slate-400 tracking-widest">{code}</span>
             <button onClick={copy} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -224,29 +280,58 @@ export default function GroupPage() {
       {/* Share hint */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 mb-4 flex items-center gap-3">
         <div className="flex-1 text-xs text-slate-400">
-          Compartilhe o código <span className="font-mono font-bold text-white">{code}</span> com amigos.
+          Compartilhe <span className="font-mono font-bold text-white">{code}</span> com amigos para entrarem.
         </div>
         <button onClick={copy} className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 shrink-0 transition-colors">
           {copied ? <Check size={13} /> : <Copy size={13} />} Copiar
         </button>
       </div>
 
-      {/* Leaderboard */}
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-4">
+        <button onClick={() => setTab('leaderboard')}
+          className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${tab === 'leaderboard' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>
+          Classificação
+        </button>
+        <button onClick={() => setTab('matches')}
+          className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${tab === 'matches' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>
+          Partidas
+        </button>
+      </div>
+
+      {/* Content */}
       {rankedMembers.length === 0 ? (
         <div className="text-center text-slate-500 text-sm py-12">Carregando grupo…</div>
-      ) : (
+      ) : tab === 'leaderboard' ? (
         <div className="space-y-2">
           {rankedMembers.map(({ member }, i) => (
-            <MemberRow
-              key={member.userId}
-              member={member}
-              rank={i + 1}
-              isMe={member.userId === userId}
-              games={games}
+            <MemberRow key={member.userId} member={member} rank={i + 1}
+              isMe={member.userId === userId} games={games}
               expanded={expanded === member.userId}
-              onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
-            />
+              onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)} />
           ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {finishedWithPreds.length > 0 && (
+            <>
+              <div className="text-xs text-slate-500 uppercase tracking-wide">Encerradas</div>
+              {finishedWithPreds.map(game => (
+                <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder} />
+              ))}
+            </>
+          )}
+          {upcomingWithPreds.length > 0 && (
+            <>
+              <div className={`text-xs text-slate-500 uppercase tracking-wide ${finishedWithPreds.length > 0 ? 'mt-4' : ''}`}>Próximas</div>
+              {upcomingWithPreds.map(game => (
+                <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder} />
+              ))}
+            </>
+          )}
+          {gamesWithPredictions.length === 0 && (
+            <div className="text-center text-slate-500 text-sm py-8">Nenhum palpite feito ainda.</div>
+          )}
         </div>
       )}
     </div>
