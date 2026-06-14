@@ -401,7 +401,7 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
   const games = await fetchEnrichedGames()
   const groupGames = games.filter(g => g.type === 'group' && g.group !== '')
 
-  type Entry = { team: ApiTeam; pts: number; gf: number; ga: number }
+  type Entry = { team: ApiTeam; pts: number; gf: number; ga: number; w: number; d: number; l: number; played: number }
   const groupMap = new Map<string, Map<string, Entry>>()
 
   for (const game of groupGames) {
@@ -411,7 +411,7 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
 
     const addTeam = (team: ApiTeam | undefined) => {
       if (team && !teams.has(team.id))
-        teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0 })
+        teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, played: 0 })
     }
     addTeam(game.homeTeam)
     addTeam(game.awayTeam)
@@ -422,12 +422,16 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
       const homeEntry = game.homeTeam ? teams.get(game.homeTeam.id) : undefined
       const awayEntry = game.awayTeam ? teams.get(game.awayTeam.id) : undefined
       if (homeEntry) {
-        homeEntry.gf += hs; homeEntry.ga += as_
-        homeEntry.pts += hs > as_ ? 3 : hs === as_ ? 1 : 0
+        homeEntry.gf += hs; homeEntry.ga += as_; homeEntry.played++
+        if (hs > as_) { homeEntry.pts += 3; homeEntry.w++ }
+        else if (hs === as_) { homeEntry.pts += 1; homeEntry.d++ }
+        else homeEntry.l++
       }
       if (awayEntry) {
-        awayEntry.gf += as_; awayEntry.ga += hs
-        awayEntry.pts += as_ > hs ? 3 : as_ === hs ? 1 : 0
+        awayEntry.gf += as_; awayEntry.ga += hs; awayEntry.played++
+        if (as_ > hs) { awayEntry.pts += 3; awayEntry.w++ }
+        else if (as_ === hs) { awayEntry.pts += 1; awayEntry.d++ }
+        else awayEntry.l++
       }
     }
   }
@@ -448,6 +452,10 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
           gf: String(s.gf),
           ga: String(s.ga),
           gd: s.gf - s.ga,
+          played: s.played,
+          w: s.w,
+          d: s.d,
+          l: s.l,
           team: s.team,
         })),
     }))

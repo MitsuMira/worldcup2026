@@ -8,6 +8,28 @@ import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+// WC2026: 12 groups → top-2 advance + best 8 of 12 third-place teams = 32 in R32
+const QUALIFYING_THIRDS = 8
+const MIN_GAMES_TO_DETERMINE = 3 // only show Q/✕ once a group has finished all 3 matchday games
+
+function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
+  // Collect 3rd-place team from each group (index 2) that has played enough games
+  const thirds = groups
+    .map(g => g.standings[2])
+    .filter(s => s && (s.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
+
+  if (thirds.length < QUALIFYING_THIRDS) return new Set() // not enough data yet
+
+  // Sort by same tiebreaker: pts → gd → gf
+  const sorted = [...thirds].sort((a, b) => {
+    const pd = Number(b.pts) - Number(a.pts); if (pd) return pd
+    const gdd = (b.gd ?? 0) - (a.gd ?? 0); if (gdd) return gdd
+    return Number(b.gf) - Number(a.gf)
+  })
+
+  return new Set(sorted.slice(0, QUALIFYING_THIRDS).map(s => s.team_id))
+}
+
 export default function StandingsPage() {
   const { t } = useT()
   const { data, error, isLoading } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { refreshInterval: 60_000 })
@@ -18,6 +40,8 @@ export default function StandingsPage() {
   const groups = [...(data?.groups ?? [])]
     .filter((g) => Array.isArray(g?.standings))
     .sort((a, b) => getGroupLetter(a).localeCompare(getGroupLetter(b)))
+
+  const qualifyingThirds = computeQualifyingThirds(groups)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -38,7 +62,13 @@ export default function StandingsPage() {
       )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {groups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} />)}
+        {groups.map((g) => (
+          <GroupTable
+            key={getGroupLetter(g) || g.standings[0]?.team_id}
+            group={g}
+            qualifyingThirds={qualifyingThirds}
+          />
+        ))}
       </div>
 
       {!isLoading && groups.length === 0 && !error && (
