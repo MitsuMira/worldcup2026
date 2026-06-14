@@ -14,11 +14,15 @@ export async function POST(req: Request) {
   const group: KvGroup = { label, createdAt: new Date().toISOString() }
   const member: KvMember = { userId, name, predictions, updatedAt: new Date().toISOString() }
 
-  await Promise.all([
-    kv.set(groupKey(code), group),
-    kv.set(memberKey(code, userId), member),
-    kv.sadd(membersSetKey(code), userId),
-  ])
-
-  return NextResponse.json({ ok: true })
+  try {
+    await Promise.all([
+      kv.set(groupKey(code), group),
+      kv.set(memberKey(code, userId), member),
+      kv.sadd(membersSetKey(code), userId),
+    ])
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    console.error('[groups create]', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
