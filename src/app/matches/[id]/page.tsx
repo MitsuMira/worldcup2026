@@ -197,18 +197,20 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-white/25" />
       {/* Centre spot */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white/30" />
-      {/* Top penalty area */}
-      <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ top: 0, width: '62%', height: '18%' }} />
-      {/* Top 6-yard box */}
-      <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ top: 0, width: '32%', height: '7%' }} />
-      {/* Top goal */}
-      <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-b border-white/30" style={{ top: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
-      {/* Bottom penalty area */}
-      <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ bottom: 0, width: '62%', height: '18%' }} />
-      {/* Bottom 6-yard box */}
-      <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ bottom: 0, width: '32%', height: '7%' }} />
-      {/* Bottom goal */}
-      <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-t border-white/30" style={{ bottom: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
+      {/* GK side: penalty area, 6-yard box and goal — top for home, bottom for away (mirror) */}
+      {!mirror ? (
+        <>
+          <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ top: 0, width: '62%', height: '18%' }} />
+          <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ top: 0, width: '32%', height: '7%' }} />
+          <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-b border-white/30" style={{ top: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
+        </>
+      ) : (
+        <>
+          <div className="absolute left-1/2 -translate-x-1/2 border border-white/25" style={{ bottom: 0, width: '62%', height: '18%' }} />
+          <div className="absolute left-1/2 -translate-x-1/2 border border-white/20" style={{ bottom: 0, width: '32%', height: '7%' }} />
+          <div className="absolute left-1/2 -translate-x-1/2 bg-white/10 border-x border-t border-white/30" style={{ bottom: 0, width: '18%', height: '2.5%', minHeight: 5 }} />
+        </>
+      )}
 
       <div className="relative flex flex-col justify-between h-full gap-1 px-1" style={{ minHeight: 280 }}>
         {displayRows.map((row, ri) => (
