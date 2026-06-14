@@ -47,7 +47,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ code: st
 export async function POST(_req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
-    const userIds = await kv.smembers<string[]>(membersSetKey(code))
+    const userIds = await kv.smembers(membersSetKey(code))
     if (!userIds || userIds.length === 0) return NextResponse.json({ members: [] })
 
     const members = await Promise.all(
