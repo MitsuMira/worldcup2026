@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { kv, groupKey, memberKey, membersSetKey, type KvGroup, type KvMember } from '@/lib/kv'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,24 +11,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
 
-  // Create group
-  const { error: groupError } = await supabase
-    .from('groups')
-    .insert({ code, label })
+  const group: KvGroup = { label, createdAt: new Date().toISOString() }
+  const member: KvMember = { userId, name, predictions, updatedAt: new Date().toISOString() }
 
-  if (groupError) {
-    // If duplicate code, it's a collision — caller should retry with a new code
-    return NextResponse.json({ error: groupError.message }, { status: 500 })
-  }
-
-  // Add creator as first member
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .insert({ code, user_id: userId, name, predictions, updated_at: new Date().toISOString() })
-
-  if (memberError) {
-    return NextResponse.json({ error: memberError.message }, { status: 500 })
-  }
+  await Promise.all([
+    kv.set(groupKey(code), group),
+    kv.set(memberKey(code, userId), member),
+    kv.sadd(membersSetKey(code), userId),
+  ])
 
   return NextResponse.json({ ok: true })
 }
