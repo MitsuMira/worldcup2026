@@ -64,32 +64,24 @@ export function useAblyGroup(
     ch.publish('msg', msg)
   }, [userId])
 
-  // Sync predictions when they change
+  // Sync predictions when they change while connected
   useEffect(() => {
     if (status !== 'connected' || !userId) return
     publishSelf()
-    log(`Palpites sincronizados (${Object.keys(predictions).length})`)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [predictions, status, userId])
 
   useEffect(() => {
-    if (!code || !userId) {
-      log(`Aguardando: code=${code ?? 'null'} userId=${userId || 'null'}`)
-      return
-    }
+    if (!code || !userId) return
 
-    log(`Conectando ao Ably → canal group-${code}`)
     setStatus('connecting')
 
-    const client = new Ably.Realtime({
-      authUrl: '/api/ably-token',
-      authMethod: 'GET',
-    })
+    const client = new Ably.Realtime({ authUrl: '/api/ably-token', authMethod: 'GET' })
     clientRef.current = client
 
     client.connection.on('connected', () => {
       setStatus('connected')
-      log('Ably conectado', 'ok')
+      log('Conectado', 'ok')
 
       const channel = client.channels.get(`group-${code}`)
       channelRef.current = channel
@@ -101,52 +93,61 @@ export function useAblyGroup(
           const m = data.member
           stateRef.current.members[m.userId] = m
           setRoomState({ members: { ...stateRef.current.members } })
-          log(`Membro atualizado: ${m.name}`, 'ok')
         }
 
         if (data.type === 'request-state' && data.fromUserId !== userId) {
-          // Someone joined — respond with our known state
-          const resp: AblyMessage = { type: 'state-response', toUserId: data.fromUserId, members: stateRef.current.members }
+          const resp: AblyMessage = {
+            type: 'state-response',
+            toUserId: data.fromUserId,
+            members: stateRef.current.members,
+          }
           channel.publish('msg', resp)
-          log(`Estado enviado para novo membro`)
         }
 
         if (data.type === 'state-response' && data.toUserId === userId) {
-          // Catch-up: merge received state
           for (const [uid, member] of Object.entries(data.members)) {
             if (!stateRef.current.members[uid]) {
               stateRef.current.members[uid] = member
             }
           }
           setRoomState({ members: { ...stateRef.current.members } })
-          log(`Estado recebido: ${Object.keys(data.members).length} membro(s)`, 'ok')
+          log(`${Object.keys(data.members).length} membro(s) recebido(s)`, 'ok')
         }
       })
 
-      // Announce self + request catch-up from others
+      // Replay last 2 min of channel history to catch up without needing an online peer
+      channel.history({ limit: 50 }, (err, page) => {
+        if (err || !page) return
+        const seen = new Set<string>()
+        for (const msg of page.items) {
+          const data = msg.data as AblyMessage
+          if (data.type === 'member-update') {
+            const m = data.member
+            if (!seen.has(m.userId)) {
+              seen.add(m.userId)
+              if (!stateRef.current.members[m.userId]) {
+                stateRef.current.members[m.userId] = m
+              }
+            }
+          }
+        }
+        setRoomState({ members: { ...stateRef.current.members } })
+      })
+
       publishSelf()
-      const req: AblyMessage = { type: 'request-state', fromUserId: userId }
-      channel.publish('msg', req)
-      log('Solicitando estado do grupo…')
+      // Ask online peers for their state too
+      channel.publish('msg', { type: 'request-state', fromUserId: userId } satisfies AblyMessage)
     })
 
     client.connection.on('failed', (err) => {
       setStatus('disconnected')
-      log(`Falha na conexão: ${err?.reason?.message ?? 'erro desconhecido'}`, 'error')
+      log(`Falha: ${err?.reason?.message ?? 'erro desconhecido'}`, 'error')
     })
 
-    client.connection.on('disconnected', () => {
-      setStatus('disconnected')
-      log('Desconectado do Ably', 'error')
-    })
-
-    client.connection.on('suspended', () => {
-      setStatus('disconnected')
-      log('Conexão suspensa (sem rede?)', 'error')
-    })
+    client.connection.on('disconnected', () => setStatus('disconnected'))
+    client.connection.on('suspended', () => setStatus('disconnected'))
 
     return () => {
-      log('Desconectando (cleanup)')
       channelRef.current?.unsubscribe()
       channelRef.current = null
       client.close()

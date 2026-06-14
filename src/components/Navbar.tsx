@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Trophy, Calendar, BarChart3, Users, Star, Menu, X, Award, UsersRound } from 'lucide-react'
+import { Trophy, Calendar, BarChart3, Users, Star, Menu, X, Award } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '@/contexts/LanguageContext'
 import { SettingsButton } from './SettingsModal'
@@ -19,7 +19,6 @@ export default function Navbar() {
     { href: '/playoffs', label: t.nav.playoffs, icon: Award },
     { href: '/teams', label: t.nav.teams, icon: Users },
     { href: '/predictions', label: t.nav.predictions, icon: Star },
-    { href: '/groups', label: 'Grupos', icon: UsersRound },
   ]
 
   return (

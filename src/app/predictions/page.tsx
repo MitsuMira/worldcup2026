@@ -2,12 +2,13 @@
 
 import useSWR from 'swr'
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame, Prediction, PredictionResult, MatchDetail } from '@/lib/types'
 import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
-import { Loader2, CheckCircle2, XCircle, Minus, Trophy } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Minus, Trophy, UsersRound } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
@@ -74,9 +75,16 @@ export default function PredictionsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-1">{t.predictions.title}</h1>
-        <p className="text-slate-400 text-sm">{t.predictions.subtitle}</p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-white mb-1">{t.predictions.title}</h1>
+          <p className="text-slate-400 text-sm">{t.predictions.subtitle}</p>
+        </div>
+        <Link href="/groups"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
+          <UsersRound size={15} className="text-amber-400" />
+          Grupos
+        </Link>
       </div>
 
       {(finishedPredictions.length > 0 || pendingCount > 0) && (

@@ -134,7 +134,7 @@ export default function GroupPage() {
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
 
-  const { state, status, logs } = useAblyGroup(mounted ? code : null, userId, userName, predictions)
+  const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions)
 
   useEffect(() => {
     setMounted(true)
@@ -242,23 +242,6 @@ export default function GroupPage() {
             />
           ))}
         </div>
-      )}
-
-      {/* Connection log */}
-      {logs.length > 0 && (
-        <details className="mt-6">
-          <summary className="text-xs text-slate-600 cursor-pointer hover:text-slate-400 transition-colors">
-            Log de conexão ({logs.length})
-          </summary>
-          <div className="mt-2 bg-slate-900 border border-slate-800 rounded-xl p-3 font-mono text-[10px] space-y-0.5">
-            {logs.map((l, i) => (
-              <div key={i} className={`flex gap-2 ${l.type === 'ok' ? 'text-green-400' : l.type === 'error' ? 'text-red-400' : 'text-slate-500'}`}>
-                <span className="shrink-0 text-slate-600">{l.ts}</span>
-                <span>{l.msg}</span>
-              </div>
-            ))}
-          </div>
-        </details>
       )}
     </div>
   )
