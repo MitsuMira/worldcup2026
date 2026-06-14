@@ -19,7 +19,6 @@ export default function GroupsPage() {
   const [view, setView] = useState<'list' | 'join' | 'create'>('list')
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [joining, setJoining] = useState(false)
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -63,27 +62,13 @@ export default function GroupsPage() {
     router.push(`/groups/${code}`)
   }
 
-  const handleJoin = async () => {
+  const handleJoin = () => {
     const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (code.length !== 6) { setError('Código deve ter 6 caracteres'); return }
-    setJoining(true)
-    setError('')
-    try {
-      const res = await fetch(`/api/groups/${code}`)
-      const data = await res.json() as { exists: boolean; label?: string }
-      if (!data.exists) {
-        setError('Grupo não encontrado. Verifique o código.')
-        setJoining(false)
-        return
-      }
-      const entry: GroupEntry = { code, label: data.label ?? code, joinedAt: new Date().toISOString() }
-      saveGroup(entry)
-      setGroups(getGroups())
-      router.push(`/groups/${code}`)
-    } catch {
-      setError('Erro ao verificar o grupo. Tente novamente.')
-      setJoining(false)
-    }
+    const entry: GroupEntry = { code, label: code, joinedAt: new Date().toISOString() }
+    saveGroup(entry)
+    setGroups(getGroups())
+    router.push(`/groups/${code}`)
   }
 
   const copy = (code: string) => {
@@ -201,11 +186,11 @@ export default function GroupsPage() {
                   maxLength={6}
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleJoin} disabled={joining || joinCode.length < 6}
-                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
-                    {joining ? <><Loader2 size={14} className="animate-spin" /> Verificando…</> : 'Entrar'}
+                  <button onClick={handleJoin} disabled={joinCode.length < 6}
+                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors">
+                    Entrar
                   </button>
-                  <button onClick={() => { setView('list'); setError('') }} disabled={joining}
+                  <button onClick={() => { setView('list'); setError('') }}
                     className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">
                     Cancelar
                   </button>
