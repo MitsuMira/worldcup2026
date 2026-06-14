@@ -1,13 +1,11 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Check, Wifi, WifiOff, ChevronDown, ChevronUp, Crown } from 'lucide-react'
-import { useAblyGroup } from '@/hooks/useAblyGroup'
+import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
-import type { PartyMember, PartyPrediction } from '@/lib/partyTypes'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
 
@@ -16,11 +14,18 @@ const STORAGE_KEY = 'wc2026_predictions'
 
 type PredictionResult = 'correct' | 'correct-winner' | 'wrong' | 'pending'
 
+interface KvMember {
+  userId: string
+  name: string
+  predictions: Record<string, { homeScore: number | string; awayScore: number | string }>
+  updatedAt: string
+}
+
 function loadPredictions(): Record<string, Prediction> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
 }
 
-function calcPoints(member: PartyMember, games: EnrichedGame[]) {
+function calcPoints(member: KvMember, games: EnrichedGame[]) {
   let pts = 0, exact = 0, winner = 0
   for (const game of games) {
     const pred = member.predictions[game.id]
@@ -45,7 +50,7 @@ function ResultDot({ result }: { result: PredictionResult }) {
 function MemberRow({
   member, rank, isMe, games, expanded, onToggle,
 }: {
-  member: PartyMember; rank: number; isMe: boolean; games: EnrichedGame[]
+  member: KvMember; rank: number; isMe: boolean; games: EnrichedGame[]
   expanded: boolean; onToggle: () => void
 }) {
   const { pts, exact, winner } = calcPoints(member, games)
@@ -62,7 +67,6 @@ function MemberRow({
           <div className="flex items-center gap-2">
             <span className="text-white font-semibold truncate">{member.name}</span>
             {isMe && <span className="text-[10px] text-amber-400 font-bold">você</span>}
-            {member.online && <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" title="online" />}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
             {predictedFinished.length} palpites · {exact} exatos · {winner} vencedor
@@ -79,7 +83,7 @@ function MemberRow({
         <div className="px-4 pb-4 border-t border-slate-800">
           <div className="mt-3 space-y-2">
             {games.filter(g => getMatchStatus(g) === 'finished').map(game => {
-              const pred = member.predictions[game.id] as PartyPrediction | undefined
+              const pred = member.predictions[game.id]
               if (!pred) return null
               const result = getPredictionResult(
                 { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,
@@ -121,15 +125,12 @@ function MemberRow({
 
 export default function GroupPage() {
   const { code } = useParams<{ code: string }>()
-  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [userId, setUserId] = useState('')
-  const [userName, setUserName] = useState('')
-  const [predictions, setPredictions] = useState<Record<string, PartyPrediction>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [persistentMembers, setPersistentMembers] = useState<Record<string, PartyMember>>({})
   const [log, setLog] = useState<string[]>([])
+
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setLog(prev => [`[${ts}] ${msg}`, ...prev].slice(0, 30))
@@ -138,28 +139,25 @@ export default function GroupPage() {
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
 
-  const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
-  const { state, status } = useAblyGroup(mounted ? code : null, userId, userName, predictions, localGroupLabel)
-
-  const prevStatus = useRef(status)
-  useEffect(() => {
-    if (status !== prevStatus.current) {
-      addLog(`Ably: ${prevStatus.current} → ${status}`)
-      prevStatus.current = status
+  // Poll KV for group members every 30s
+  const { data: membersData, mutate: refreshMembers } = useSWR<{ members: KvMember[] }>(
+    mounted ? `group-members-${code}` : null,
+    () => fetch(`/api/groups/${code}`, { method: 'POST' }).then(r => r.json()),
+    {
+      refreshInterval: 30_000,
+      onSuccess: (d) => addLog(`KV ← ${d.members?.length ?? 0} membro(s)`),
+      onError: (e) => addLog(`KV ✗ ${e}`),
     }
-    if (status === 'connected') {
-      addLog(`Ably: conectado | membros ao vivo: ${Object.keys(state.members).length}`)
-    }
-  }, [status, state.members, addLog])
+  )
+  const members = membersData?.members ?? []
 
-  // Debounced upsert of own predictions to KV — also restores group key after Redis restart
+  // Debounced upsert of own predictions to KV
   const upsertTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const upsertToKv = useCallback((uid: string, uname: string, preds: Record<string, PartyPrediction>, label: string) => {
+  const upsertToKv = useCallback((uid: string, uname: string, preds: Record<string, Prediction>, label: string) => {
     if (!uid || !uname) return
     if (upsertTimer.current) clearTimeout(upsertTimer.current)
     upsertTimer.current = setTimeout(async () => {
-      const nPreds = Object.keys(preds).length
-      addLog(`KV upsert → ${uname} (${nPreds} palpites, grupo "${label}")`)
+      addLog(`KV → salvando ${Object.keys(preds).length} palpites…`)
       try {
         const res = await fetch(`/api/groups/${code}`, {
           method: 'PUT',
@@ -167,75 +165,39 @@ export default function GroupPage() {
           body: JSON.stringify({ userId: uid, name: uname, predictions: preds, groupLabel: label }),
         })
         const json = await res.json()
-        addLog(`KV upsert ← ${res.ok ? 'ok' : `erro ${res.status}: ${JSON.stringify(json)}`}`)
+        addLog(`KV ← ${res.ok ? 'salvo com sucesso' : `erro ${res.status}: ${JSON.stringify(json)}`}`)
+        if (res.ok) refreshMembers()
       } catch (e) {
-        addLog(`KV upsert ✗ ${e}`)
+        addLog(`KV ✗ ${e}`)
       }
-    }, 2000)
-  }, [code, addLog])
+    }, 1500)
+  }, [code, addLog, refreshMembers])
 
-  // Load all group members from Supabase (persistent leaderboard)
-  const loadFromKv = useCallback(async () => {
-    addLog('KV load → buscando membros…')
-    try {
-      const res = await fetch(`/api/groups/${code}`, { method: 'POST' })
-      const data = await res.json() as { members: Array<{ user_id: string; name: string; predictions: Record<string, PartyPrediction>; updated_at: string }> }
-      const members = data.members ?? []
-      addLog(`KV load ← ${members.length} membro(s) encontrado(s)`)
-      const map: Record<string, PartyMember> = {}
-      for (const m of members) {
-        map[m.user_id] = {
-          userId: m.user_id,
-          name: m.name,
-          predictions: m.predictions,
-          joinedAt: m.updated_at,
-          online: false,
-        }
-      }
-      setPersistentMembers(map)
-    } catch (e) {
-      addLog(`KV load ✗ ${e}`)
-    }
-  }, [code, addLog])
+  const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
 
   useEffect(() => {
     setMounted(true)
     const uid = getOrCreateUserId()
     const uname = getUserName()
     setUserId(uid)
-    setUserName(uname)
 
-    const raw = loadPredictions()
-    const preds = raw as unknown as Record<string, PartyPrediction>
-    setPredictions(preds)
+    const preds = loadPredictions()
+    addLog(`Grupo ${code} | uid …${uid.slice(-6)} | ${Object.keys(preds).length} palpites locais`)
 
-    // Ensure this group is saved locally
-    const groups = getGroups()
-    if (!groups.find(g => g.code === code)) {
+    if (!getGroups().find(g => g.code === code)) {
       saveGroup({ code, label: code, joinedAt: new Date().toISOString() })
     }
-
-    addLog(`Iniciando grupo ${code} | uid: ${uid.slice(0, 8)}… | ${Object.keys(preds).length} palpites locais`)
-    loadFromKv()
 
     const label = getGroups().find(g => g.code === code)?.label ?? code
     upsertToKv(uid, uname, preds, label)
 
     const onStorage = () => {
-      const updated = loadPredictions() as unknown as Record<string, PartyPrediction>
-      setPredictions(updated)
+      const updated = loadPredictions()
       upsertToKv(uid, uname, updated, label)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [code, loadFromKv, upsertToKv, addLog])
-
-  useEffect(() => {
-    if (!mounted) return
-    const raw = loadPredictions()
-    setPredictions(raw as unknown as Record<string, PartyPrediction>)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted])
+  }, [code, upsertToKv, addLog])
 
   const copy = () => {
     navigator.clipboard.writeText(code)
@@ -243,32 +205,15 @@ export default function GroupPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Merge Supabase baseline with Ably real-time overlay
-  const mergedMembers = useMemo(() => {
-    const merged: Record<string, PartyMember> = {}
-    // Start with persistent data (everyone who has ever been in the group)
-    for (const [uid, m] of Object.entries(persistentMembers)) {
-      merged[uid] = { ...m, online: false }
-    }
-    // Overlay real-time data (more up-to-date predictions + online flag)
-    for (const [uid, m] of Object.entries(state.members)) {
-      merged[uid] = { ...merged[uid], ...m, online: true }
-    }
-    return merged
-  }, [persistentMembers, state.members])
-
   const rankedMembers = useMemo(() => {
-    return Object.values(mergedMembers)
+    return members
       .map(m => ({ member: m, ...calcPoints(m, games) }))
       .sort((a, b) => b.pts - a.pts || b.exact - a.exact)
-  }, [mergedMembers, games])
+  }, [members, games])
 
   if (!mounted) return null
 
-  const members = Object.values(mergedMembers).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hostLabel = (members.find(m => (m as any).groupLabel) as any)?.groupLabel as string | undefined
-  const groupLabel = hostLabel ?? localGroupLabel
+  const groupLabel = localGroupLabel
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
@@ -286,20 +231,15 @@ export default function GroupPage() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          {status === 'connected'
-            ? <><Wifi size={13} className="text-green-400" /><span className="text-green-400">ao vivo</span></>
-            : status === 'connecting'
-            ? <><Wifi size={13} className="text-slate-500 animate-pulse" /><span className="text-slate-500">conectando…</span></>
-            : <><WifiOff size={13} className="text-red-400" /><span className="text-red-400">desconectado</span></>
-          }
-        </div>
+        <button onClick={() => refreshMembers()} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Atualizar">
+          <RefreshCw size={14} />
+        </button>
       </div>
 
       {/* Share hint */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 mb-6 flex items-center gap-3">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 mb-4 flex items-center gap-3">
         <div className="flex-1 text-xs text-slate-400">
-          Compartilhe o código <span className="font-mono font-bold text-white">{code}</span> com amigos para entrarem no grupo.
+          Compartilhe o código <span className="font-mono font-bold text-white">{code}</span> com amigos.
         </div>
         <button onClick={copy} className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 shrink-0 transition-colors">
           {copied ? <Check size={13} /> : <Copy size={13} />} Copiar
@@ -308,18 +248,16 @@ export default function GroupPage() {
 
       {/* Debug log */}
       {log.length > 0 && (
-        <div className="bg-black border border-slate-800 rounded-xl p-3 mb-4 font-mono text-[10px] text-slate-400 space-y-0.5 max-h-40 overflow-y-auto">
+        <div className="bg-black border border-slate-800 rounded-xl p-3 mb-4 font-mono text-[10px] text-slate-400 space-y-0.5 max-h-36 overflow-y-auto">
           {log.map((l, i) => (
-            <div key={i} className={l.includes('✗') || l.includes('erro') ? 'text-red-400' : l.includes('ok') ? 'text-green-400' : ''}>{l}</div>
+            <div key={i} className={l.includes('✗') || l.includes('erro') ? 'text-red-400' : l.includes('sucesso') || l.includes('←') ? 'text-green-400' : ''}>{l}</div>
           ))}
         </div>
       )}
 
       {/* Leaderboard */}
       {rankedMembers.length === 0 ? (
-        <div className="text-center text-slate-500 text-sm py-12">
-          Carregando grupo…
-        </div>
+        <div className="text-center text-slate-500 text-sm py-12">Carregando grupo…</div>
       ) : (
         <div className="space-y-2">
           {rankedMembers.map(({ member }, i) => (
@@ -334,12 +272,6 @@ export default function GroupPage() {
             />
           ))}
         </div>
-      )}
-
-      {rankedMembers.length > 0 && (
-        <p className="text-center text-xs text-slate-600 mt-6">
-          🟢 online agora · ⚫ visto anteriormente
-        </p>
       )}
     </div>
   )
