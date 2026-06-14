@@ -31,4 +31,4 @@ export type PartyClientMessage =
 export type PartyServerMessage =
   | { type: 'state'; state: PartyRoomState }
 
-export const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? 'wc2026-groups.mitsumira.partykit.dev'
+export const PARTY_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? 'wc2026-groups.redacted.partykit.dev'
