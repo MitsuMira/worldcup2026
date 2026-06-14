@@ -7,6 +7,17 @@ import { PARTY_HOST } from '@/lib/partyTypes'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
+export interface ConnectionLog {
+  ts: string
+  msg: string
+  type: 'info' | 'ok' | 'error'
+}
+
+function log(logs: ConnectionLog[], msg: string, type: ConnectionLog['type'] = 'info'): ConnectionLog[] {
+  const ts = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return [...logs.slice(-19), { ts, msg, type }]
+}
+
 export function usePartyGroup(
   code: string | null,
   userId: string,
@@ -15,11 +26,15 @@ export function usePartyGroup(
 ) {
   const [state, setState] = useState<PartyRoomState | null>(null)
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
+  const [logs, setLogs] = useState<ConnectionLog[]>([])
   const socketRef = useRef<PartySocket | null>(null)
   const predictionsRef = useRef(predictions)
   const nameRef = useRef(name)
 
-  // keep refs current without reconnecting
+  const addLog = useCallback((msg: string, type: ConnectionLog['type'] = 'info') => {
+    setLogs(prev => log(prev, msg, type))
+  }, [])
+
   useEffect(() => { predictionsRef.current = predictions }, [predictions])
   useEffect(() => { nameRef.current = name }, [name])
 
@@ -27,50 +42,79 @@ export function usePartyGroup(
     socketRef.current?.send(JSON.stringify(msg))
   }, [])
 
-  // Sync updated predictions to server
   useEffect(() => {
     if (status !== 'connected' || !userId) return
     send({ type: 'predictions', userId, predictions })
+    addLog(`Palpites sincronizados (${Object.keys(predictions).length})`, 'info')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [predictions, status, userId])
 
-  // Connect / disconnect when code changes
   useEffect(() => {
-    if (!code || !userId) return
+    if (!code || !userId) {
+      addLog(`Aguardando: code=${code ?? 'null'} userId=${userId || 'null'}`, 'info')
+      return
+    }
 
+    if (!PARTY_HOST) {
+      addLog('ERRO: NEXT_PUBLIC_PARTYKIT_HOST não configurado', 'error')
+      return
+    }
+
+    addLog(`Conectando → ws://${PARTY_HOST}/parties/main/${code}`, 'info')
     setStatus('connecting')
+
     const socket = new PartySocket({ host: PARTY_HOST, room: code })
     socketRef.current = socket
 
     socket.addEventListener('open', () => {
       setStatus('connected')
-      socket.send(JSON.stringify({
+      addLog('WebSocket aberto', 'ok')
+      const joinMsg: PartyClientMessage = {
         type: 'join',
         userId,
         name: nameRef.current,
         predictions: predictionsRef.current,
-      } satisfies PartyClientMessage))
+      }
+      socket.send(JSON.stringify(joinMsg))
+      addLog(`Enviado: join (nome="${nameRef.current}", ${Object.keys(predictionsRef.current).length} palpites)`, 'ok')
     })
 
     socket.addEventListener('message', (ev: MessageEvent) => {
-      const msg = JSON.parse(ev.data as string) as PartyServerMessage
-      if (msg.type === 'state') setState(msg.state)
+      try {
+        const msg = JSON.parse(ev.data as string) as PartyServerMessage
+        if (msg.type === 'state') {
+          setState(msg.state)
+          addLog(`Estado recebido: ${Object.keys(msg.state.members).length} membro(s)`, 'ok')
+        } else {
+          addLog(`Mensagem desconhecida: ${ev.data as string}`, 'info')
+        }
+      } catch {
+        addLog(`Erro ao parsear mensagem: ${ev.data as string}`, 'error')
+      }
     })
 
-    socket.addEventListener('close', () => setStatus('disconnected'))
-    socket.addEventListener('error', () => setStatus('disconnected'))
+    socket.addEventListener('close', (ev: CloseEvent) => {
+      setStatus('disconnected')
+      addLog(`Conexão fechada (code=${ev.code} reason=${ev.reason || 'sem motivo'})`, 'error')
+    })
+
+    socket.addEventListener('error', (ev: Event) => {
+      setStatus('disconnected')
+      addLog(`Erro WebSocket: ${(ev as ErrorEvent).message ?? 'sem detalhes'}`, 'error')
+    })
 
     return () => {
+      addLog('Desconectando (cleanup)', 'info')
       socket.close()
       socketRef.current = null
       setStatus('disconnected')
     }
-  }, [code, userId])
+  }, [code, userId, addLog])
 
   const rename = useCallback((newName: string) => {
     if (!userId) return
     send({ type: 'rename', userId, name: newName })
   }, [userId, send])
 
-  return { state, status, rename }
+  return { state, status, logs, rename }
 }
