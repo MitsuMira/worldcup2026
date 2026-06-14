@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, Plus, LogIn, Trash2, Copy, Check, Pencil } from 'lucide-react'
+import Ably from 'ably'
+import { Users, Plus, LogIn, Trash2, Copy, Check, Pencil, Loader2 } from 'lucide-react'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
 
 export default function GroupsPage() {
@@ -14,11 +15,12 @@ export default function GroupsPage() {
   const [nameInput, setNameInput] = useState('')
   const [groups, setGroups] = useState<GroupEntry[]>([])
   const [joinCode, setJoinCode] = useState('')
-  const [joinLabel, setJoinLabel] = useState('')
   const [createLabel, setCreateLabel] = useState('')
   const [view, setView] = useState<'list' | 'join' | 'create'>('list')
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [joining, setJoining] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -37,23 +39,51 @@ export default function GroupsPage() {
     setEditingName(false)
   }
 
-  const handleCreate = () => {
+  // Publish group-created marker so others can validate it exists
+  const publishGroupCreated = useCallback(async (code: string, label: string, uid: string) => {
+    const tokenRes = await fetch(`/api/ably-token?clientId=${encodeURIComponent(uid)}`)
+    const tokenReq = await tokenRes.json()
+    const client = new Ably.Realtime({ ...tokenReq })
+    await new Promise<void>(resolve => { client.connection.once('connected', () => resolve()) })
+    const channel = client.channels.get(`group-${code}`)
+    await channel.publish('group-created', { code, label, createdAt: new Date().toISOString() })
+    client.close()
+  }, [])
+
+  const handleCreate = async () => {
     const label = createLabel.trim() || 'Meu grupo'
     const code = generateCode()
+    setCreating(true)
+    try {
+      await publishGroupCreated(code, label, userId)
+    } catch { /* not critical — group still works */ }
     const entry: GroupEntry = { code, label, joinedAt: new Date().toISOString() }
     saveGroup(entry)
     setGroups(getGroups())
     router.push(`/groups/${code}`)
   }
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (code.length !== 6) { setError('Código deve ter 6 caracteres'); return }
-    const label = joinLabel.trim() || code
-    const entry: GroupEntry = { code, label, joinedAt: new Date().toISOString() }
-    saveGroup(entry)
-    setGroups(getGroups())
-    router.push(`/groups/${code}`)
+    setJoining(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/groups/${code}`)
+      const data = await res.json() as { exists: boolean; label?: string }
+      if (!data.exists) {
+        setError('Grupo não encontrado. Verifique o código.')
+        setJoining(false)
+        return
+      }
+      const entry: GroupEntry = { code, label: data.label ?? code, joinedAt: new Date().toISOString() }
+      saveGroup(entry)
+      setGroups(getGroups())
+      router.push(`/groups/${code}`)
+    } catch {
+      setError('Erro ao verificar o grupo. Tente novamente.')
+      setJoining(false)
+    }
   }
 
   const copy = (code: string) => {
@@ -116,7 +146,6 @@ export default function GroupsPage() {
 
       {!needsName && (
         <>
-          {/* Actions */}
           {view === 'list' && (
             <div className="flex gap-2 mb-6">
               <button onClick={() => setView('create')}
@@ -144,11 +173,11 @@ export default function GroupsPage() {
                   maxLength={32}
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleCreate}
-                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-lg transition-colors">
-                    Criar e entrar
+                  <button onClick={handleCreate} disabled={creating}
+                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                    {creating ? <><Loader2 size={14} className="animate-spin" /> Criando…</> : 'Criar e entrar'}
                   </button>
-                  <button onClick={() => setView('list')}
+                  <button onClick={() => setView('list')} disabled={creating}
                     className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">
                     Cancelar
                   </button>
@@ -172,11 +201,11 @@ export default function GroupsPage() {
                   maxLength={6}
                 />
                 <div className="flex gap-2">
-                  <button onClick={handleJoin}
-                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-lg transition-colors">
-                    Entrar
+                  <button onClick={handleJoin} disabled={joining || joinCode.length < 6}
+                    className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                    {joining ? <><Loader2 size={14} className="animate-spin" /> Verificando…</> : 'Entrar'}
                   </button>
-                  <button onClick={() => { setView('list'); setError('') }}
+                  <button onClick={() => { setView('list'); setError('') }} disabled={joining}
                     className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">
                     Cancelar
                   </button>
@@ -185,7 +214,6 @@ export default function GroupsPage() {
             </div>
           )}
 
-          {/* Groups list */}
           {groups.length === 0 ? (
             <div className="text-center text-slate-500 text-sm py-10">
               Você ainda não está em nenhum grupo.<br />Crie um ou entre com um código!
@@ -199,24 +227,16 @@ export default function GroupsPage() {
                     <div className="text-white font-semibold">{g.label}</div>
                     <div className="text-xs text-slate-500 font-mono mt-0.5">{g.code}</div>
                   </button>
-                  <button onClick={() => copy(g.code)}
-                    className="text-slate-500 hover:text-slate-300 transition-colors p-1"
-                    title="Copiar código">
+                  <button onClick={() => copy(g.code)} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Copiar código">
                     {copied === g.code ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
                   </button>
-                  <button onClick={() => leave(g.code)}
-                    className="text-slate-600 hover:text-red-400 transition-colors p-1"
-                    title="Sair do grupo">
+                  <button onClick={() => leave(g.code)} className="text-slate-600 hover:text-red-400 transition-colors p-1" title="Sair do grupo">
                     <Trash2 size={15} />
                   </button>
                 </div>
               ))}
             </div>
           )}
-
-          <p className="text-xs text-slate-600 text-center mt-8">
-            ID do usuário: <span className="font-mono">{userId.slice(0, 8)}…</span>
-          </p>
         </>
       )}
     </div>

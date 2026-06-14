@@ -6,6 +6,10 @@ import type { PartyRoomState, PartyMember, PartyPrediction } from '@/lib/partyTy
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
+interface MemberUpdate extends PartyMember {
+  groupLabel?: string
+}
+
 export function useAblyGroup(
   code: string | null,
   userId: string,
@@ -27,7 +31,7 @@ export function useAblyGroup(
   useEffect(() => { nameRef.current = name }, [name])
   useEffect(() => { groupLabelRef.current = groupLabel }, [groupLabel])
 
-  const makePresenceData = useCallback((): PartyMember & { groupLabel?: string } => ({
+  const makeMemberData = useCallback((): MemberUpdate => ({
     userId,
     name: nameRef.current,
     predictions: predictionsRef.current,
@@ -36,13 +40,14 @@ export function useAblyGroup(
     groupLabel: groupLabelRef.current,
   }), [userId])
 
-  const updatePresence = useCallback(() => {
-    channelRef.current?.presence.update(makePresenceData())
-  }, [makePresenceData])
+  const publishSelf = useCallback(() => {
+    channelRef.current?.publish('member-update', makeMemberData())
+  }, [makeMemberData])
 
+  // Push updated predictions while connected
   useEffect(() => {
     if (status !== 'connected' || !userId) return
-    updatePresence()
+    publishSelf()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [predictions, status, userId])
 
@@ -58,30 +63,25 @@ export function useAblyGroup(
     })
     clientRef.current = client
 
-    const applyMember = (member: PartyMember, online: boolean) => {
-      stateRef.current[member.userId] = { ...member, online }
-      setRoomState({ members: { ...stateRef.current } })
-    }
-
     client.connection.on('connected', () => {
       setStatus('connected')
-      const channel = client.channels.get(`group-${code}`)
+
+      // Rewind: replay last 50 messages so we see members who published before us
+      const channel = client.channels.get(`group-${code}`, {
+        params: { rewind: '50' },
+      })
       channelRef.current = channel
 
-      // Subscribe to presence events
-      // 'present' fires for each member already in room when we first attach
-      channel.presence.subscribe('present', msg => applyMember(msg.data as PartyMember, true))
-      channel.presence.subscribe('enter', msg => applyMember(msg.data as PartyMember, true))
-      channel.presence.subscribe('update', msg => applyMember(msg.data as PartyMember, true))
-      channel.presence.subscribe('leave', msg => {
-        const m = stateRef.current[msg.clientId]
-        if (m) applyMember({ ...m }, false)
+      channel.subscribe('member-update', msg => {
+        const data = msg.data as MemberUpdate
+        if (!data?.userId) return
+        // Keep the most recent update per user (rewind delivers oldest first)
+        stateRef.current[data.userId] = { ...data, online: true }
+        setRoomState({ members: { ...stateRef.current } })
       })
 
-      // Show ourselves immediately, then enter the presence set
-      const self = makePresenceData()
-      applyMember(self, true)
-      channel.presence.enter(self).catch(() => {})
+      // Publish our own data so others see us
+      publishSelf()
     })
 
     client.connection.on('disconnected', () => setStatus('disconnected'))
@@ -89,7 +89,6 @@ export function useAblyGroup(
     client.connection.on('failed', () => setStatus('disconnected'))
 
     return () => {
-      channelRef.current?.presence.leave()
       channelRef.current?.unsubscribe()
       channelRef.current = null
       client.close()
@@ -97,12 +96,12 @@ export function useAblyGroup(
       stateRef.current = {}
       setStatus('disconnected')
     }
-  }, [code, userId, makePresenceData])
+  }, [code, userId, publishSelf])
 
   const rename = useCallback((newName: string) => {
     nameRef.current = newName
-    updatePresence()
-  }, [updatePresence])
+    publishSelf()
+  }, [publishSelf])
 
   return { state: roomState, status, rename }
 }
