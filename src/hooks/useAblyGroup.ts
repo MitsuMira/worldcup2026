@@ -68,6 +68,7 @@ export function useAblyGroup(
       const channel = client.channels.get(`group-${code}`)
       channelRef.current = channel
 
+      // Subscribe to presence events
       channel.presence.subscribe('enter', msg => applyMember(msg.data as PartyMember, true))
       channel.presence.subscribe('update', msg => applyMember(msg.data as PartyMember, true))
       channel.presence.subscribe('leave', msg => {
@@ -75,16 +76,16 @@ export function useAblyGroup(
         if (m) applyMember({ ...m }, false)
       })
 
-      // Wait for channel to be fully attached before enter + get
-      // Wait for channel attached before presence operations
-      channel.on('attached', () => {
-        channel.presence.enter(makePresenceData())
-        channel.presence.get().then(members => {
-          for (const m of members) applyMember(m.data as PartyMember, true)
-          setRoomState({ members: { ...stateRef.current } })
-        }).catch(() => {})
-      })
-      channel.attach()
+      // Show ourselves immediately (optimistic), then enter + get the rest
+      const self = makePresenceData()
+      applyMember(self, true)
+
+      channel.presence.enter(self).then(() =>
+        channel.presence.get()
+      ).then(members => {
+        for (const m of members) applyMember(m.data as PartyMember, true)
+        setRoomState({ members: { ...stateRef.current } })
+      }).catch(() => {})
     })
 
     client.connection.on('disconnected', () => setStatus('disconnected'))
