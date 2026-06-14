@@ -66,22 +66,26 @@ export function useAblyGroup(
     client.connection.on('connected', () => {
       setStatus('connected')
 
-      // Rewind: replay last 50 messages so we see members who published before us
-      const channel = client.channels.get(`group-${code}`, {
-        params: { rewind: '50' },
-      })
+      const channel = client.channels.get(`group-${code}`)
       channelRef.current = channel
+
+      // When someone new joins, they broadcast a ping — everyone responds with their data
+      channel.subscribe('who-is-here', msg => {
+        // Don't respond to our own ping
+        if (msg.data?.userId === userId) return
+        publishSelf()
+      })
 
       channel.subscribe('member-update', msg => {
         const data = msg.data as MemberUpdate
         if (!data?.userId) return
-        // Keep the most recent update per user (rewind delivers oldest first)
         stateRef.current[data.userId] = { ...data, online: true }
         setRoomState({ members: { ...stateRef.current } })
       })
 
-      // Publish our own data so others see us
+      // Publish our presence, then ping everyone else to respond
       publishSelf()
+      channel.publish('who-is-here', { userId })
     })
 
     client.connection.on('disconnected', () => setStatus('disconnected'))
