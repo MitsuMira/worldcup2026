@@ -15,7 +15,11 @@ const content: Record<Lang, {
     sections: [
       {
         title: 'Local Storage',
-        body: 'Your predictions and favourite teams are saved in your browser\'s local storage so they persist across sessions. This data stays on your device and is never sent to us.',
+        body: 'Your predictions and favourite teams are saved in your browser\'s local storage so they persist across sessions. Individual predictions stay on your device unless you join or create a group.',
+      },
+      {
+        title: 'Prediction Groups',
+        body: 'If you create or join a prediction group, your display name and match predictions are sent to and stored on our servers (Vercel Redis) to power the group leaderboard. This data is shared with other members of the same group. You can leave a group at any time, which removes your data from our servers.',
       },
       {
         title: 'Analytics',
@@ -34,7 +38,11 @@ const content: Record<Lang, {
     sections: [
       {
         title: 'Armazenamento Local',
-        body: 'As suas previsões e seleções favoritas são guardadas no armazenamento local do browser para que persistam entre sessões. Estes dados ficam no seu dispositivo e nunca são enviados para nós.',
+        body: 'As suas previsões e seleções favoritas são guardadas no armazenamento local do browser para que persistam entre sessões. Os palpites individuais ficam no seu dispositivo, a menos que entre ou crie um grupo.',
+      },
+      {
+        title: 'Grupos de Palpites',
+        body: 'Se criar ou entrar num grupo de palpites, o seu nome e palpites são enviados e armazenados nos nossos servidores (Vercel Redis) para alimentar o ranking do grupo. Estes dados são partilhados com os outros membros do mesmo grupo. Pode sair do grupo a qualquer momento, o que remove os seus dados dos nossos servidores.',
       },
       {
         title: 'Análises',
@@ -53,7 +61,11 @@ const content: Record<Lang, {
     sections: [
       {
         title: 'Almacenamiento Local',
-        body: 'Tus predicciones y selecciones favoritas se guardan en el almacenamiento local del navegador para que persistan entre sesiones. Estos datos permanecen en tu dispositivo y nunca nos son enviados.',
+        body: 'Tus predicciones y selecciones favoritas se guardan en el almacenamiento local del navegador para que persistan entre sesiones. Las predicciones individuales permanecen en tu dispositivo, salvo que te unas o crees un grupo.',
+      },
+      {
+        title: 'Grupos de Predicciones',
+        body: 'Si creas o te unes a un grupo de predicciones, tu nombre y predicciones se envían y almacenan en nuestros servidores (Vercel Redis) para alimentar la tabla del grupo. Estos datos se comparten con los demás miembros del mismo grupo. Puedes salir del grupo en cualquier momento, lo que elimina tus datos de nuestros servidores.',
       },
       {
         title: 'Análisis',
