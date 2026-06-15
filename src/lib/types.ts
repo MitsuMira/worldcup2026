@@ -78,7 +78,7 @@ export interface EnrichedGame extends ApiGame {
 // Enriched group (team data joined in)
 export interface EnrichedGroup {
   group: string
-  standings: Array<ApiGroupStanding & { team?: ApiTeam; gd: number; played: number; w: number; d: number; l: number }>
+  standings: Array<ApiGroupStanding & { team?: ApiTeam; gd: number; played: number; w: number; d: number; l: number; yellows: number; reds: number }>
 }
 
 // ── Match detail (from ESPN /summary endpoint) ───────────────────────────────

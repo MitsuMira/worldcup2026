@@ -537,6 +537,8 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
           w: s.w,
           d: s.d,
           l: s.l,
+          yellows: s.yellows,
+          reds: s.reds,
           team: s.team,
         })),
     }))

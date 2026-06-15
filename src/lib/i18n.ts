@@ -114,7 +114,8 @@ export const en: Translations = {
       '48 teams in 12 groups of 4',
       'Top 2 from each group advance to the Round of 32',
       '8 best third-place teams also advance (total: 32 teams)',
-      'Tiebreaker: Points → Goal difference → Goals scored → Head-to-head',
+      'Tiebreakers (Step 1 — head-to-head): Points · GD · Goals scored',
+      'Tiebreakers (Step 2 — overall): GD · Goals scored · Conduct (fewest cards)',
     ],
   },
   playoffs: {
@@ -227,7 +228,8 @@ export const pt: Translations = {
       '48 seleções em 12 grupos de 4',
       'Os 2 primeiros de cada grupo avançam para as oitavas',
       'Os 8 melhores terceiros colocados também avançam (total: 32 seleções)',
-      'Desempate: Pontos → Saldo de gols → Gols marcados → Confronto direto',
+      'Desempate (Passo 1 — confronto direto): Pontos · Saldo · Gols marcados',
+      'Desempate (Passo 2 — geral): Saldo · Gols marcados · Fair play (menos cartões)',
     ],
   },
   playoffs: {
@@ -340,7 +342,8 @@ export const es: Translations = {
       '48 selecciones en 12 grupos de 4',
       'Los 2 primeros de cada grupo avanzan a los dieciseisavos',
       'Los 8 mejores terceros también avanzan (total: 32 selecciones)',
-      'Desempate: Puntos → Diferencia de goles → Goles marcados → Enfrentamiento directo',
+      'Desempate (Paso 1 — enfrentamiento directo): Puntos · DG · Goles marcados',
+      'Desempate (Paso 2 — general): DG · Goles marcados · Fair play (menos tarjetas)',
     ],
   },
   playoffs: {
