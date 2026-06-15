@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown, Share2 } from 'lucide-react'
+import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown, Share2, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getMatchStatus } from '@/lib/utils'
@@ -174,8 +175,11 @@ export default function GroupsPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-8">
-        <Users size={28} className="text-amber-400" />
-        <div>
+        <Link href="/predictions" className="text-slate-400 hover:text-white transition-colors" title="Palpites">
+          <ArrowLeft size={20} />
+        </Link>
+        <Users size={24} className="text-amber-400" />
+        <div className="flex-1">
           <h1 className="text-2xl font-black text-white">Grupos</h1>
           <p className="text-sm text-slate-400">Compita com amigos nos palpites</p>
         </div>

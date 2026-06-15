@@ -460,10 +460,17 @@ export default function MatchDetailPage() {
   const game = gamesData?.games.find(g => g.id === id)
   const status = game ? getMatchStatus(game) : null
 
+  // Poll faster in the first 10 min of a live match — ESPN is slow to publish initial data
+  const earlyLive = status === 'live' && game && (() => {
+    const kickoff = game.date ? new Date(game.date).getTime() : 0
+    return kickoff > 0 && Date.now() - kickoff < 10 * 60 * 1000
+  })()
+  const liveInterval = earlyLive ? 8_000 : 15_000
+
   const { data: detail, isLoading: detailLoading, error: detailError } = useSWR<MatchDetail>(
     id ? `/api/match/${id}` : null,
     fetcher,
-    { refreshInterval: status === 'live' ? 15_000 : 0 },
+    { refreshInterval: status === 'live' ? liveInterval : 0 },
   )
 
   if (gamesLoading) {
@@ -699,7 +706,13 @@ export default function MatchDetailPage() {
           {/* ── Live Feed ── */}
           {tab === 'feed' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/50">
-              {(detail.commentary ?? []).map((c: CommentaryEntry) => (
+              {(detail.commentary ?? []).length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center px-6">
+                  <Loader2 size={20} className="animate-spin text-slate-500" />
+                  <p className="text-slate-400 text-sm font-medium">Aguardando narração ao vivo…</p>
+                  <p className="text-slate-600 text-xs">A ESPN pode demorar alguns minutos para publicar os dados no início da partida.</p>
+                </div>
+              ) : (detail.commentary ?? []).map((c: CommentaryEntry) => (
                 <div key={c.sequence} className="flex gap-3 px-4 py-3 text-sm">
                   <span className="text-xs text-slate-500 w-8 shrink-0 pt-0.5 tabular-nums">{c.minute ?? ''}</span>
                   {c.icon && <span className="shrink-0 text-sm">{c.icon}</span>}
@@ -713,7 +726,17 @@ export default function MatchDetailPage() {
           {tab === 'stats' && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
               {(!detail.homeStats && !detail.awayStats) ? (
-                <p className="text-slate-500 text-center py-6 text-sm">{t.matchDetail.noStats}</p>
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  {status === 'live' ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin text-slate-500" />
+                      <p className="text-slate-400 text-sm font-medium">Aguardando estatísticas ao vivo…</p>
+                      <p className="text-slate-600 text-xs">A ESPN pode demorar alguns minutos para publicar os dados no início da partida.</p>
+                    </>
+                  ) : (
+                    <p className="text-slate-500 text-sm">{t.matchDetail.noStats}</p>
+                  )}
+                </div>
               ) : (
                 <>
                   <div className="flex justify-between text-xs font-bold mb-4">

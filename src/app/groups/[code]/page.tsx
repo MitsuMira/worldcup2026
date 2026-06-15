@@ -542,9 +542,6 @@ export default function GroupPage() {
         <button onClick={() => { refreshMembers(); refreshSettings() }} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Atualizar">
           <RefreshCw size={14} />
         </button>
-        <Link href="/" className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors px-2 py-1 rounded-lg border border-amber-500/30 hover:border-amber-400/50 shrink-0">
-          Palpites
-        </Link>
       </div>
 
       {/* Settings panel */}
