@@ -80,7 +80,9 @@ function SettingsPanel({ settings, userId, members, code, onUpdated }: {
   onUpdated: () => void
 }) {
   const [saving, setSaving] = useState(false)
-  const isOwner = settings.creatorId === userId
+  const [labelInput, setLabelInput] = useState(settings.label)
+  const [editingLabel, setEditingLabel] = useState(false)
+  const isOwner = settings.creatorId === userId || !settings.creatorId
   const ownerMember = members.find(m => m.userId === settings.creatorId)
 
   const patch = async (body: object) => {
@@ -103,6 +105,50 @@ function SettingsPanel({ settings, userId, members, code, onUpdated }: {
         <Settings size={14} className="text-slate-400" />
         <span className="font-semibold text-white text-sm">Configurações do grupo</span>
       </div>
+
+      {/* Group name */}
+      {isOwner && (
+        <div className="mb-4">
+          <div className="text-xs text-slate-500 mb-1">Nome do grupo</div>
+          {editingLabel ? (
+            <div className="flex gap-2">
+              <input
+                autoFocus
+                value={labelInput}
+                onChange={e => setLabelInput(e.target.value)}
+                maxLength={32}
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-amber-500"
+              />
+              <button
+                onClick={async () => {
+                  const trimmed = labelInput.trim()
+                  if (!trimmed) return
+                  setSaving(true)
+                  try {
+                    await fetch(`/api/groups/${code}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId, action: 'rename', label: trimmed }),
+                    })
+                    onUpdated()
+                    setEditingLabel(false)
+                  } finally { setSaving(false) }
+                }}
+                disabled={saving || !labelInput.trim()}
+                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-xs rounded-lg transition-colors"
+              >
+                Salvar
+              </button>
+              <button onClick={() => setEditingLabel(false)} className="text-slate-500 text-xs hover:text-white">✕</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-semibold">{settings.label}</span>
+              <button onClick={() => { setLabelInput(settings.label); setEditingLabel(true) }} className="text-slate-500 hover:text-slate-300 text-xs">Editar</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Ownership */}
       <div className="mb-4">

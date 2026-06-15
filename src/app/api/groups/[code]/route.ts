@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
 export async function PATCH(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
-    const body = await req.json() as { userId: string; action: 'claim' | 'settings' | 'transfer'; minParticipation?: number; targetId?: string }
+    const body = await req.json() as { userId: string; action: 'claim' | 'settings' | 'transfer' | 'rename'; minParticipation?: number; targetId?: string; label?: string }
     const { userId, action } = body
 
     if (!userId || !action) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
@@ -49,6 +49,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ code: 
         return NextResponse.json({ error: 'target not a member' }, { status: 400 })
       await kv.set(groupKey(code), { ...group, creatorId: targetId })
       return NextResponse.json({ ok: true, creatorId: targetId })
+    }
+
+    if (action === 'rename') {
+      if (group.creatorId && group.creatorId !== userId)
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+      const label = body.label?.trim()
+      if (!label) return NextResponse.json({ error: 'missing label' }, { status: 400 })
+      await kv.set(groupKey(code), { ...group, label })
+      return NextResponse.json({ ok: true, label })
     }
 
     if (action === 'settings') {
