@@ -462,7 +462,7 @@ export default function MatchDetailPage() {
 
   // Poll faster in the first 10 min of a live match — ESPN is slow to publish initial data
   const earlyLive = status === 'live' && game && (() => {
-    const kickoff = game.date ? new Date(game.date).getTime() : 0
+    const kickoff = game.utc_date ? new Date(game.utc_date).getTime() : 0
     return kickoff > 0 && Date.now() - kickoff < 10 * 60 * 1000
   })()
   const liveInterval = earlyLive ? 8_000 : 15_000
