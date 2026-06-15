@@ -40,6 +40,9 @@ interface EspnDetail {
   clock?: { value: number; displayValue: string }
   team?: { id: string }
   athletesInvolved?: Array<{ id: string; displayName: string }>
+  scoringPlay?: boolean
+  penaltyKick?: boolean
+  ownGoal?: boolean
 }
 
 interface EspnVenue {
@@ -123,11 +126,16 @@ function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
   const seen = new Set<string>()
   return comp.details
     .filter(d => {
+      if (d.team?.id !== espnTeamId) return false
+      if (d.ownGoal) return false
+      // Prefer ESPN's explicit boolean flags when present
+      if (d.scoringPlay !== undefined) return d.scoringPlay === true
+      // Fallback: match by type text
       const text = d.type?.text?.toLowerCase() ?? ''
-      return (text.includes('goal') && !text.includes('missed') && !text.includes('own')) && d.team?.id === espnTeamId
+      return text.includes('goal') && !text.includes('missed') && !text.includes('own')
     })
     .filter(d => {
-      // Deduplicate: penalty kicks generate both a "Penalty" event and a "Goal" event at the same clock value
+      // Deduplicate: some penalty goals appear as both a "Penalty" and a "Goal" event at the same clock + player
       const key = `${d.team?.id}-${d.clock?.value ?? 0}-${d.athletesInvolved?.[0]?.id ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
