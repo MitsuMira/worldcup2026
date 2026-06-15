@@ -396,12 +396,86 @@ export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
   return games
 }
 
+// ── FIFA tiebreaker (WC 2026 rules) ─────────────────────────────────────────
+// Step 1: H2H pts → H2H GD → H2H GF (among tied teams only)
+// Step 2: overall GD → overall GF
+// Step 3: FIFA ranking (no data — skipped)
+
+type Entry = { team: ApiTeam; pts: number; gf: number; ga: number; w: number; d: number; l: number; played: number }
+
+function h2hStats(entries: Entry[], games: EnrichedGame[]): Map<string, { pts: number; gd: number; gf: number }> {
+  const ids = new Set(entries.map(e => e.team.id))
+  const stats = new Map(entries.map(e => [e.team.id, { pts: 0, gd: 0, gf: 0 }]))
+  for (const g of games) {
+    if (g.finished !== 'TRUE') continue
+    const hId = g.homeTeam?.id, aId = g.awayTeam?.id
+    if (!hId || !aId || !ids.has(hId) || !ids.has(aId)) continue
+    const hs = parseInt(g.home_score) || 0, as_ = parseInt(g.away_score) || 0
+    const h = stats.get(hId)!, a = stats.get(aId)!
+    h.gf += hs; h.gd += hs - as_
+    a.gf += as_; a.gd += as_ - hs
+    if (hs > as_) h.pts += 3
+    else if (hs === as_) { h.pts += 1; a.pts += 1 }
+    else a.pts += 3
+  }
+  return stats
+}
+
+function overallCmp(a: Entry, b: Entry): number {
+  const gdd = (b.gf - b.ga) - (a.gf - a.ga); if (gdd) return gdd
+  return b.gf - a.gf
+}
+
+function rankTied(entries: Entry[], games: EnrichedGame[]): Entry[] {
+  if (entries.length <= 1) return entries
+  const h2h = h2hStats(entries, games)
+  const sorted = [...entries].sort((a, b) => {
+    const ha = h2h.get(a.team.id)!, hb = h2h.get(b.team.id)!
+    const pd = hb.pts - ha.pts; if (pd) return pd
+    const gdd = hb.gd - ha.gd; if (gdd) return gdd
+    const gfd = hb.gf - ha.gf; if (gfd) return gfd
+    return overallCmp(a, b)
+  })
+  // For 3+ tied: sub-groups still equal on H2H fall back to overall
+  if (entries.length > 2) {
+    const result: Entry[] = []
+    let i = 0
+    while (i < sorted.length) {
+      let j = i + 1
+      const hi = h2h.get(sorted[i].team.id)!
+      while (j < sorted.length) {
+        const hj = h2h.get(sorted[j].team.id)!
+        if (hj.pts !== hi.pts || hj.gd !== hi.gd || hj.gf !== hi.gf) break
+        j++
+      }
+      const sub = sorted.slice(i, j)
+      result.push(...(sub.length > 1 ? sub.sort(overallCmp) : sub))
+      i = j
+    }
+    return result
+  }
+  return sorted
+}
+
+function sortFifa(entries: Entry[], games: EnrichedGame[]): Entry[] {
+  const byPts = [...entries].sort((a, b) => b.pts - a.pts)
+  const result: Entry[] = []
+  let i = 0
+  while (i < byPts.length) {
+    let j = i + 1
+    while (j < byPts.length && byPts[j].pts === byPts[i].pts) j++
+    const tied = byPts.slice(i, j)
+    result.push(...(tied.length > 1 ? rankTied(tied, games) : tied))
+    i = j
+  }
+  return result
+}
+
 export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
   // Derive standings from game results — no extra ESPN endpoint needed
   const games = await fetchEnrichedGames()
   const groupGames = games.filter(g => g.type === 'group' && g.group !== '')
 
-  type Entry = { team: ApiTeam; pts: number; gf: number; ga: number; w: number; d: number; l: number; played: number }
   const groupMap = new Map<string, Map<string, Entry>>()
 
   for (const game of groupGames) {
@@ -440,12 +514,7 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([grp, teams]) => ({
       group: grp,
-      standings: [...teams.values()]
-        .sort((a, b) => {
-          const pd = b.pts - a.pts; if (pd) return pd
-          const gdd = (b.gf - b.ga) - (a.gf - a.ga); if (gdd) return gdd
-          return b.gf - a.gf
-        })
+      standings: sortFifa([...teams.values()], groupGames)
         .map(s => ({
           team_id: s.team.id,
           pts: String(s.pts),
