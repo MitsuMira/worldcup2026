@@ -175,14 +175,27 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
   const nums = formation.split('-').map(Number).filter(n => !isNaN(n) && n > 0)
   if (nums.length === 0 || lineup.starters.length < 11) return null
 
-  const sorted = [...lineup.starters].sort((a, b) => (a.formationPlace ?? 99) - (b.formationPlace ?? 99))
-  // rows: [GK], then groups from formation (e.g. 4,3,3), then optionally reverse for mirror
-  const rows: typeof sorted[number][][] = [[sorted[0]]]
-  let idx = 1
-  for (const count of nums) {
-    rows.push(sorted.slice(idx, idx + count))
-    idx += count
+  function posRow(pos?: string): 'GK' | 'DEF' | 'MID' | 'FWD' {
+    if (!pos) return 'MID'
+    const p = pos.toUpperCase()
+    if (p === 'GK' || p === 'G') return 'GK'
+    if (/^(CB|LB|RB|LWB|RWB|SW|D|DF|DEF|FB|WB)$/.test(p)) return 'DEF'
+    if (/^(FW|LW|RW|LF|RF|CF|ST|SS|F|ATT|FOR|WF)$/.test(p)) return 'FWD'
+    return 'MID'
   }
+
+  const byPos = { GK: [] as typeof lineup.starters, DEF: [] as typeof lineup.starters, MID: [] as typeof lineup.starters, FWD: [] as typeof lineup.starters }
+  for (const p of lineup.starters) byPos[posRow(p.position)].push(p)
+  const sortByPlace = (a: typeof lineup.starters[0], b: typeof lineup.starters[0]) => (a.formationPlace ?? 99) - (b.formationPlace ?? 99)
+
+  // Build rows: GK first, then outfield rows from formation nums largest-first (defenders closest to GK)
+  // nums come from formation string e.g. "4-3-3" → [4,3,3] = DEF,MID,FWD
+  // If formation doesn't match position counts, fall back to pos buckets as-is
+  const defMidFwd = [byPos.DEF, byPos.MID, byPos.FWD].filter(r => r.length > 0)
+  const rows: typeof lineup.starters[number][][] = [
+    byPos.GK.sort(sortByPlace),
+    ...defMidFwd.map(r => r.sort(sortByPlace)),
+  ]
   const displayRows = mirror ? [...rows].reverse() : rows
 
   return (
