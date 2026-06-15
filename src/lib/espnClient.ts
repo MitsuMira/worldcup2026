@@ -1,5 +1,6 @@
 import 'server-only'
 import type { EnrichedGame, EnrichedGroup, ApiTeam, ApiStadium } from './types'
+import { FIFA_RANK } from './fifaRanking'
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
 
@@ -431,7 +432,11 @@ function h2hStats(entries: Entry[], games: EnrichedGame[]): Map<string, { pts: n
 function overallCmp(a: Entry, b: Entry): number {
   const gdd = (b.gf - b.ga) - (a.gf - a.ga); if (gdd) return gdd
   const gfd = b.gf - a.gf; if (gfd) return gfd
-  return conductPenalty(a) - conductPenalty(b) // fewer cards = better
+  const cd = conductPenalty(a) - conductPenalty(b); if (cd) return cd // fewer cards = better
+  // Step 3: FIFA ranking (lower number = better)
+  const ra = FIFA_RANK[a.team.id] ?? 999
+  const rb = FIFA_RANK[b.team.id] ?? 999
+  return ra - rb
 }
 
 function rankTied(entries: Entry[], games: EnrichedGame[]): Entry[] {

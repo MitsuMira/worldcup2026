@@ -3,6 +3,7 @@
 import useSWR from 'swr'
 import GroupTable from '@/components/GroupTable'
 import type { EnrichedGroup } from '@/lib/types'
+import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2 } from 'lucide-react'
 
@@ -27,7 +28,9 @@ function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
     const gfd = Number(b.gf) - Number(a.gf); if (gfd) return gfd
     const ca = (a.yellows ?? 0) + (a.reds ?? 0) * 3
     const cb = (b.yellows ?? 0) + (b.reds ?? 0) * 3
-    return ca - cb
+    const cd = ca - cb; if (cd) return cd
+    // Step 5: FIFA ranking (lower number = better)
+    return (FIFA_RANK[a.team_id] ?? 999) - (FIFA_RANK[b.team_id] ?? 999)
   })
 
   return new Set(sorted.slice(0, QUALIFYING_THIRDS).map(s => s.team_id))
