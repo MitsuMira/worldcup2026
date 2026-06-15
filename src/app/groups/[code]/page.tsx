@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock } from 'lucide-react'
+import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock, Share2 } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
@@ -409,10 +409,15 @@ export default function GroupPage() {
   const finishedFiltered = filteredGames.filter(g => getMatchStatus(g) === 'finished')
   const upcomingFiltered = filteredGames.filter(g => getMatchStatus(g) !== 'finished')
 
-  const copy = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const share = () => {
+    const url = `${window.location.origin}/join/${code}`
+    if (navigator.share) {
+      navigator.share({ title: `Entrar no grupo ${localGroupLabel}`, url }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   if (!mounted) return null
@@ -428,8 +433,8 @@ export default function GroupPage() {
           <h1 className="text-xl font-black text-white truncate">{localGroupLabel}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs font-mono text-slate-400 tracking-widest">{code}</span>
-            <button onClick={copy} className="text-slate-500 hover:text-slate-300 transition-colors">
-              {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+            <button onClick={share} className="text-slate-500 hover:text-slate-300 transition-colors">
+              {copied ? <Check size={12} className="text-green-400" /> : <Share2 size={12} />}
             </button>
           </div>
         </div>
@@ -461,8 +466,8 @@ export default function GroupPage() {
         <div className="flex-1 text-xs text-slate-400">
           Compartilhe <span className="font-mono font-bold text-white">{code}</span> com amigos para entrarem.
         </div>
-        <button onClick={copy} className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 shrink-0 transition-colors">
-          {copied ? <Check size={13} /> : <Copy size={13} />} Copiar
+        <button onClick={share} className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 shrink-0 transition-colors">
+          {copied ? <Check size={13} /> : <Share2 size={13} />} Compartilhar
         </button>
       </div>
 

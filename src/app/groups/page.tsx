@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown } from 'lucide-react'
+import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown, Share2 } from 'lucide-react'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getMatchStatus } from '@/lib/utils'
@@ -147,10 +147,15 @@ export default function GroupsPage() {
     }
   }
 
-  const copy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    setCopied(code)
-    setTimeout(() => setCopied(null), 2000)
+  const share = (code: string) => {
+    const url = `${window.location.origin}/join/${code}`
+    if (navigator.share) {
+      navigator.share({ title: 'Entrar no grupo de palpites', url }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(url)
+      setCopied(code)
+      setTimeout(() => setCopied(null), 2000)
+    }
   }
 
   const leave = async (code: string) => {
@@ -274,8 +279,8 @@ export default function GroupsPage() {
                     <div className="text-white font-semibold truncate">{g.label}</div>
                     <GroupStats code={g.code} userId={userId} games={games} />
                   </button>
-                  <button onClick={() => copy(g.code)} className="text-slate-500 hover:text-slate-300 transition-colors p-1 shrink-0" title="Copiar código">
-                    {copied === g.code ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
+                  <button onClick={() => share(g.code)} className="text-slate-500 hover:text-slate-300 transition-colors p-1 shrink-0" title="Compartilhar link de convite">
+                    {copied === g.code ? <Check size={15} className="text-green-400" /> : <Share2 size={15} />}
                   </button>
                   <button onClick={() => leave(g.code)} className="text-slate-600 hover:text-red-400 transition-colors p-1 shrink-0" title="Sair do grupo">
                     <LogOut size={15} />
