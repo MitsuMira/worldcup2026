@@ -175,27 +175,23 @@ function FormationField({ lineup, mirror }: { lineup: NonNullable<MatchDetail['h
   const nums = formation.split('-').map(Number).filter(n => !isNaN(n) && n > 0)
   if (nums.length === 0 || lineup.starters.length < 11) return null
 
-  function posRow(pos?: string): 'GK' | 'DEF' | 'MID' | 'FWD' {
-    if (!pos) return 'MID'
-    const p = pos.toUpperCase()
-    if (p === 'GK' || p === 'G') return 'GK'
-    if (/^(CB|LB|RB|LWB|RWB|SW|D|DF|DEF|FB|WB)$/.test(p)) return 'DEF'
-    if (/^(FW|LW|RW|LF|RF|CF|ST|SS|F|ATT|FOR|WF)$/.test(p)) return 'FWD'
-    return 'MID'
+  const isGk = (p: typeof lineup.starters[0]) => {
+    const pos = (p.position ?? '').toUpperCase()
+    return pos === 'GK' || pos === 'G'
   }
-
-  const byPos = { GK: [] as typeof lineup.starters, DEF: [] as typeof lineup.starters, MID: [] as typeof lineup.starters, FWD: [] as typeof lineup.starters }
-  for (const p of lineup.starters) byPos[posRow(p.position)].push(p)
   const sortByPlace = (a: typeof lineup.starters[0], b: typeof lineup.starters[0]) => (a.formationPlace ?? 99) - (b.formationPlace ?? 99)
 
-  // Build rows: GK first, then outfield rows from formation nums largest-first (defenders closest to GK)
-  // nums come from formation string e.g. "4-3-3" → [4,3,3] = DEF,MID,FWD
-  // If formation doesn't match position counts, fall back to pos buckets as-is
-  const defMidFwd = [byPos.DEF, byPos.MID, byPos.FWD].filter(r => r.length > 0)
-  const rows: typeof lineup.starters[number][][] = [
-    byPos.GK.sort(sortByPlace),
-    ...defMidFwd.map(r => r.sort(sortByPlace)),
-  ]
+  // Use position only to identify GK; slice remaining outfield players by formationPlace
+  // according to formation numbers — more reliable than using ESPN position labels for outfield roles.
+  const gk = lineup.starters.filter(isGk)
+  const outfield = lineup.starters.filter(p => !isGk(p)).sort(sortByPlace)
+
+  const rows: typeof lineup.starters[number][][] = [gk]
+  let idx = 0
+  for (const count of nums) {
+    rows.push(outfield.slice(idx, idx + count))
+    idx += count
+  }
   const displayRows = mirror ? [...rows].reverse() : rows
 
   return (
