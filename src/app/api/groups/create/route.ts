@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
 
-  const group: KvGroup = { label, createdAt: new Date().toISOString() }
+  const group: KvGroup = { label, createdAt: new Date().toISOString(), creatorId: userId, minParticipation: 0 }
   const member: KvMember = { userId, name, predictions, updatedAt: new Date().toISOString() }
 
   try {

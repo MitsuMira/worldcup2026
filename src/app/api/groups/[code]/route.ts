@@ -8,10 +8,50 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
   try {
     const group = await kv.get<KvGroup>(groupKey(code))
     if (!group) return NextResponse.json({ exists: false })
-    return NextResponse.json({ exists: true, label: group.label })
+    return NextResponse.json({
+      exists: true,
+      label: group.label,
+      creatorId: group.creatorId ?? null,
+      minParticipation: group.minParticipation ?? 0,
+    })
   } catch (e) {
     console.error('[groups GET]', e)
     return NextResponse.json({ exists: false, error: String(e) })
+  }
+}
+
+// PATCH: claim ownership (if unclaimed) or update settings (creator only)
+export async function PATCH(req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  try {
+    const body = await req.json() as { userId: string; action: 'claim' | 'settings'; minParticipation?: number }
+    const { userId, action } = body
+
+    if (!userId || !action) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
+
+    const group = await kv.get<KvGroup>(groupKey(code))
+    if (!group) return NextResponse.json({ error: 'group not found' }, { status: 404 })
+
+    if (action === 'claim') {
+      if (group.creatorId) return NextResponse.json({ error: 'already claimed' }, { status: 409 })
+      await kv.set(groupKey(code), { ...group, creatorId: userId })
+      return NextResponse.json({ ok: true, creatorId: userId })
+    }
+
+    if (action === 'settings') {
+      if (group.creatorId && group.creatorId !== userId)
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+      const minParticipation = Number(body.minParticipation ?? 0)
+      if (![0, 50, 100].includes(minParticipation))
+        return NextResponse.json({ error: 'invalid minParticipation' }, { status: 400 })
+      await kv.set(groupKey(code), { ...group, minParticipation })
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({ error: 'unknown action' }, { status: 400 })
+  } catch (e) {
+    console.error('[groups PATCH]', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }
 
@@ -32,7 +72,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ code: st
     if (groupLabel) {
       const existing = await kv.get<KvGroup>(groupKey(code))
       if (!existing) {
-        ops.push(kv.set(groupKey(code), { label: groupLabel, createdAt: new Date().toISOString() } satisfies KvGroup))
+        ops.push(kv.set(groupKey(code), { label: groupLabel, createdAt: new Date().toISOString(), minParticipation: 0 } satisfies KvGroup))
       }
     }
 

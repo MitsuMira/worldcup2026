@@ -37,6 +37,8 @@ export const kv = {
 export interface KvGroup {
   label: string
   createdAt: string
+  creatorId?: string       // userId of the group creator (may be absent for legacy groups)
+  minParticipation: number // 0 = all games count; 50 = majority; 100 = all members must predict
 }
 
 export interface KvMember {

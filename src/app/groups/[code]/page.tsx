@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
@@ -14,6 +14,7 @@ const STORAGE_KEY = 'wc2026_predictions'
 
 type PredictionResult = 'correct' | 'correct-winner' | 'wrong' | 'pending'
 type Tab = 'leaderboard' | 'matches'
+type MatchFilter = 'all' | 'finished' | 'upcoming'
 
 interface KvMember {
   userId: string
@@ -22,13 +23,34 @@ interface KvMember {
   updatedAt: string
 }
 
+interface GroupSettings {
+  exists: boolean
+  label: string
+  creatorId: string | null
+  minParticipation: number
+}
+
+const PARTICIPATION_OPTIONS = [
+  { value: 0,   label: 'Todas as partidas', desc: 'Conta todas, independente de quem palpitou' },
+  { value: 50,  label: 'Maioria (≥50%)', desc: 'Conta se mais da metade dos membros palpitou' },
+  { value: 100, label: 'Todos os membros', desc: 'Conta apenas se todos palpitaram' },
+]
+
 function loadPredictions(): Record<string, Prediction> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
 }
 
-function calcPoints(member: KvMember, games: EnrichedGame[]) {
+// Returns whether a game counts given the minParticipation setting
+function gameCountsForScoring(game: EnrichedGame, allMembers: KvMember[], minParticipation: number): boolean {
+  if (minParticipation === 0 || allMembers.length === 0) return true
+  const predictors = allMembers.filter(m => m.predictions[game.id]).length
+  return (predictors / allMembers.length) * 100 >= minParticipation
+}
+
+function calcPoints(member: KvMember, games: EnrichedGame[], allMembers: KvMember[], minParticipation: number) {
   let pts = 0, exact = 0, winner = 0
   for (const game of games) {
+    if (!gameCountsForScoring(game, allMembers, minParticipation)) continue
     const pred = member.predictions[game.id]
     if (!pred) continue
     const result = getPredictionResult(
@@ -48,15 +70,117 @@ function ResultDot({ result }: { result: PredictionResult }) {
   return <span className="w-2 h-2 rounded-full bg-slate-700 inline-block shrink-0" title="Aguardando" />
 }
 
+// ── Settings panel ───────────────────────────────────────────────────────────
+
+function SettingsPanel({ settings, userId, members, code, onUpdated }: {
+  settings: GroupSettings
+  userId: string
+  members: KvMember[]
+  code: string
+  onUpdated: () => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const isOwner = settings.creatorId === userId
+  const ownerMember = members.find(m => m.userId === settings.creatorId)
+
+  const patch = async (body: object) => {
+    setSaving(true)
+    try {
+      await fetch(`/api/groups/${code}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...body }),
+      })
+      onUpdated()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4 text-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Settings size={14} className="text-slate-400" />
+        <span className="font-semibold text-white text-sm">Configurações do grupo</span>
+      </div>
+
+      {/* Ownership */}
+      <div className="mb-4">
+        <div className="text-xs text-slate-500 mb-1">Proprietário</div>
+        {settings.creatorId ? (
+          <div className="flex items-center gap-2 text-slate-300 text-xs">
+            <Crown size={12} className="text-amber-400" />
+            <span>{ownerMember?.name ?? settings.creatorId}</span>
+            {isOwner && <span className="text-amber-400 font-bold">(você)</span>}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500">Sem proprietário definido</span>
+            <button
+              onClick={() => patch({ action: 'claim' })}
+              disabled={saving}
+              className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-50"
+            >
+              Reivindicar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Participation threshold */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="text-xs text-slate-500">Partidas que contam para pontuação</div>
+          {!isOwner && <Lock size={10} className="text-slate-600" />}
+        </div>
+        <div className="space-y-1.5">
+          {PARTICIPATION_OPTIONS.map(opt => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-2.5 rounded-lg px-3 py-2 border transition-colors ${
+                settings.minParticipation === opt.value
+                  ? 'border-amber-500/50 bg-amber-500/5'
+                  : 'border-slate-800 bg-slate-800/40'
+              } ${isOwner ? 'cursor-pointer' : 'cursor-default'}`}
+            >
+              <input
+                type="radio"
+                name="minParticipation"
+                value={opt.value}
+                checked={settings.minParticipation === opt.value}
+                disabled={!isOwner || saving}
+                onChange={() => patch({ action: 'settings', minParticipation: opt.value })}
+                className="mt-0.5 accent-amber-500 shrink-0"
+              />
+              <div>
+                <div className={`text-xs font-semibold ${settings.minParticipation === opt.value ? 'text-white' : 'text-slate-400'}`}>
+                  {opt.label}
+                </div>
+                <div className="text-[10px] text-slate-600 leading-tight mt-0.5">{opt.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        {!isOwner && settings.creatorId && (
+          <p className="text-[10px] text-slate-600 mt-2">Apenas o proprietário pode alterar esta configuração.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Leaderboard tab ──────────────────────────────────────────────────────────
 
-function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
+function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, expanded, onToggle }: {
   member: KvMember; rank: number; isMe: boolean; games: EnrichedGame[]
+  allMembers: KvMember[]; minParticipation: number
   expanded: boolean; onToggle: () => void
 }) {
-  const { pts, exact, winner } = calcPoints(member, games)
-  const finishedGames = games.filter(g => getMatchStatus(g) === 'finished')
-  const predictedFinished = finishedGames.filter(g => member.predictions[g.id])
+  const { pts, exact, winner } = calcPoints(member, games, allMembers, minParticipation)
+  const countedFinished = games.filter(g =>
+    getMatchStatus(g) === 'finished' && gameCountsForScoring(g, allMembers, minParticipation)
+  )
+  const predictedCounted = countedFinished.filter(g => member.predictions[g.id])
 
   return (
     <div className={`border rounded-xl transition-colors ${isMe ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800 bg-slate-900'}`}>
@@ -70,7 +194,7 @@ function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
             {isMe && <span className="text-[10px] text-amber-400 font-bold">você</span>}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {predictedFinished.length} palpites · {exact} exatos · {winner} vencedor
+            {predictedCounted.length} palpites · {exact} exatos · {winner} vencedor
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -83,7 +207,7 @@ function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-800">
           <div className="mt-3 space-y-2">
-            {finishedGames.map(game => {
+            {countedFinished.map(game => {
               const pred = member.predictions[game.id]
               if (!pred) return null
               const result = getPredictionResult(
@@ -101,10 +225,10 @@ function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
                 </div>
               )
             })}
-            {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id]).length > 0 && (
+            {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id] && gameCountsForScoring(g, allMembers, minParticipation)).length > 0 && (
               <>
                 <div className="text-[10px] text-slate-600 uppercase tracking-wider pt-1">Palpites futuros</div>
-                {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id]).map(game => {
+                {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id] && gameCountsForScoring(g, allMembers, minParticipation)).map(game => {
                   const pred = member.predictions[game.id]
                   if (!pred) return null
                   return (
@@ -126,30 +250,39 @@ function MemberRow({ member, rank, isMe, games, expanded, onToggle }: {
 
 // ── Matches tab ──────────────────────────────────────────────────────────────
 
-function MatchCompare({ game, members, rankedOrder }: {
+function MatchCompare({ game, members, rankedOrder, counts }: {
   game: EnrichedGame
   members: KvMember[]
-  rankedOrder: string[] // userIds sorted by rank, for consistent column order
+  rankedOrder: string[]
+  counts: boolean // whether this game counts for scoring
 }) {
   const finished = getMatchStatus(game) === 'finished'
   const anyPrediction = members.some(m => m.predictions[game.id])
   if (!anyPrediction) return null
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+    <div className={`border rounded-xl overflow-hidden ${counts ? 'bg-slate-900 border-slate-800' : 'bg-slate-900/50 border-slate-800/50'}`}>
       {/* Match header */}
-      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-        <span className="text-xs text-white font-semibold truncate flex-1">
-          {getTeamName(game, 'home')} vs {getTeamName(game, 'away')}
-        </span>
-        {finished ? (
-          <span className="text-xs font-black text-white ml-2 shrink-0">{game.home_score}–{game.away_score}</span>
-        ) : (
-          <span className="text-[10px] text-slate-500 ml-2 shrink-0">não iniciado</span>
-        )}
+      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {game.group && <span className="text-[10px] font-bold text-slate-500 shrink-0">Gr.{game.group}</span>}
+          <span className="text-xs text-white font-semibold truncate">
+            {getTeamName(game, 'home')} vs {getTeamName(game, 'away')}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {!counts && (
+            <span className="text-[9px] font-bold text-slate-600 bg-slate-800 rounded px-1.5 py-0.5">não conta</span>
+          )}
+          {finished ? (
+            <span className="text-xs font-black text-white">{game.home_score}–{game.away_score}</span>
+          ) : (
+            <span className="text-[10px] text-slate-500">não iniciado</span>
+          )}
+        </div>
       </div>
       {/* Member predictions */}
-      <div className="divide-y divide-slate-800/50">
+      <div className={`divide-y divide-slate-800/50 ${!counts ? 'opacity-50' : ''}`}>
         {rankedOrder.map((uid, i) => {
           const member = members.find(m => m.userId === uid)
           if (!member) return null
@@ -189,9 +322,19 @@ export default function GroupPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<Tab>('leaderboard')
+  const [showSettings, setShowSettings] = useState(false)
+  const [matchFilter, setMatchFilter] = useState<MatchFilter>('all')
+  const [groupFilter, setGroupFilter] = useState<string>('all')
 
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const games = gamesData?.games ?? []
+
+  const { data: settingsData, mutate: refreshSettings } = useSWR<GroupSettings>(
+    mounted ? `group-settings-${code}` : null,
+    () => fetch(`/api/groups/${code}`).then(r => r.json()),
+    { refreshInterval: 60_000 }
+  )
+  const settings: GroupSettings = settingsData ?? { exists: true, label: code, creatorId: null, minParticipation: 0 }
 
   const { data: membersData, mutate: refreshMembers } = useSWR<{ members: KvMember[] }>(
     mounted ? `group-members-${code}` : null,
@@ -232,21 +375,39 @@ export default function GroupPage() {
     return () => window.removeEventListener('storage', onStorage)
   }, [code, upsertToKv])
 
+  const minParticipation = settings.minParticipation ?? 0
+
   const rankedMembers = useMemo(() =>
     members
-      .map(m => ({ member: m, ...calcPoints(m, games) }))
+      .map(m => ({ member: m, ...calcPoints(m, games, members, minParticipation) }))
       .sort((a, b) => b.pts - a.pts || b.exact - a.exact),
-    [members, games]
+    [members, games, minParticipation]
   )
   const rankedOrder = rankedMembers.map(r => r.member.userId)
 
-  // Games that have at least one prediction from any member
+  // Games with at least one prediction
   const gamesWithPredictions = useMemo(() =>
     games.filter(g => members.some(m => m.predictions[g.id])),
     [games, members]
   )
-  const finishedWithPreds = gamesWithPredictions.filter(g => getMatchStatus(g) === 'finished')
-  const upcomingWithPreds = gamesWithPredictions.filter(g => getMatchStatus(g) !== 'finished')
+
+  // Available group letters for the filter
+  const availableGroups = useMemo(() => {
+    const letters = [...new Set(gamesWithPredictions.map(g => g.group).filter(Boolean))].sort()
+    return letters
+  }, [gamesWithPredictions])
+
+  // Apply filters
+  const filteredGames = useMemo(() => {
+    let list = gamesWithPredictions
+    if (groupFilter !== 'all') list = list.filter(g => g.group === groupFilter)
+    if (matchFilter === 'finished') list = list.filter(g => getMatchStatus(g) === 'finished')
+    else if (matchFilter === 'upcoming') list = list.filter(g => getMatchStatus(g) !== 'finished')
+    return list
+  }, [gamesWithPredictions, groupFilter, matchFilter])
+
+  const finishedFiltered = filteredGames.filter(g => getMatchStatus(g) === 'finished')
+  const upcomingFiltered = filteredGames.filter(g => getMatchStatus(g) !== 'finished')
 
   const copy = () => {
     navigator.clipboard.writeText(code)
@@ -272,10 +433,28 @@ export default function GroupPage() {
             </button>
           </div>
         </div>
-        <button onClick={() => refreshMembers()} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Atualizar">
+        <button
+          onClick={() => setShowSettings(v => !v)}
+          className={`p-1 transition-colors ${showSettings ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}
+          title="Configurações"
+        >
+          <Settings size={16} />
+        </button>
+        <button onClick={() => { refreshMembers(); refreshSettings() }} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Atualizar">
           <RefreshCw size={14} />
         </button>
       </div>
+
+      {/* Settings panel */}
+      {showSettings && settingsData && (
+        <SettingsPanel
+          settings={settings}
+          userId={userId}
+          members={members}
+          code={code}
+          onUpdated={() => { refreshSettings(); refreshMembers() }}
+        />
+      )}
 
       {/* Share hint */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 mb-4 flex items-center gap-3">
@@ -307,31 +486,67 @@ export default function GroupPage() {
           {rankedMembers.map(({ member }, i) => (
             <MemberRow key={member.userId} member={member} rank={i + 1}
               isMe={member.userId === userId} games={games}
+              allMembers={members} minParticipation={minParticipation}
               expanded={expanded === member.userId}
               onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)} />
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
-          {finishedWithPreds.length > 0 && (
-            <>
-              <div className="text-xs text-slate-500 uppercase tracking-wide">Encerradas</div>
-              {finishedWithPreds.map(game => (
-                <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder} />
+        <div>
+          {/* Filters */}
+          <div className="space-y-2 mb-4">
+            {/* Status filter */}
+            <div className="flex gap-1.5">
+              {(['all', 'finished', 'upcoming'] as MatchFilter[]).map(f => (
+                <button key={f} onClick={() => setMatchFilter(f)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${matchFilter === f ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+                  {f === 'all' ? 'Todas' : f === 'finished' ? 'Encerradas' : 'Próximas'}
+                </button>
               ))}
-            </>
-          )}
-          {upcomingWithPreds.length > 0 && (
-            <>
-              <div className={`text-xs text-slate-500 uppercase tracking-wide ${finishedWithPreds.length > 0 ? 'mt-4' : ''}`}>Próximas</div>
-              {upcomingWithPreds.map(game => (
-                <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder} />
-              ))}
-            </>
-          )}
-          {gamesWithPredictions.length === 0 && (
-            <div className="text-center text-slate-500 text-sm py-8">Nenhum palpite feito ainda.</div>
-          )}
+            </div>
+            {/* Group filter */}
+            {availableGroups.length > 1 && (
+              <div className="flex gap-1.5 flex-wrap">
+                <button onClick={() => setGroupFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${groupFilter === 'all' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+                  Todos
+                </button>
+                {availableGroups.map(g => (
+                  <button key={g} onClick={() => setGroupFilter(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${groupFilter === g ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+                    Gr.{g}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {matchFilter !== 'upcoming' && finishedFiltered.length > 0 && (
+              <>
+                {matchFilter === 'all' && <div className="text-xs text-slate-500 uppercase tracking-wide">Encerradas</div>}
+                {finishedFiltered.map(game => (
+                  <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder}
+                    counts={gameCountsForScoring(game, members, minParticipation)} />
+                ))}
+              </>
+            )}
+            {matchFilter !== 'finished' && upcomingFiltered.length > 0 && (
+              <>
+                {matchFilter === 'all' && finishedFiltered.length > 0 && <div className="text-xs text-slate-500 uppercase tracking-wide mt-4">Próximas</div>}
+                {matchFilter === 'all' && finishedFiltered.length === 0 && <div className="text-xs text-slate-500 uppercase tracking-wide">Próximas</div>}
+                {upcomingFiltered.map(game => (
+                  <MatchCompare key={game.id} game={game} members={members} rankedOrder={rankedOrder}
+                    counts={gameCountsForScoring(game, members, minParticipation)} />
+                ))}
+              </>
+            )}
+            {filteredGames.length === 0 && (
+              <div className="text-center text-slate-500 text-sm py-8">
+                {gamesWithPredictions.length === 0 ? 'Nenhum palpite feito ainda.' : 'Nenhuma partida com estes filtros.'}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
