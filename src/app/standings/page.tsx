@@ -20,11 +20,14 @@ function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
 
   if (thirds.length < QUALIFYING_THIRDS) return new Set() // not enough data yet
 
-  // Sort by same tiebreaker: pts → gd → gf
+  // FIFA criteria for best thirds: pts → GD → GF → conduct score (fewer cards = better)
   const sorted = [...thirds].sort((a, b) => {
     const pd = Number(b.pts) - Number(a.pts); if (pd) return pd
     const gdd = (b.gd ?? 0) - (a.gd ?? 0); if (gdd) return gdd
-    return Number(b.gf) - Number(a.gf)
+    const gfd = Number(b.gf) - Number(a.gf); if (gfd) return gfd
+    const ca = (a.yellows ?? 0) + (a.reds ?? 0) * 3
+    const cb = (b.yellows ?? 0) + (b.reds ?? 0) * 3
+    return ca - cb
   })
 
   return new Set(sorted.slice(0, QUALIFYING_THIRDS).map(s => s.team_id))
