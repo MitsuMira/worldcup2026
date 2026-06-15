@@ -195,7 +195,7 @@ export const en: Translations = {
 }
 
 export const pt: Translations = {
-  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', predictions: 'Previsões' },
+  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', predictions: 'Palpites' },
   countdown: { label: 'Contagem regressiva', days: 'Dias', hours: 'Horas', min: 'Min', sec: 'Seg' },
   ceremony: {
     title: '🎭 Cerimônia de Abertura',

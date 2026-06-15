@@ -120,10 +120,18 @@ function computeTimeElapsed(status: EspnStatus): string {
 
 function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
   if (!comp.details) return ''
+  const seen = new Set<string>()
   return comp.details
     .filter(d => {
       const text = d.type?.text?.toLowerCase() ?? ''
-      return (text.includes('goal') && !text.includes('missed')) && d.team?.id === espnTeamId
+      return (text.includes('goal') && !text.includes('missed') && !text.includes('own')) && d.team?.id === espnTeamId
+    })
+    .filter(d => {
+      // Deduplicate: penalty kicks generate both a "Penalty" event and a "Goal" event at the same clock value
+      const key = `${d.team?.id}-${d.clock?.value ?? 0}-${d.athletesInvolved?.[0]?.id ?? ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
     })
     .map(d => d.athletesInvolved?.[0]?.displayName ?? '')
     .filter(Boolean)
