@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
 export async function PATCH(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
-    const body = await req.json() as { userId: string; action: 'claim' | 'settings'; minParticipation?: number }
+    const body = await req.json() as { userId: string; action: 'claim' | 'settings' | 'transfer'; minParticipation?: number; targetId?: string }
     const { userId, action } = body
 
     if (!userId || !action) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
@@ -36,6 +36,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ code: 
       if (group.creatorId) return NextResponse.json({ error: 'already claimed' }, { status: 409 })
       await kv.set(groupKey(code), { ...group, creatorId: userId })
       return NextResponse.json({ ok: true, creatorId: userId })
+    }
+
+    if (action === 'transfer') {
+      if (!group.creatorId || group.creatorId !== userId)
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+      const targetId = body.targetId
+      if (!targetId) return NextResponse.json({ error: 'missing targetId' }, { status: 400 })
+      // Verify target is a member
+      const members = await kv.smembers(membersSetKey(code))
+      if (!members.includes(targetId))
+        return NextResponse.json({ error: 'target not a member' }, { status: 400 })
+      await kv.set(groupKey(code), { ...group, creatorId: targetId })
+      return NextResponse.json({ ok: true, creatorId: targetId })
     }
 
     if (action === 'settings') {
@@ -84,12 +97,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ code: st
   }
 }
 
-// Remove a member from the group (leave)
+// Remove a member from the group (leave or admin kick)
 export async function DELETE(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   try {
-    const { userId } = await req.json() as { userId: string }
+    const body = await req.json() as { userId: string; adminId?: string }
+    const { userId, adminId } = body
     if (!userId) return NextResponse.json({ error: 'missing userId' }, { status: 400 })
+
+    // If adminId is provided, verify they are the group creator
+    if (adminId && adminId !== userId) {
+      const group = await kv.get<KvGroup>(groupKey(code))
+      if (!group || group.creatorId !== adminId)
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    }
+
     await Promise.all([
       kv.del(memberKey(code, userId)),
       kv.srem(membersSetKey(code), userId),

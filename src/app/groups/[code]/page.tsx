@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock, Share2 } from 'lucide-react'
+import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock, Share2, UserX, ArrowRightLeft } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
@@ -171,10 +171,11 @@ function SettingsPanel({ settings, userId, members, code, onUpdated }: {
 
 // ── Leaderboard tab ──────────────────────────────────────────────────────────
 
-function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, expanded, onToggle }: {
+function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, expanded, onToggle, isAdmin, onKick, onTransfer }: {
   member: KvMember; rank: number; isMe: boolean; games: EnrichedGame[]
   allMembers: KvMember[]; minParticipation: number
   expanded: boolean; onToggle: () => void
+  isAdmin: boolean; onKick: (m: KvMember) => void; onTransfer: (m: KvMember) => void
 }) {
   const { pts, exact, winner } = calcPoints(member, games, allMembers, minParticipation)
   const countedFinished = games.filter(g =>
@@ -203,6 +204,27 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
         </div>
         {expanded ? <ChevronUp size={14} className="text-slate-500 shrink-0" /> : <ChevronDown size={14} className="text-slate-500 shrink-0" />}
       </button>
+
+      {/* Admin actions — visible to admin for other members */}
+      {isAdmin && !isMe && (
+        <div className="px-4 pb-3 flex items-center gap-3 border-t border-slate-800/50">
+          <span className="text-[10px] text-slate-600 uppercase tracking-wide flex-1">Admin</span>
+          <button
+            onClick={e => { e.stopPropagation(); onTransfer(member) }}
+            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-amber-400 transition-colors"
+            title="Transferir admin"
+          >
+            <ArrowRightLeft size={11} /> Tornar admin
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onKick(member) }}
+            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-red-400 transition-colors"
+            title="Remover do grupo"
+          >
+            <UserX size={11} /> Remover
+          </button>
+        </div>
+      )}
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-800">
@@ -409,6 +431,32 @@ export default function GroupPage() {
   const finishedFiltered = filteredGames.filter(g => getMatchStatus(g) === 'finished')
   const upcomingFiltered = filteredGames.filter(g => getMatchStatus(g) !== 'finished')
 
+  const isAdmin = settings.creatorId === userId
+
+  const kickMember = async (member: KvMember) => {
+    if (!confirm(`Remover ${member.name} do grupo?`)) return
+    try {
+      await fetch(`/api/groups/${code}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.userId, adminId: userId }),
+      })
+      refreshMembers()
+    } catch { /* non-fatal */ }
+  }
+
+  const transferAdmin = async (member: KvMember) => {
+    if (!confirm(`Tornar ${member.name} o novo administrador?\nVocê perderá os privilégios de admin.`)) return
+    try {
+      await fetch(`/api/groups/${code}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'transfer', targetId: member.userId }),
+      })
+      refreshSettings()
+    } catch { /* non-fatal */ }
+  }
+
   const share = () => {
     const url = `${window.location.origin}/join/${code}`
     if (navigator.share) {
@@ -493,7 +541,10 @@ export default function GroupPage() {
               isMe={member.userId === userId} games={games}
               allMembers={members} minParticipation={minParticipation}
               expanded={expanded === member.userId}
-              onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)} />
+              onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
+              isAdmin={isAdmin}
+              onKick={kickMember}
+              onTransfer={transferAdmin} />
           ))}
         </div>
       ) : (
