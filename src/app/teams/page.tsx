@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Star } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
 import type { ApiTeam } from '@/lib/types'
+import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
@@ -126,6 +127,9 @@ function TeamGrid({
                 <div className="text-sm font-semibold text-white leading-tight">{team.name_en}</div>
                 <div className="text-xs text-slate-500 mt-0.5">{team.fifa_code}</div>
                 <div className="text-xs text-blue-400/70 mt-0.5">Group {team.groups}</div>
+                {FIFA_RANK[team.fifa_code] != null && (
+                  <div className="text-[10px] text-amber-400/80 mt-0.5">🏆 #{FIFA_RANK[team.fifa_code]} FIFA</div>
+                )}
               </div>
             </Link>
             {/* Favorite star — sits on top-right corner */}
