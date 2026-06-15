@@ -398,10 +398,17 @@ export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
 
 // ── FIFA tiebreaker (WC 2026 rules) ─────────────────────────────────────────
 // Step 1: H2H pts → H2H GD → H2H GF (among tied teams only)
-// Step 2: overall GD → overall GF
+// Step 2: overall GD → overall GF → conduct score (fewer cards = better)
 // Step 3: FIFA ranking (no data — skipped)
 
-type Entry = { team: ApiTeam; pts: number; gf: number; ga: number; w: number; d: number; l: number; played: number }
+type Entry = { team: ApiTeam; pts: number; gf: number; ga: number; w: number; d: number; l: number; played: number; yellows: number; reds: number }
+
+function conductPenalty(e: Entry): number {
+  // Yellow-reds are counted in both yellow and red by extractCards.
+  // FIFA: yellow=-1, direct red=-3, yellow-red=-3 (not -4).
+  // We approximate: yellows*1 + reds*3, accepting slight over-penalty for yellow-reds.
+  return e.yellows + e.reds * 3
+}
 
 function h2hStats(entries: Entry[], games: EnrichedGame[]): Map<string, { pts: number; gd: number; gf: number }> {
   const ids = new Set(entries.map(e => e.team.id))
@@ -423,7 +430,8 @@ function h2hStats(entries: Entry[], games: EnrichedGame[]): Map<string, { pts: n
 
 function overallCmp(a: Entry, b: Entry): number {
   const gdd = (b.gf - b.ga) - (a.gf - a.ga); if (gdd) return gdd
-  return b.gf - a.gf
+  const gfd = b.gf - a.gf; if (gfd) return gfd
+  return conductPenalty(a) - conductPenalty(b) // fewer cards = better
 }
 
 function rankTied(entries: Entry[], games: EnrichedGame[]): Entry[] {
@@ -485,7 +493,7 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
 
     const addTeam = (team: ApiTeam | undefined) => {
       if (team && !teams.has(team.id))
-        teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, played: 0 })
+        teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, played: 0, yellows: 0, reds: 0 })
     }
     addTeam(game.homeTeam)
     addTeam(game.awayTeam)
@@ -497,12 +505,16 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
       const awayEntry = game.awayTeam ? teams.get(game.awayTeam.id) : undefined
       if (homeEntry) {
         homeEntry.gf += hs; homeEntry.ga += as_; homeEntry.played++
+        homeEntry.yellows += game.home_yellow_cards ?? 0
+        homeEntry.reds += game.home_red_cards ?? 0
         if (hs > as_) { homeEntry.pts += 3; homeEntry.w++ }
         else if (hs === as_) { homeEntry.pts += 1; homeEntry.d++ }
         else homeEntry.l++
       }
       if (awayEntry) {
         awayEntry.gf += as_; awayEntry.ga += hs; awayEntry.played++
+        awayEntry.yellows += game.away_yellow_cards ?? 0
+        awayEntry.reds += game.away_red_cards ?? 0
         if (as_ > hs) { awayEntry.pts += 3; awayEntry.w++ }
         else if (as_ === hs) { awayEntry.pts += 1; awayEntry.d++ }
         else awayEntry.l++
