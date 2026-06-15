@@ -51,10 +51,25 @@ export default function StandingsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-black text-white mb-1">{t.standings.title}</h1>
         <p className="text-slate-400 text-sm">{t.standings.subtitle}</p>
       </div>
+
+      <details className="mb-6 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden group">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-sm font-semibold text-slate-300 hover:text-white list-none">
+          <span>{t.standings.qualTitle}</span>
+          <span className="text-slate-500 text-xs transition-transform group-open:rotate-180">▼</span>
+        </summary>
+        <ul className="px-4 pb-4 space-y-1.5 text-xs text-slate-400">
+          {t.standings.qualRules.map((rule, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="text-slate-600 shrink-0">•</span>
+              <span>{rule}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
 
       {error && (
         <div className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-xl p-4 mb-6">
@@ -80,15 +95,6 @@ export default function StandingsPage() {
       {!isLoading && groups.length === 0 && !error && (
         <div className="text-slate-500 text-center py-20">{t.standings.noData}</div>
       )}
-
-      <div className="mt-10 bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-slate-400">
-        <p className="font-semibold text-slate-300 mb-2">{t.standings.qualTitle}</p>
-        <ul className="space-y-1 text-xs">
-          {t.standings.qualRules.map((rule, i) => (
-            <li key={i}>• {rule}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   )
 }
