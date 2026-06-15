@@ -520,7 +520,7 @@ export default function GroupPage() {
     <div className="max-w-lg mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/groups" className="text-slate-400 hover:text-white transition-colors">
+        <Link href="/groups" className="text-slate-400 hover:text-white transition-colors" title="Meus grupos">
           <ArrowLeft size={20} />
         </Link>
         <div className="flex-1 min-w-0">
@@ -542,6 +542,9 @@ export default function GroupPage() {
         <button onClick={() => { refreshMembers(); refreshSettings() }} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Atualizar">
           <RefreshCw size={14} />
         </button>
+        <Link href="/" className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors px-2 py-1 rounded-lg border border-amber-500/30 hover:border-amber-400/50 shrink-0">
+          Palpites
+        </Link>
       </div>
 
       {/* Settings panel */}
