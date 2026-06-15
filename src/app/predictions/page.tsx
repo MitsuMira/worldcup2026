@@ -214,7 +214,7 @@ export default function PredictionsPage() {
             <div key={game.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-500 uppercase tracking-wide">{localStageLabel(game.type, game.group, t)}</span>
-                <ResultBadge result={result} t={t} />
+                <ResultBadge result={result} isDraw={game.home_score === game.away_score} t={t} />
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -317,7 +317,7 @@ function GamePreview({ gameId, homeName, awayName }: { gameId: string; homeName:
   )
 }
 
-function ResultBadge({ result, t }: { result: PredictionResult; t: Translations }) {
+function ResultBadge({ result, isDraw, t }: { result: PredictionResult; isDraw?: boolean; t: Translations }) {
   if (result === 'correct') return (
     <span className="flex items-center gap-1 text-xs font-bold text-green-400">
       <CheckCircle2 size={13} /> {t.predictions.resultCorrect}
@@ -325,7 +325,7 @@ function ResultBadge({ result, t }: { result: PredictionResult; t: Translations 
   )
   if (result === 'correct-winner') return (
     <span className="flex items-center gap-1 text-xs font-bold text-blue-400">
-      <CheckCircle2 size={13} /> {t.predictions.resultWinner}
+      <CheckCircle2 size={13} /> {isDraw ? t.predictions.resultDraw : t.predictions.resultWinner}
     </span>
   )
   if (result === 'wrong') return (
