@@ -87,7 +87,6 @@ export default function TeamDetailPage() {
     totalRed += (isHome ? g.home_red_cards : g.away_red_cards) ?? 0
   }
 
-  // Player stat aggregation
   interface PlayerStat {
     name: string
     position?: string
@@ -98,9 +97,24 @@ export default function TeamDetailPage() {
     goals: number
     yellowCards: number
     redCards: number
+    everPlayed: boolean
   }
 
   const playerStats = new Map<string, PlayerStat>()
+
+  const getStat = (player: RosterPlayer): PlayerStat => {
+    if (!playerStats.has(player.name)) {
+      playerStats.set(player.name, {
+        name: player.name,
+        position: player.position,
+        headshot: player.headshot,
+        apps: 0, starts: 0, minutesPlayed: 0,
+        goals: 0, yellowCards: 0, redCards: 0,
+        everPlayed: false,
+      })
+    }
+    return playerStats.get(player.name)!
+  }
 
   if (matchDetailsList) {
     for (const detail of matchDetailsList) {
@@ -111,49 +125,35 @@ export default function TeamDetailPage() {
       const subs = lineup.subs ?? []
       const events = detail.events ?? []
 
-      const getStat = (player: RosterPlayer): PlayerStat => {
-        if (!playerStats.has(player.name)) {
-          playerStats.set(player.name, {
-            name: player.name,
-            position: player.position,
-            headshot: player.headshot,
-            apps: 0,
-            starts: 0,
-            minutesPlayed: 0,
-            goals: 0,
-            yellowCards: 0,
-            redCards: 0,
-          })
-        }
-        return playerStats.get(player.name)!
-      }
+      // Register every squad member (even unused subs)
+      for (const player of [...starters, ...subs]) getStat(player)
 
-      // Process starters
+      // Starters
       for (const player of starters) {
         const stat = getStat(player)
-        stat.apps++
-        stat.starts++
-        // Find if subbed off
-        const subOffEvent = events.find(e => e.type === 'sub' && e.secondaryPlayer === player.name)
-        const minsPlayed = subOffEvent ? Math.min(subOffEvent.minute, 90) : 90
-        stat.minutesPlayed += minsPlayed
+        stat.apps++; stat.starts++; stat.everPlayed = true
+        const subOff = events.find(e => e.type === 'sub' && e.secondaryPlayer === player.name)
+        stat.minutesPlayed += subOff ? Math.min(subOff.minute, 90) : 90
       }
 
-      // Process subs who actually came on
+      // Subs who actually came on
       for (const player of subs) {
-        const subOnEvent = events.find(e => e.type === 'sub' && e.primaryPlayer === player.name)
-        if (!subOnEvent) continue // didn't come on
+        const subOn = events.find(e => e.type === 'sub' && e.primaryPlayer === player.name)
+        if (!subOn) continue
         const stat = getStat(player)
-        stat.apps++
-        stat.minutesPlayed += Math.max(0, 90 - Math.min(subOnEvent.minute, 90))
+        stat.apps++; stat.everPlayed = true
+        const minuteOn = Math.min(subOn.minute, 90)
+        // Could also be subbed off themselves
+        const subOff = events.find(e => e.type === 'sub' && e.secondaryPlayer === player.name && e.minute > subOn.minute)
+        const minuteOff = subOff ? Math.min(subOff.minute, 90) : 90
+        stat.minutesPlayed += Math.max(0, minuteOff - minuteOn)
       }
 
       // Goals and cards
       for (const event of events) {
         if (event.teamId !== id) continue
-        const name = event.primaryPlayer
-        if (!playerStats.has(name)) continue
-        const stat = playerStats.get(name)!
+        const stat = playerStats.get(event.primaryPlayer)
+        if (!stat) continue
         if (event.type === 'goal') stat.goals++
         else if (event.type === 'yellow') stat.yellowCards++
         else if (event.type === 'red' || event.type === 'yellowred') stat.redCards++
@@ -161,13 +161,19 @@ export default function TeamDetailPage() {
     }
   }
 
-  const squadList = [...playerStats.values()].sort((a, b) =>
-    b.apps - a.apps || a.name.localeCompare(b.name)
-  )
+  const playedList = [...playerStats.values()]
+    .filter(p => p.everPlayed)
+    .sort((a, b) => b.minutesPlayed - a.minutesPlayed || a.name.localeCompare(b.name))
 
-  const anyGoals = squadList.some(p => p.goals > 0)
-  const anyYellow = squadList.some(p => p.yellowCards > 0)
-  const anyRed = squadList.some(p => p.redCards > 0)
+  const notPlayedList = [...playerStats.values()]
+    .filter(p => !p.everPlayed)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const squadList = [...playedList, ...notPlayedList]
+
+  const anyGoals = playedList.some(p => p.goals > 0)
+  const anyYellow = playedList.some(p => p.yellowCards > 0)
+  const anyRed = playedList.some(p => p.redCards > 0)
 
   if (isLoading) {
     return (
@@ -329,60 +335,65 @@ export default function TeamDetailPage() {
       {/* Squad / Elenco */}
       {squadList.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
-            🧍 Elenco / Squad
-          </h2>
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Elenco</h2>
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-slate-500 border-b border-slate-800">
-                  <th className="text-left px-3 py-2 font-medium">Player</th>
-                  <th className="px-2 py-2 font-medium text-center">App/GS</th>
-                  <th className="px-2 py-2 font-medium text-center">Min</th>
-                  {anyGoals && <th className="px-2 py-2 font-medium text-center">⚽</th>}
-                  {anyYellow && <th className="px-2 py-2 font-medium text-center">🟨</th>}
-                  {anyRed && <th className="px-2 py-2 font-medium text-center">🟥</th>}
+                <tr className="text-slate-500 border-b border-slate-800 text-center">
+                  <th className="text-left px-3 py-2 font-medium">Jogador</th>
+                  <th className="px-2 py-2 font-medium" title="Partidas jogadas">Jogos</th>
+                  <th className="px-2 py-2 font-medium" title="Jogos como titular">Titular</th>
+                  <th className="px-2 py-2 font-medium" title="Minutos em campo">Minutos</th>
+                  {anyGoals && <th className="px-2 py-2 font-medium">⚽</th>}
+                  {anyYellow && <th className="px-2 py-2 font-medium">🟨</th>}
+                  {anyRed && <th className="px-2 py-2 font-medium">🟥</th>}
                 </tr>
               </thead>
               <tbody>
-                {squadList.map((p) => (
+                {playedList.map((p) => (
                   <tr key={p.name} className="border-t border-slate-800/50 hover:bg-slate-800/30">
                     <td className="px-3 py-1.5">
                       <div className="flex items-center gap-2">
-                        {p.headshot && (
-                          <img
-                            src={p.headshot}
-                            alt={p.name}
-                            className="w-6 h-6 rounded-full object-cover bg-slate-700 flex-shrink-0"
-                          />
-                        )}
+                        {p.headshot
+                          ? <img src={p.headshot} alt={p.name} className="w-6 h-6 rounded-full object-cover bg-slate-700 shrink-0" />
+                          : <div className="w-6 h-6 rounded-full bg-slate-700 shrink-0" />
+                        }
                         <span className="text-white font-medium truncate">{p.name}</span>
-                        {p.position && (
-                          <span className="text-slate-500 bg-slate-800 px-1 rounded text-[10px] flex-shrink-0">
-                            {p.position}
-                          </span>
-                        )}
+                        {p.position && <span className="text-slate-500 bg-slate-800 px-1 rounded text-[10px] shrink-0">{p.position}</span>}
                       </div>
                     </td>
-                    <td className="px-2 py-1.5 text-center text-slate-300">{p.apps}/{p.starts}</td>
-                    <td className="px-2 py-1.5 text-center text-slate-300">{p.minutesPlayed}&apos;</td>
-                    {anyGoals && (
-                      <td className="px-2 py-1.5 text-center">
-                        {p.goals > 0 ? <span className="text-white font-bold">{p.goals}</span> : <span className="text-slate-700">–</span>}
-                      </td>
-                    )}
-                    {anyYellow && (
-                      <td className="px-2 py-1.5 text-center">
-                        {p.yellowCards > 0 ? <span className="text-amber-400 font-bold">{p.yellowCards}</span> : <span className="text-slate-700">–</span>}
-                      </td>
-                    )}
-                    {anyRed && (
-                      <td className="px-2 py-1.5 text-center">
-                        {p.redCards > 0 ? <span className="text-red-400 font-bold">{p.redCards}</span> : <span className="text-slate-700">–</span>}
-                      </td>
-                    )}
+                    <td className="px-2 py-1.5 text-center text-slate-300">{p.apps}</td>
+                    <td className="px-2 py-1.5 text-center text-slate-300">{p.starts}</td>
+                    <td className="px-2 py-1.5 text-center text-slate-400">{p.minutesPlayed}&apos;</td>
+                    {anyGoals && <td className="px-2 py-1.5 text-center">{p.goals > 0 ? <span className="text-white font-bold">{p.goals}</span> : <span className="text-slate-700">–</span>}</td>}
+                    {anyYellow && <td className="px-2 py-1.5 text-center">{p.yellowCards > 0 ? <span className="text-amber-400 font-bold">{p.yellowCards}</span> : <span className="text-slate-700">–</span>}</td>}
+                    {anyRed && <td className="px-2 py-1.5 text-center">{p.redCards > 0 ? <span className="text-red-400 font-bold">{p.redCards}</span> : <span className="text-slate-700">–</span>}</td>}
                   </tr>
                 ))}
+                {notPlayedList.length > 0 && (
+                  <>
+                    <tr className="border-t border-slate-700">
+                      <td colSpan={4 + (anyGoals ? 1 : 0) + (anyYellow ? 1 : 0) + (anyRed ? 1 : 0)}
+                        className="px-3 py-1.5 text-[10px] text-slate-600 uppercase tracking-wide font-semibold">
+                        Ainda não entrou em campo
+                      </td>
+                    </tr>
+                    {notPlayedList.map((p) => (
+                      <tr key={p.name} className="border-t border-slate-800/30 opacity-50">
+                        <td className="px-3 py-1.5" colSpan={4 + (anyGoals ? 1 : 0) + (anyYellow ? 1 : 0) + (anyRed ? 1 : 0)}>
+                          <div className="flex items-center gap-2">
+                            {p.headshot
+                              ? <img src={p.headshot} alt={p.name} className="w-6 h-6 rounded-full object-cover bg-slate-700 shrink-0" />
+                              : <div className="w-6 h-6 rounded-full bg-slate-700 shrink-0" />
+                            }
+                            <span className="text-slate-400 font-medium truncate">{p.name}</span>
+                            {p.position && <span className="text-slate-600 bg-slate-800 px-1 rounded text-[10px] shrink-0">{p.position}</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
