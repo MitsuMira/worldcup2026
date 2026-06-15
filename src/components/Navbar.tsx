@@ -25,11 +25,28 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
-          <Link href="/" className="flex items-center gap-2 font-bold text-white text-lg">
+          <Link href="/" className="flex items-center gap-2 font-bold text-white text-lg shrink-0">
             <span className="text-2xl">⚽</span>
             <span className="hidden sm:inline text-amber-400">WC</span>
             <span className="hidden sm:inline">2026</span>
           </Link>
+
+          {/* Mobile icon nav — visible only on small screens, right after the logo */}
+          <div className="flex md:hidden items-center gap-0.5 ml-2 flex-1">
+            {links.map(({ href, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`p-2 rounded-lg transition-colors ${
+                  path === href
+                    ? 'text-white bg-slate-800'
+                    : 'text-slate-500 hover:text-white'
+                }`}
+              >
+                <Icon size={18} />
+              </Link>
+            ))}
+          </div>
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1">
@@ -52,9 +69,9 @@ export default function Navbar() {
           <div className="flex items-center gap-2">
             <SettingsButton />
 
-            {/* Mobile menu toggle */}
+            {/* Mobile menu toggle — hidden now that icons are in the top bar */}
             <button
-              className="md:hidden p-2 text-slate-400 hover:text-white"
+              className="hidden p-2 text-slate-400 hover:text-white"
               onClick={() => setOpen(!open)}
             >
               {open ? <X size={20} /> : <Menu size={20} />}
