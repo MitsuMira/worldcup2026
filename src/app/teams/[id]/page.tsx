@@ -7,7 +7,8 @@ import { Star } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
 import GroupTable from '@/components/GroupTable'
 import MatchCard from '@/components/MatchCard'
-import type { ApiTeam, EnrichedGame, EnrichedGroup } from '@/lib/types'
+import type { ApiTeam, EnrichedGame, EnrichedGroup, MatchDetail, RosterPlayer } from '@/lib/types'
+import { FIFA_RANK } from '@/lib/fifaRanking'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
@@ -70,6 +71,14 @@ export default function TeamDetailPage() {
   }
   const topScorers = [...scorerMap.entries()].sort((a, b) => b[1] - a[1])
 
+  // Fetch match details for finished games
+  const finishedGameIds = finishedGames.map(g => g.id)
+  const { data: matchDetailsList } = useSWR<MatchDetail[]>(
+    finishedGameIds.length > 0 ? ['team-matches', id, ...finishedGameIds] : null,
+    () => Promise.all(finishedGameIds.map(gid => fetch(`/api/match/${gid}`).then(r => r.json()))),
+    { revalidateOnFocus: false }
+  )
+
   // Aggregate cards
   let totalYellow = 0, totalRed = 0
   for (const g of finishedGames) {
@@ -77,6 +86,88 @@ export default function TeamDetailPage() {
     totalYellow += (isHome ? g.home_yellow_cards : g.away_yellow_cards) ?? 0
     totalRed += (isHome ? g.home_red_cards : g.away_red_cards) ?? 0
   }
+
+  // Player stat aggregation
+  interface PlayerStat {
+    name: string
+    position?: string
+    headshot?: string
+    apps: number
+    starts: number
+    minutesPlayed: number
+    goals: number
+    yellowCards: number
+    redCards: number
+  }
+
+  const playerStats = new Map<string, PlayerStat>()
+
+  if (matchDetailsList) {
+    for (const detail of matchDetailsList) {
+      if (!detail || !detail.events) continue
+      const lineup = detail.homeTeamId === id ? detail.homeLineup : detail.awayLineup
+      if (!lineup) continue
+      const starters = lineup.starters ?? []
+      const subs = lineup.subs ?? []
+      const events = detail.events ?? []
+
+      const getStat = (player: RosterPlayer): PlayerStat => {
+        if (!playerStats.has(player.name)) {
+          playerStats.set(player.name, {
+            name: player.name,
+            position: player.position,
+            headshot: player.headshot,
+            apps: 0,
+            starts: 0,
+            minutesPlayed: 0,
+            goals: 0,
+            yellowCards: 0,
+            redCards: 0,
+          })
+        }
+        return playerStats.get(player.name)!
+      }
+
+      // Process starters
+      for (const player of starters) {
+        const stat = getStat(player)
+        stat.apps++
+        stat.starts++
+        // Find if subbed off
+        const subOffEvent = events.find(e => e.type === 'sub' && e.secondaryPlayer === player.name)
+        const minsPlayed = subOffEvent ? Math.min(subOffEvent.minute, 90) : 90
+        stat.minutesPlayed += minsPlayed
+      }
+
+      // Process subs who actually came on
+      for (const player of subs) {
+        const subOnEvent = events.find(e => e.type === 'sub' && e.primaryPlayer === player.name)
+        if (!subOnEvent) continue // didn't come on
+        const stat = getStat(player)
+        stat.apps++
+        stat.minutesPlayed += Math.max(0, 90 - Math.min(subOnEvent.minute, 90))
+      }
+
+      // Goals and cards
+      for (const event of events) {
+        if (event.teamId !== id) continue
+        const name = event.primaryPlayer
+        if (!playerStats.has(name)) continue
+        const stat = playerStats.get(name)!
+        if (event.type === 'goal') stat.goals++
+        else if (event.type === 'yellow') stat.yellowCards++
+        else if (event.type === 'red' || event.type === 'yellowred') stat.redCards++
+      }
+    }
+  }
+
+  const squadList = [...playerStats.values()].sort((a, b) =>
+    b.apps - a.apps || a.name.localeCompare(b.name)
+  )
+
+  const anyGoals = squadList.some(p => p.goals > 0)
+  const anyYellow = squadList.some(p => p.yellowCards > 0)
+  const anyRed = squadList.some(p => p.redCards > 0)
 
   if (isLoading) {
     return (
@@ -110,10 +201,18 @@ export default function TeamDetailPage() {
           <TeamFlag team={team} size="lg" />
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-black text-white">{team.name_en}</h1>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
               <span className="text-slate-400 text-sm">{team.fifa_code}</span>
               <span className="text-slate-600">·</span>
               <span className="text-blue-400 text-sm">{t.match.stageGroup} {team.groups}</span>
+              {FIFA_RANK[team.fifa_code] != null && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    🏆 #{FIFA_RANK[team.fifa_code]} FIFA
+                  </span>
+                </>
+              )}
             </div>
           </div>
           <button
@@ -225,6 +324,69 @@ export default function TeamDetailPage() {
 
       {teamGames.length === 0 && (
         <div className="text-slate-500 text-center py-12">{t.teamDetail.noMatches}</div>
+      )}
+
+      {/* Squad / Elenco */}
+      {squadList.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
+            🧍 Elenco / Squad
+          </h2>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-slate-500 border-b border-slate-800">
+                  <th className="text-left px-3 py-2 font-medium">Player</th>
+                  <th className="px-2 py-2 font-medium text-center">App/GS</th>
+                  <th className="px-2 py-2 font-medium text-center">Min</th>
+                  {anyGoals && <th className="px-2 py-2 font-medium text-center">⚽</th>}
+                  {anyYellow && <th className="px-2 py-2 font-medium text-center">🟨</th>}
+                  {anyRed && <th className="px-2 py-2 font-medium text-center">🟥</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {squadList.map((p) => (
+                  <tr key={p.name} className="border-t border-slate-800/50 hover:bg-slate-800/30">
+                    <td className="px-3 py-1.5">
+                      <div className="flex items-center gap-2">
+                        {p.headshot && (
+                          <img
+                            src={p.headshot}
+                            alt={p.name}
+                            className="w-6 h-6 rounded-full object-cover bg-slate-700 flex-shrink-0"
+                          />
+                        )}
+                        <span className="text-white font-medium truncate">{p.name}</span>
+                        {p.position && (
+                          <span className="text-slate-500 bg-slate-800 px-1 rounded text-[10px] flex-shrink-0">
+                            {p.position}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-center text-slate-300">{p.apps}/{p.starts}</td>
+                    <td className="px-2 py-1.5 text-center text-slate-300">{p.minutesPlayed}&apos;</td>
+                    {anyGoals && (
+                      <td className="px-2 py-1.5 text-center">
+                        {p.goals > 0 ? <span className="text-white font-bold">{p.goals}</span> : <span className="text-slate-700">–</span>}
+                      </td>
+                    )}
+                    {anyYellow && (
+                      <td className="px-2 py-1.5 text-center">
+                        {p.yellowCards > 0 ? <span className="text-amber-400 font-bold">{p.yellowCards}</span> : <span className="text-slate-700">–</span>}
+                      </td>
+                    )}
+                    {anyRed && (
+                      <td className="px-2 py-1.5 text-center">
+                        {p.redCards > 0 ? <span className="text-red-400 font-bold">{p.redCards}</span> : <span className="text-slate-700">–</span>}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   )
