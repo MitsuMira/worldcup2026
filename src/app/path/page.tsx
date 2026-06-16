@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import { MATCH_LABELS } from '@/lib/bracketStructure'
+import { MATCH_LABELS, isEspnPlaceholder } from '@/lib/bracketStructure'
 import type { ApiTeam, EnrichedGroup } from '@/lib/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -192,7 +192,7 @@ export default function PathPage() {
     const map = new Map<string, ApiTeam[]>()
     const realTeams = teams.filter(t =>
       t.fifa_code && t.fifa_code.length >= 2 &&
-      !/^(group|winner|place|tbd)/i.test(t.name_en)
+      !isEspnPlaceholder(t.name_en)
     )
     const sorted = [...realTeams].sort((a, b) => a.groups.localeCompare(b.groups) || a.name_en.localeCompare(b.name_en))
     for (const team of sorted) {
