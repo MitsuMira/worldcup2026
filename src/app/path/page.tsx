@@ -95,6 +95,36 @@ function buildPath(mySlot: string): RoundStep[] {
   ]
 }
 
+function buildPathFromR32(r32: number): RoundStep[] {
+  const r32Labels = MATCH_LABELS[r32]
+  if (!r32Labels) return []
+  // Opponent in R32: whichever slot is not Best 3rd
+  const oppR32Slot = r32Labels.home === 'Best 3rd' ? r32Labels.away : r32Labels.home
+
+  const r16 = R32_TO_R16[r32]
+  const oppR32MatchEntry = Object.entries(R32_TO_R16).find(([m, r]) => r === r16 && Number(m) !== r32)
+  const oppR16Slots = oppR32MatchEntry ? getLeafSlots(Number(oppR32MatchEntry[0]), MATCH_LABELS) : []
+
+  const qf = R16_TO_QF[r16]
+  const oppR16MatchEntry = Object.entries(R16_TO_QF).find(([m, q]) => q === qf && Number(m) !== r16)
+  const oppQFSlots = oppR16MatchEntry ? getLeafSlots(Number(oppR16MatchEntry[0]), MATCH_LABELS) : []
+
+  const sf = QF_TO_SF[qf]
+  const oppQFMatchEntry = Object.entries(QF_TO_SF).find(([m, s]) => s === sf && Number(m) !== qf)
+  const oppSFSlots = oppQFMatchEntry ? getLeafSlots(Number(oppQFMatchEntry[0]), MATCH_LABELS) : []
+
+  const oppSFMatch = [101,102].find(m => m !== sf)!
+  const oppFinalSlots = getLeafSlots(oppSFMatch, MATCH_LABELS)
+
+  return [
+    { round:'r32',   label:'Fase de 32',       myMatch:r32, oppSlots:[oppR32Slot] },
+    { round:'r16',   label:'Oitavas de Final',  myMatch:r16, oppSlots:oppR16Slots },
+    { round:'qf',    label:'Quartas de Final',  myMatch:qf,  oppSlots:oppQFSlots },
+    { round:'sf',    label:'Semifinal',         myMatch:sf,  oppSlots:oppSFSlots },
+    { round:'final', label:'Final',             myMatch:103, oppSlots:oppFinalSlots },
+  ]
+}
+
 // Can a team at standings index `idx` mathematically reach `targetPos` (0-based)?
 // Simple check: remaining games give 3 pts each; if team can reach or surpass target's current pts.
 function canReachPosition(group: EnrichedGroup, idx: number, targetPos: number): boolean {
@@ -179,7 +209,7 @@ function GroupMiniTable({ groupLetter, groups, targetPos }: GroupMiniTableProps)
 
 export default function PathPage() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('')
-  const [finishPos, setFinishPos] = useState<'1st' | '2nd'>('1st')
+  const [finishPos, setFinishPos] = useState<'1st' | '2nd' | '3rd'>('1st')
 
   const { data: teamsData } = useSWR<{ teams: ApiTeam[] }>('/api/teams', fetcher, { revalidateOnFocus: false })
   const { data: groupsData } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { refreshInterval: 60_000 })
@@ -206,11 +236,20 @@ export default function PathPage() {
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
   // Determine the slot key: '1X' or '2X' based on finishPos and team's group
-  const mySlot = selectedTeam
+  const mySlot = selectedTeam && finishPos !== '3rd'
     ? `${finishPos === '1st' ? '1' : '2'}${selectedTeam.groups}`
     : ''
 
   const path = mySlot ? buildPath(mySlot) : []
+
+  // Best 3rd: multiple scenarios — one per R32 match where this group is eligible
+  const best3rdScenarios = useMemo(() => {
+    if (!selectedTeam || finishPos !== '3rd') return []
+    return Object.entries(BEST3_GROUPS)
+      .filter(([, gs]) => gs.includes(selectedTeam.groups))
+      .map(([m]) => ({ r32: Number(m), path: buildPathFromR32(Number(m)) }))
+      .sort((a, b) => a.r32 - b.r32)
+  }, [selectedTeam, finishPos])
 
   // Helper: render opponent slots for a round step
   function renderOppSlots(step: RoundStep) {
@@ -305,17 +344,17 @@ export default function PathPage() {
                 Terminar o grupo como
               </label>
               <div className="flex gap-2">
-                {(['1st', '2nd'] as const).map(pos => (
+                {(['1st', '2nd', '3rd'] as const).map(pos => (
                   <button
                     key={pos}
                     onClick={() => setFinishPos(pos)}
-                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border ${
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors border ${
                       finishPos === pos
                         ? 'bg-amber-500 border-amber-400 text-slate-950'
                         : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
                     }`}
                   >
-                    {pos === '1st' ? '1º Lugar' : '2º Lugar'}
+                    {pos === '1st' ? '1º Lugar' : pos === '2nd' ? '2º Lugar' : '3º (Melhor 3º)'}
                   </button>
                 ))}
               </div>
@@ -330,7 +369,8 @@ export default function PathPage() {
             <div>
               <div className="text-white font-bold">{selectedTeam.name_en}</div>
               <div className="text-slate-500 text-xs">
-                Grupo {selectedTeam.groups} · {finishPos === '1st' ? '1º Lugar' : '2º Lugar'} → slot {mySlot}
+                Grupo {selectedTeam.groups} · {finishPos === '1st' ? '1º Lugar' : finishPos === '2nd' ? '2º Lugar' : '3º Lugar (Melhor 3º)'}
+                {mySlot ? ` → slot ${mySlot}` : ''}
               </div>
             </div>
           </div>
@@ -356,6 +396,45 @@ export default function PathPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Best 3rd: multiple scenarios */}
+        {finishPos === '3rd' && best3rdScenarios.length > 0 && (
+          <div className="space-y-8">
+            {best3rdScenarios.map(({ r32, path: scenPath }) => (
+              <div key={r32}>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Cenário</span>
+                  <span className="text-white font-bold text-sm">se classificar para M{r32}</span>
+                  <span className="text-slate-600 text-xs">
+                    (grupos elegíveis: {BEST3_GROUPS[r32]?.join(', ')})
+                  </span>
+                </div>
+                <div className="space-y-4">
+                  {scenPath.map(step => (
+                    <div key={step.round} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80">
+                        <span className="font-bold text-white">{step.label}</span>
+                        <span className="text-amber-400 text-sm font-mono font-bold">M{step.myMatch}</span>
+                      </div>
+                      <div className="p-3">
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-1">
+                          Possíveis Adversários
+                        </div>
+                        {renderOppSlots(step)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {finishPos === '3rd' && selectedTeam && best3rdScenarios.length === 0 && (
+          <div className="text-center py-10 text-slate-600 text-sm">
+            Grupo {selectedTeam.groups} não tem cenários de Melhor 3º Lugar mapeados.
           </div>
         )}
 
