@@ -95,55 +95,41 @@ function buildPath(mySlot: string): RoundStep[] {
   ]
 }
 
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-interface StandingRowProps {
-  pos: number        // 0-based index in standings array
-  group: EnrichedGroup
-  highlight?: boolean
+// Can a team at standings index `idx` mathematically reach `targetPos` (0-based)?
+// Simple check: remaining games give 3 pts each; if team can reach or surpass target's current pts.
+function canReachPosition(group: EnrichedGroup, idx: number, targetPos: number): boolean {
+  if (idx === targetPos) return true
+  if (idx < targetPos) return true // already above target
+  const standings = group.standings
+  if (!standings || standings.length < 4) return true // no data yet, assume possible
+  const team = standings[idx]
+  const target = standings[targetPos]
+  if (!team || !target) return true
+  const played = team.played ?? 0
+  const remaining = 3 - played // group stage = 3 games
+  const maxPossible = (team.pts ?? 0) + remaining * 3
+  return maxPossible >= (target.pts ?? 0)
 }
 
-function StandingRow({ pos, group, highlight }: StandingRowProps) {
-  const s = group.standings[pos]
-  if (!s) return null
-  const team = s.team
-  return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 text-xs border-t border-slate-800/50 first:border-t-0
-      ${highlight ? 'bg-amber-500/10 border-l-2 border-l-amber-500' : ''}`}>
-      <span className="text-slate-600 w-4 shrink-0">{pos + 1}º</span>
-      {team ? (
-        <>
-          <TeamFlag team={team} size="sm" />
-          <span className="flex-1 text-slate-200 font-medium truncate">{team.name_en}</span>
-        </>
-      ) : (
-        <span className="flex-1 text-slate-500 italic">TBD</span>
-      )}
-      <span className="text-blue-400 font-bold w-6 text-right">{s.pts ?? '—'}</span>
-      <span className="text-slate-500 w-8 text-right">
-        {s.gd !== undefined ? (s.gd > 0 ? `+${s.gd}` : s.gd) : '—'}
-      </span>
-    </div>
-  )
-}
+
 
 interface GroupMiniTableProps {
   groupLetter: string
   groups: EnrichedGroup[]
-  highlightPos?: number   // 0-based row to highlight (0=1st, 1=2nd, 2=3rd)
+  targetPos: number   // 0-based position we care about (0=1st, 1=2nd, 2=3rd)
 }
 
-function GroupMiniTable({ groupLetter, groups, highlightPos }: GroupMiniTableProps) {
+function GroupMiniTable({ groupLetter, groups, targetPos }: GroupMiniTableProps) {
   const group = groups.find(g => g.group === groupLetter)
   if (!group) return (
     <div className="text-slate-600 text-xs px-3 py-2">Grupo {groupLetter} — sem dados</div>
   )
 
-  const rowCount = highlightPos === 2 ? 3 : 2 // show 3 rows for Best3rd
+  const standings = group.standings ?? []
 
   return (
     <div className="mb-2">
-      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider px-3 py-1">
+      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 mb-0.5">
         Grupo {groupLetter}
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
@@ -153,9 +139,37 @@ function GroupMiniTable({ groupLetter, groups, highlightPos }: GroupMiniTablePro
           <span className="w-6 text-right">Pts</span>
           <span className="w-8 text-right">SG</span>
         </div>
-        {Array.from({ length: rowCount }, (_, i) => (
-          <StandingRow key={i} pos={i} group={group} highlight={highlightPos === i} />
-        ))}
+        {standings.map((s, i) => {
+          const isTarget = i === targetPos
+          const couldReach = !isTarget && canReachPosition(group, i, targetPos)
+          const dimmed = !isTarget && !couldReach
+          return (
+            <div
+              key={s.team_id ?? i}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs border-t border-slate-800/50 first:border-t-0 transition-colors
+                ${isTarget ? 'bg-amber-500/15 border-l-2 border-l-amber-400' : ''}
+                ${couldReach ? 'bg-amber-500/5 border-l-2 border-l-amber-900' : ''}
+                ${dimmed ? 'opacity-35' : ''}
+              `}
+            >
+              <span className={`w-4 shrink-0 text-right ${isTarget ? 'text-amber-400 font-bold' : 'text-slate-600'}`}>{i + 1}º</span>
+              {s.team ? (
+                <>
+                  <TeamFlag team={s.team} size="sm" />
+                  <span className={`flex-1 font-medium truncate ${isTarget ? 'text-amber-100' : couldReach ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {s.team.name_en}
+                  </span>
+                </>
+              ) : (
+                <span className="flex-1 text-slate-500 italic">TBD</span>
+              )}
+              <span className={`font-bold w-6 text-right ${isTarget ? 'text-amber-300' : 'text-blue-400'}`}>{s.pts ?? '—'}</span>
+              <span className="text-slate-500 w-8 text-right">
+                {s.gd !== undefined ? (s.gd > 0 ? `+${s.gd}` : s.gd) : '—'}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -217,15 +231,11 @@ export default function PathPage() {
 
     const elements: React.ReactNode[] = []
 
-    // Render group mini-tables for named slots
+    // Render group mini-tables for named slots (all 4 teams, highlight target position)
     for (const [letter, positions] of Array.from(groupMap.entries()).sort()) {
+      const targetPos = positions.length === 1 ? positions[0] : 0
       elements.push(
-        <GroupMiniTable
-          key={letter}
-          groupLetter={letter}
-          groups={groups}
-          highlightPos={positions.length === 1 ? positions[0] : undefined}
-        />
+        <GroupMiniTable key={letter} groupLetter={letter} groups={groups} targetPos={targetPos} />
       )
     }
 
@@ -234,21 +244,12 @@ export default function PathPage() {
       const best3rdGroups = BEST3_GROUPS[myMatch] ?? []
       elements.push(
         <div key="best3rd" className="mb-2">
-          <div className="text-xs font-bold text-amber-500/70 uppercase tracking-wider px-3 py-1">
-            Melhor 3º Lugar (de {best3rdGroups.join(', ')})
+          <div className="text-xs font-bold text-amber-500/70 uppercase tracking-wider px-1 py-1">
+            Melhor 3º Lugar (grupos {best3rdGroups.join(', ')})
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {best3rdGroups.map(letter => (
-              <div key={letter}>
-                <div className="text-[10px] text-slate-500 px-1 mb-0.5">Grupo {letter}</div>
-                <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-                  {(() => {
-                    const g = groups.find(gr => gr.group === letter)
-                    if (!g) return <div className="text-slate-600 text-xs px-3 py-2">sem dados</div>
-                    return <StandingRow pos={2} group={g} highlight />
-                  })()}
-                </div>
-              </div>
+              <GroupMiniTable key={letter} groupLetter={letter} groups={groups} targetPos={2} />
             ))}
           </div>
         </div>
