@@ -11,6 +11,7 @@ import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -302,9 +303,17 @@ export default function PlayoffsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-white mb-1">{t.playoffs.title}</h1>
-        <p className="text-slate-400 text-sm">{t.playoffs.subtitle}</p>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-white mb-1">{t.playoffs.title}</h1>
+          <p className="text-slate-400 text-sm">{t.playoffs.subtitle}</p>
+        </div>
+        <Link
+          href="/path"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-xl text-xs font-bold transition-colors"
+        >
+          🗺️ Meu caminho
+        </Link>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
