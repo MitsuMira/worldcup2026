@@ -173,10 +173,14 @@ export default function PathPage() {
   const teams = teamsData?.teams ?? []
   const groups = groupsData?.groups ?? []
 
-  // Group teams by group letter for the dropdown
+  // Group teams by group letter for the dropdown — exclude ESPN placeholders
   const teamsByGroup = useMemo(() => {
     const map = new Map<string, ApiTeam[]>()
-    const sorted = [...teams].sort((a, b) => a.groups.localeCompare(b.groups) || a.name_en.localeCompare(b.name_en))
+    const realTeams = teams.filter(t =>
+      t.fifa_code && t.fifa_code.length >= 2 &&
+      !/^(group|winner|place|tbd)/i.test(t.name_en)
+    )
+    const sorted = [...realTeams].sort((a, b) => a.groups.localeCompare(b.groups) || a.name_en.localeCompare(b.name_en))
     for (const team of sorted) {
       const g = team.groups
       if (!map.has(g)) map.set(g, [])
