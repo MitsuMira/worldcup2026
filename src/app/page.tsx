@@ -10,16 +10,27 @@ import type { EnrichedGame, EnrichedGroup, ApiTeam } from '@/lib/types'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true)
   return (
     <section className="mb-10">
-      <h2 className="text-lg font-bold text-white mb-4">{title}</h2>
-      {children}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 w-full text-left group mb-4"
+      >
+        <h2 className="text-lg font-bold text-white flex-1">{title}</h2>
+        <ChevronDown
+          size={18}
+          className={`text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+      {open && children}
     </section>
   )
 }
