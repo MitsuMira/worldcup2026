@@ -2,6 +2,7 @@
 
 import useSWR from 'swr'
 import GroupTable from '@/components/GroupTable'
+import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGroup } from '@/lib/types'
 import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
@@ -13,15 +14,33 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 const QUALIFYING_THIRDS = 8
 const MIN_GAMES_TO_DETERMINE = 3 // only show Q/✕ once a group has finished all 3 matchday games
 
+type ThirdEntry = EnrichedGroup['standings'][number] & { groupLetter: string }
+
+function getThirds(groups: EnrichedGroup[]): ThirdEntry[] {
+  const getGroupLetter = (g: EnrichedGroup) =>
+    g.group || g.standings.find((s) => s.team?.groups)?.team?.groups || ''
+
+  return groups
+    .map(g => ({ ...(g.standings[2] as EnrichedGroup['standings'][number]), groupLetter: getGroupLetter(g) }))
+    .filter(s => s && s.team_id)
+    .sort((a, b) => {
+      const pd = Number(b.pts) - Number(a.pts); if (pd) return pd
+      const gdd = (b.gd ?? 0) - (a.gd ?? 0); if (gdd) return gdd
+      const gfd = Number(b.gf) - Number(a.gf); if (gfd) return gfd
+      const ca = (a.yellows ?? 0) + (a.reds ?? 0) * 3
+      const cb = (b.yellows ?? 0) + (b.reds ?? 0) * 3
+      const cd = ca - cb; if (cd) return cd
+      return (FIFA_RANK[a.team_id] ?? 999) - (FIFA_RANK[b.team_id] ?? 999)
+    })
+}
+
 function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
-  // Collect 3rd-place team from each group (index 2) that has played enough games
   const thirds = groups
     .map(g => g.standings[2])
     .filter(s => s && (s.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
 
   if (thirds.length < QUALIFYING_THIRDS) return new Set() // not enough data yet
 
-  // FIFA criteria for best thirds: pts → GD → GF → conduct score (fewer cards = better)
   const sorted = [...thirds].sort((a, b) => {
     const pd = Number(b.pts) - Number(a.pts); if (pd) return pd
     const gdd = (b.gd ?? 0) - (a.gd ?? 0); if (gdd) return gdd
@@ -29,11 +48,82 @@ function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
     const ca = (a.yellows ?? 0) + (a.reds ?? 0) * 3
     const cb = (b.yellows ?? 0) + (b.reds ?? 0) * 3
     const cd = ca - cb; if (cd) return cd
-    // Step 5: FIFA ranking (lower number = better)
     return (FIFA_RANK[a.team_id] ?? 999) - (FIFA_RANK[b.team_id] ?? 999)
   })
 
   return new Set(sorted.slice(0, QUALIFYING_THIRDS).map(s => s.team_id))
+}
+
+function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
+  const thirds = getThirds(groups)
+  if (thirds.length === 0) return null
+
+  const enoughData = thirds.every(t => (t.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
+
+  return (
+    <div className="mt-10">
+      <h2 className="text-xl font-black text-white mb-1">Melhores 3ºs Colocados</h2>
+      <p className="text-slate-400 text-sm mb-4">
+        Os 8 melhores de 12 grupos avançam para a Fase de 32 · ordenados por Pts → SG → GP → Cartões → Ranking FIFA
+      </p>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        {/* header */}
+        <div className="grid grid-cols-[1.5rem_1fr_2rem_2.5rem_2.5rem_2.5rem_2.5rem_2.5rem] gap-x-2 px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+          <span>#</span>
+          <span>Seleção</span>
+          <span className="text-center">Gr</span>
+          <span className="text-right">Pts</span>
+          <span className="text-right">J</span>
+          <span className="text-right">SG</span>
+          <span className="text-right">GP</span>
+          <span className="text-right">FIFA</span>
+        </div>
+        {thirds.map((s, i) => {
+          const qualifies = enoughData && i < QUALIFYING_THIRDS
+          const borderColor = enoughData
+            ? (i < QUALIFYING_THIRDS ? 'border-l-emerald-500' : 'border-l-slate-700')
+            : 'border-l-slate-700'
+          const cutoff = enoughData && i === QUALIFYING_THIRDS - 1
+          return (
+            <div key={s.team_id}>
+              <div
+                className={`grid grid-cols-[1.5rem_1fr_2rem_2.5rem_2.5rem_2.5rem_2.5rem_2.5rem] gap-x-2 px-3 py-2 text-xs border-t border-slate-800/60 border-l-2 transition-colors
+                  ${borderColor}
+                  ${qualifies ? 'bg-emerald-500/5' : ''}
+                `}
+              >
+                <span className={`font-bold ${qualifies ? 'text-emerald-400' : 'text-slate-500'}`}>{i + 1}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  {s.team && <TeamFlag team={s.team} size="sm" />}
+                  <span className={`truncate font-medium ${qualifies ? 'text-white' : 'text-slate-400'}`}>
+                    {s.team?.name_en ?? s.team_id}
+                  </span>
+                </span>
+                <span className={`text-center font-bold ${qualifies ? 'text-amber-400' : 'text-slate-500'}`}>{s.groupLetter}</span>
+                <span className={`text-right font-bold tabular-nums ${qualifies ? 'text-white' : 'text-slate-400'}`}>{s.pts ?? '—'}</span>
+                <span className="text-right tabular-nums text-slate-500">{s.played ?? '—'}</span>
+                <span className="text-right tabular-nums text-slate-400">{s.gd !== undefined ? (s.gd > 0 ? `+${s.gd}` : s.gd) : '—'}</span>
+                <span className="text-right tabular-nums text-slate-400">{s.gf ?? '—'}</span>
+                <span className="text-right tabular-nums text-slate-500">{FIFA_RANK[s.team_id] != null ? `#${FIFA_RANK[s.team_id]}` : '—'}</span>
+              </div>
+              {cutoff && enoughData && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60">
+                  <div className="flex-1 border-t border-dashed border-emerald-800" />
+                  <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-widest whitespace-nowrap">Classificados ↑ · Eliminados ↓</span>
+                  <div className="flex-1 border-t border-dashed border-emerald-800" />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {!enoughData && (
+        <p className="text-slate-600 text-xs mt-2 text-center">
+          A classificação final dos melhores 3ºs será definida ao término de todos os jogos da fase de grupos.
+        </p>
+      )}
+    </div>
+  )
 }
 
 export default function StandingsPage() {
@@ -95,6 +185,8 @@ export default function StandingsPage() {
       {!isLoading && groups.length === 0 && !error && (
         <div className="text-slate-500 text-center py-20">{t.standings.noData}</div>
       )}
+
+      {groups.length > 0 && <BestThirdsTable groups={groups} />}
     </div>
   )
 }
