@@ -125,11 +125,16 @@ function SettingsPanel({ settings, userId, members, code, onUpdated }: {
                   if (!trimmed) return
                   setSaving(true)
                   try {
-                    await fetch(`/api/groups/${code}`, {
+                    const res = await fetch(`/api/groups/${code}`, {
                       method: 'PATCH',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ userId, action: 'rename', label: trimmed }),
                     })
+                    if (res.ok) {
+                      // Sync localStorage so the /groups list page shows the new name
+                      const existing = getGroups().find(g => g.code === code)
+                      if (existing) saveGroup({ ...existing, label: trimmed })
+                    }
                     onUpdated()
                     setEditingLabel(false)
                   } finally { setSaving(false) }
@@ -427,7 +432,8 @@ export default function GroupPage() {
     }, 1500)
   }, [code, refreshMembers])
 
-  const localGroupLabel = getGroups().find(g => g.code === code)?.label ?? code
+  // Prefer server label (settings.label) over localStorage so renames are visible immediately
+  const localGroupLabel = settingsData?.label ?? getGroups().find(g => g.code === code)?.label ?? code
 
   useEffect(() => {
     setMounted(true)
