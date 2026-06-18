@@ -32,7 +32,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
         <thead>
           <tr className="text-xs text-slate-500 uppercase tracking-wide">
             <th className="text-left px-4 py-2">{t.standings.team}</th>
-            {!compact && <th className="text-center px-1.5 py-2">P</th>}
+            {!compact && <th className="text-center px-1.5 py-2">J</th>}
             {!compact && <th className="text-center px-1.5 py-2">V</th>}
             {!compact && <th className="text-center px-1.5 py-2">E</th>}
             {!compact && <th className="text-center px-1.5 py-2">D</th>}
