@@ -10,16 +10,23 @@ interface Props {
   compact?: boolean
   highlightTeamId?: string
   qualifyingThirds?: Set<string>
+  isLiveSimulated?: boolean
 }
 
-export default function GroupTable({ group, compact = false, highlightTeamId, qualifyingThirds }: Props) {
+export default function GroupTable({ group, compact = false, highlightTeamId, qualifyingThirds, isLiveSimulated }: Props) {
   const { t } = useT()
   const groupLetter = group.group || group.standings.find((s) => s.team?.groups)?.team?.groups || ''
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-800">
+    <div className={`bg-slate-900 border rounded-xl overflow-hidden ${isLiveSimulated ? 'border-amber-500/40' : 'border-slate-800'}`}>
+      <div className={`px-4 py-3 border-b flex items-center justify-between ${isLiveSimulated ? 'border-amber-500/20' : 'border-slate-800'}`}>
         <h3 className="text-sm font-bold text-white">{t.match.stageGroup} {groupLetter}</h3>
+        {isLiveSimulated && (
+          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+            Simulado
+          </span>
+        )}
       </div>
       <table className="w-full text-sm">
         <thead>

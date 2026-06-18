@@ -3,9 +3,10 @@
 import useSWR from 'swr'
 import GroupTable from '@/components/GroupTable'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGroup } from '@/lib/types'
+import type { EnrichedGroup, EnrichedGame } from '@/lib/types'
 import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
+import { simulateLiveStandings } from '@/lib/simulateLiveStandings'
 import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -129,13 +130,16 @@ function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
 export default function StandingsPage() {
   const { t } = useT()
   const { data, error, isLoading } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { refreshInterval: 60_000 })
+  const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 15_000 })
 
   const getGroupLetter = (g: EnrichedGroup) =>
     g.group || g.standings.find((s) => s.team?.groups)?.team?.groups || ''
 
-  const groups = [...(data?.groups ?? [])]
+  const rawGroups = [...(data?.groups ?? [])]
     .filter((g) => Array.isArray(g?.standings))
     .sort((a, b) => getGroupLetter(a).localeCompare(getGroupLetter(b)))
+
+  const { groups, liveGroupLetters } = simulateLiveStandings(rawGroups, gamesData?.games ?? [])
 
   const qualifyingThirds = computeQualifyingThirds(groups)
 
@@ -172,12 +176,20 @@ export default function StandingsPage() {
         </div>
       )}
 
+      {liveGroupLetters.size > 0 && (
+        <div className="flex items-center gap-2 mb-4 text-xs text-amber-400/80 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block shrink-0" />
+          Classificação simulada com o placar atual dos jogos ao vivo. Pode mudar a qualquer momento.
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {groups.map((g) => (
           <GroupTable
             key={getGroupLetter(g) || g.standings[0]?.team_id}
             group={g}
             qualifyingThirds={qualifyingThirds}
+            isLiveSimulated={liveGroupLetters.has(getGroupLetter(g))}
           />
         ))}
       </div>

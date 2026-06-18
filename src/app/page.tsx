@@ -8,6 +8,7 @@ import OpeningCeremony from '@/components/OpeningCeremony'
 import FavoriteTeamCard from '@/components/FavoriteTeamCard'
 import type { EnrichedGame, EnrichedGroup, ApiTeam } from '@/lib/types'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
+import { simulateLiveStandings } from '@/lib/simulateLiveStandings'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2, ChevronDown } from 'lucide-react'
@@ -55,9 +56,10 @@ export default function Home() {
   const getGroupLetter = (g: EnrichedGroup) =>
     g.group || g.standings.find((s) => s.team?.groups)?.team?.groups || ''
 
-  const groups = [...(groupsData?.groups ?? [])].sort((a, b) =>
+  const rawGroups = [...(groupsData?.groups ?? [])].sort((a, b) =>
     getGroupLetter(a).localeCompare(getGroupLetter(b))
   )
+  const { groups, liveGroupLetters } = simulateLiveStandings(rawGroups, games)
 
   // Groups containing at least one favorite team (by team_id in standings)
   const favoriteGroups = favorites.length > 0
@@ -213,7 +215,7 @@ export default function Home() {
       {groups.length > 0 && (
         <Section title={t.home.groupStandings}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {homeGroups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} compact />)}
+            {homeGroups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} compact isLiveSimulated={liveGroupLetters.has(getGroupLetter(g))} />)}
           </div>
           {homeGroups.length < groups.length && (
             <div className="mt-4 text-center">

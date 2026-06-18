@@ -10,6 +10,7 @@ import MatchCard from '@/components/MatchCard'
 import type { ApiTeam, EnrichedGame, EnrichedGroup, MatchDetail, RosterPlayer } from '@/lib/types'
 import { FIFA_RANK } from '@/lib/fifaRanking'
 import { getMatchStatus, parseMatchDate } from '@/lib/utils'
+import { simulateLiveStandings } from '@/lib/simulateLiveStandings'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
@@ -27,7 +28,8 @@ export default function TeamDetailPage() {
 
   const teams = teamsData?.teams ?? []
   const games = gamesData?.games ?? []
-  const groups = groupsData?.groups ?? []
+  const rawGroups = groupsData?.groups ?? []
+  const { groups, liveGroupLetters } = simulateLiveStandings(rawGroups, games)
 
   const team = teams.find((tm) => tm.id === id)
   const isLoading = teamsLoading || gamesLoading
@@ -280,7 +282,7 @@ export default function TeamDetailPage() {
       {teamGroup && (
         <div className="mb-6">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.groupStanding}</h2>
-          <GroupTable group={teamGroup} highlightTeamId={team.id} />
+          <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} />
         </div>
       )}
 
