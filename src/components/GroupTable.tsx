@@ -37,9 +37,9 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
             {!compact && <th className="text-center px-1.5 py-2">E</th>}
             {!compact && <th className="text-center px-1.5 py-2">D</th>}
             <th className="text-center px-2 py-2">GD</th>
+            <th className="text-center px-3 py-2 font-bold text-slate-400">Pts</th>
             {!compact && <th className="text-center px-1.5 py-2">🟨</th>}
             {!compact && <th className="text-center px-1.5 py-2">🟥</th>}
-            <th className="text-center px-3 py-2 font-bold text-slate-400">Pts</th>
           </tr>
         </thead>
         <tbody>
@@ -97,9 +97,9 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                 <td className="text-center px-2 py-2.5">
                   {(s.gd ?? 0) > 0 ? `+${s.gd}` : s.gd ?? 0}
                 </td>
+                <td className="text-center px-3 py-2.5 font-bold text-white">{s.pts}</td>
                 {!compact && <td className="text-center px-1.5 py-2.5 text-yellow-400/80">{s.yellows ?? 0}</td>}
                 {!compact && <td className="text-center px-1.5 py-2.5 text-red-500/80">{s.reds ?? 0}</td>}
-                <td className="text-center px-3 py-2.5 font-bold text-white">{s.pts}</td>
               </tr>
             )
           })}
