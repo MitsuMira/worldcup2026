@@ -95,6 +95,11 @@ export default function GroupsPage() {
     setName(n)
     setNameInput(n)
     setGroups(getGroups())
+
+    // Re-sync group labels from localStorage when user navigates back to this page
+    const onVisible = () => { if (document.visibilityState === 'visible') setGroups(getGroups()) }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   const saveName = () => {
