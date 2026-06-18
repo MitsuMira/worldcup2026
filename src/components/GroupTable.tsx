@@ -48,6 +48,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
             const isThirdQualified = i === 2 && qualifyingThirds?.has(s.team_id)
             const isThirdEliminated = i === 2 && qualifyingThirds && !qualifyingThirds.has(s.team_id) && qualifyingThirds.size > 0
             const isEliminated = i === 3
+            const movement = (s as typeof s & { _liveMovement?: number })._liveMovement ?? 0
 
             return (
               <tr
@@ -65,6 +66,11 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-600 w-4 shrink-0">{i + 1}</span>
+                    {isLiveSimulated && movement !== 0 && (
+                      <span className={`text-[9px] font-bold shrink-0 leading-none ${movement > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {movement > 0 ? '▲' : '▼'}
+                      </span>
+                    )}
                     <TeamFlag team={s.team} size="sm" />
                     {s.team ? (
                       <Link href={`/teams/${s.team.id}`} className="text-sm font-medium truncate max-w-[90px] hover:underline">
