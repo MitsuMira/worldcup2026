@@ -5,10 +5,20 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import { MATCH_LABELS, isEspnPlaceholder } from '@/lib/bracketStructure'
-import type { ApiTeam, EnrichedGroup } from '@/lib/types'
+import { MATCH_LABELS, BRACKET_POSITIONS, isEspnPlaceholder } from '@/lib/bracketStructure'
+import { getVenueTimezone, parseMatchDate } from '@/lib/utils'
+import type { ApiTeam, EnrichedGroup, EnrichedGame } from '@/lib/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+function formatMatchDate(game: EnrichedGame): string {
+  const tz = getVenueTimezone(game)
+  const d = parseMatchDate(game.local_date)
+  if (!d) return ''
+  const date = d.toLocaleDateString('pt-BR', { timeZone: tz, day: '2-digit', month: '2-digit' })
+  const time = d.toLocaleTimeString('pt-BR', { timeZone: tz, hour: '2-digit', minute: '2-digit' })
+  return `${date} · ${time}`
+}
 
 // ── Bracket lookup tables ────────────────────────────────────────────────────
 
@@ -213,6 +223,7 @@ export default function PathPage() {
 
   const { data: teamsData } = useSWR<{ teams: ApiTeam[] }>('/api/teams', fetcher, { revalidateOnFocus: false })
   const { data: groupsData } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { refreshInterval: 60_000 })
+  const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { revalidateOnFocus: false })
 
   const teams = teamsData?.teams ?? []
   const groups = groupsData?.groups ?? []
@@ -232,6 +243,22 @@ export default function PathPage() {
     }
     return map
   }, [teams])
+
+  // Build matchNum → EnrichedGame lookup for playoff games
+  const gameByMatchNum = useMemo(() => {
+    const map = new Map<number, EnrichedGame>()
+    for (const game of (gamesData?.games ?? [])) {
+      const tz = getVenueTimezone(game)
+      const d = parseMatchDate(game.local_date)
+      if (!d) continue
+      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: tz })
+      const rawCity = game.stadium?.city_en ?? ''
+      const bp = BRACKET_POSITIONS.get(`${dateStr}_${rawCity}`) ??
+                 BRACKET_POSITIONS.get(`${dateStr}_${rawCity.split(',')[0].trim()}`)
+      if (bp?.matchNum) map.set(bp.matchNum, game)
+    }
+    return map
+  }, [gamesData])
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
@@ -379,11 +406,17 @@ export default function PathPage() {
         {/* Path rounds */}
         {path.length > 0 && (
           <div className="space-y-4">
-            {path.map(step => (
+            {path.map(step => {
+              const stepGame = gameByMatchNum.get(step.myMatch)
+              const stepDate = stepGame ? formatMatchDate(stepGame) : null
+              return (
               <div key={step.round} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 {/* Round header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80">
-                  <span className="font-bold text-white">{step.label}</span>
+                  <div>
+                    <span className="font-bold text-white">{step.label}</span>
+                    {stepDate && <span className="text-slate-500 text-xs ml-2">{stepDate}</span>}
+                  </div>
                   <span className="text-amber-400 text-sm font-mono font-bold">M{step.myMatch}</span>
                 </div>
 
@@ -395,7 +428,8 @@ export default function PathPage() {
                   {renderOppSlots(step)}
                 </div>
               </div>
-            ))}
+            )})}
+
           </div>
         )}
 
@@ -412,10 +446,16 @@ export default function PathPage() {
                   </span>
                 </div>
                 <div className="space-y-4">
-                  {scenPath.map(step => (
+                  {scenPath.map(step => {
+                    const stepGame = gameByMatchNum.get(step.myMatch)
+                    const stepDate = stepGame ? formatMatchDate(stepGame) : null
+                    return (
                     <div key={step.round} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80">
-                        <span className="font-bold text-white">{step.label}</span>
+                        <div>
+                          <span className="font-bold text-white">{step.label}</span>
+                          {stepDate && <span className="text-slate-500 text-xs ml-2">{stepDate}</span>}
+                        </div>
                         <span className="text-amber-400 text-sm font-mono font-bold">M{step.myMatch}</span>
                       </div>
                       <div className="p-3">
@@ -425,7 +465,8 @@ export default function PathPage() {
                         {renderOppSlots(step)}
                       </div>
                     </div>
-                  ))}
+                  )})}
+
                 </div>
               </div>
             ))}

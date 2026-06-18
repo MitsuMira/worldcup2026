@@ -312,7 +312,7 @@ export default function PlayoffsPage() {
           href="/path"
           className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-xl text-xs font-bold transition-colors"
         >
-          🗺️ Meu caminho
+          🗺️ Rumo à taça
         </Link>
       </div>
 
