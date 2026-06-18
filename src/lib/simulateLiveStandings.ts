@@ -64,6 +64,8 @@ export function simulateLiveStandings(
       if (homeWin) home.w = (home.w ?? 0) + 1
       else if (draw) home.d = (home.d ?? 0) + 1
       else home.l = (home.l ?? 0) + 1
+      home.yellows = (home.yellows ?? 0) + (game.home_yellow_cards ?? 0)
+      home.reds = (home.reds ?? 0) + (game.home_red_cards ?? 0)
 
       away.pts = String(Number(away.pts) + (awayWin ? 3 : draw ? 1 : 0))
       away.gf = String(Number(away.gf) + as_)
@@ -73,6 +75,8 @@ export function simulateLiveStandings(
       if (awayWin) away.w = (away.w ?? 0) + 1
       else if (draw) away.d = (away.d ?? 0) + 1
       else away.l = (away.l ?? 0) + 1
+      away.yellows = (away.yellows ?? 0) + (game.away_yellow_cards ?? 0)
+      away.reds = (away.reds ?? 0) + (game.away_red_cards ?? 0)
     }
 
     const sorted = sortStandings(standings)
