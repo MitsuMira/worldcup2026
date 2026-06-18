@@ -71,6 +71,9 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                         {movement > 0 ? '▲' : '▼'}
                       </span>
                     )}
+                    {isLiveSimulated && movement === 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 inline-block" />
+                    )}
                     <TeamFlag team={s.team} size="sm" />
                     {s.team ? (
                       <Link href={`/teams/${s.team.id}`} className="text-sm font-medium truncate max-w-[90px] hover:underline">
