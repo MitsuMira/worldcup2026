@@ -68,6 +68,8 @@ function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
         Os 8 melhores de 12 grupos avançam para a Fase de 32 · ordenados por Pts → SG → GP → Cartões → Ranking FIFA
       </p>
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+        <div className="min-w-[380px]">
         {/* header */}
         <div className="grid grid-cols-[1.5rem_1fr_2rem_2.5rem_2.5rem_2.5rem_2.5rem_2.5rem] gap-x-2 px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
           <span>#</span>
@@ -117,7 +119,7 @@ function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
             </div>
           )
         })}
-      </div>
+      </div></div></div>
       {!enoughData && (
         <p className="text-slate-600 text-xs mt-2 text-center">
           A classificação final dos melhores 3ºs será definida ao término de todos os jogos da fase de grupos.
