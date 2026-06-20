@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGroup } from '@/lib/types'
+import { canReachPosition } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
@@ -47,7 +48,8 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
             const isHighlighted = s.team_id === highlightTeamId
             const isThirdQualified = i === 2 && qualifyingThirds?.has(s.team_id)
             const isThirdEliminated = i === 2 && qualifyingThirds && !qualifyingThirds.has(s.team_id) && qualifyingThirds.size > 0
-            const isEliminated = i === 3
+            // Mathematically eliminated: can't reach 2nd place even winning all remaining games
+            const isEliminated = i >= 2 && !canReachPosition(group, i, 1)
             const movement = (s as typeof s & { _liveMovement?: number })._liveMovement ?? 0
 
             return (

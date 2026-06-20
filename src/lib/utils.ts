@@ -273,3 +273,19 @@ export function getFlagEmoji(fifaCode: string): string {
   if (!iso || iso.includes('-')) return '🏴'
   return toFlagEmoji(iso)
 }
+
+/**
+ * Returns true if the team at `idx` can still mathematically reach `targetPos` (0-based).
+ * Uses simple pts projection: remaining games × 3 pts each.
+ */
+export function canReachPosition(group: import('./types').EnrichedGroup, idx: number, targetPos: number): boolean {
+  if (idx <= targetPos) return true // already at or above target
+  const standings = group.standings
+  if (!standings || standings.length < 4) return true
+  const team = standings[idx]
+  const target = standings[targetPos]
+  if (!team || !target) return true
+  const remaining = 3 - (team.played ?? 0)
+  const maxPossible = Number(team.pts ?? 0) + remaining * 3
+  return maxPossible >= Number(target.pts ?? 0)
+}
