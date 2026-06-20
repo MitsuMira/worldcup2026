@@ -339,7 +339,8 @@ export default function TeamDetailPage() {
         <div className="mb-6">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Elenco</h2>
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[420px]">
               <thead>
                 <tr className="text-slate-500 border-b border-slate-800 text-center">
                   <th className="text-left px-3 py-2 font-medium">Jogador</th>
@@ -398,6 +399,7 @@ export default function TeamDetailPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

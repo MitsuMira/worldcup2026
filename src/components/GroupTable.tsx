@@ -110,8 +110,8 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                     {(s.gd ?? 0) > 0 ? `+${s.gd}` : s.gd ?? 0}
                   </td>
                   <td className="text-center px-3 py-2.5 font-bold text-white">{s.pts}</td>
-                  {!compact && <td className="text-center px-1.5 py-2.5 text-yellow-400/40 text-xs">{s.yellows ?? 0}</td>}
-                  {!compact && <td className="text-center px-1.5 py-2.5 text-red-500/40 text-xs">{s.reds ?? 0}</td>}
+                  {!compact && <td className="text-center px-1.5 py-2.5 text-yellow-400/70 text-xs">{s.yellows ?? 0}</td>}
+                  {!compact && <td className="text-center px-1.5 py-2.5 text-red-400/70 text-xs">{s.reds ?? 0}</td>}
                 </tr>
               )
             })}
