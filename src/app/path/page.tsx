@@ -192,18 +192,18 @@ function GroupMiniTable({ groupLetter, groups, targetPos }: GroupMiniTableProps)
                 ${dimmed ? 'opacity-35' : ''}
               `}
             >
-              <span className={`w-4 shrink-0 text-right ${isTarget ? 'text-amber-400 font-bold' : 'text-slate-600'}`}>{i + 1}º</span>
+              <span className={`w-4 shrink-0 text-right ${isTarget ? 'text-amber-700 dark:text-amber-400 font-bold' : 'text-slate-600'}`}>{i + 1}º</span>
               {s.team ? (
                 <>
                   <TeamFlag team={s.team} size="sm" />
-                  <span className={`flex-1 font-medium truncate ${isTarget ? 'text-amber-100' : couldReach ? 'text-slate-300' : 'text-slate-500'}`}>
+                  <span className={`flex-1 font-medium truncate ${isTarget ? 'text-amber-900 dark:text-amber-100' : couldReach ? 'text-slate-300' : 'text-slate-500'}`}>
                     {s.team.name_en}
                   </span>
                 </>
               ) : (
                 <span className="flex-1 text-slate-500 italic">TBD</span>
               )}
-              <span className={`font-bold w-6 text-right ${isTarget ? 'text-amber-300' : 'text-blue-400'}`}>{s.pts ?? '—'}</span>
+              <span className={`font-bold w-6 text-right ${isTarget ? 'text-amber-700 dark:text-amber-300' : 'text-blue-400'}`}>{s.pts ?? '—'}</span>
               <span className="text-slate-500 w-8 text-right">
                 {s.gd !== undefined ? (s.gd > 0 ? `+${s.gd}` : s.gd) : '—'}
               </span>
