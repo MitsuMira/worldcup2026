@@ -412,10 +412,10 @@ export default function PathPage() {
               return (
               <div key={step.round} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 {/* Round header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800">
                   <div>
                     <span className="font-bold text-white">{step.label}</span>
-                    {stepDate && <span className="text-slate-500 text-xs ml-2">{stepDate}</span>}
+                    {stepDate && <span className="text-slate-300 text-xs ml-2">{stepDate}</span>}
                   </div>
                   <span className="text-amber-400 text-sm font-mono font-bold">M{step.myMatch}</span>
                 </div>
@@ -451,10 +451,10 @@ export default function PathPage() {
                     const stepDate = stepGame ? formatMatchDate(stepGame) : null
                     return (
                     <div key={step.round} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/80">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800">
                         <div>
                           <span className="font-bold text-white">{step.label}</span>
-                          {stepDate && <span className="text-slate-500 text-xs ml-2">{stepDate}</span>}
+                          {stepDate && <span className="text-slate-300 text-xs ml-2">{stepDate}</span>}
                         </div>
                         <span className="text-amber-400 text-sm font-mono font-bold">M{step.myMatch}</span>
                       </div>
