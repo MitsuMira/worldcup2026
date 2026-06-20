@@ -530,7 +530,7 @@ export default function MatchDetailPage() {
           {status === 'live' ? (
             <span className="flex items-center gap-1.5 text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${t.match.live} ${game.time_elapsed}'`}
+              {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${t.match.live} ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
             </span>
           ) : status === 'finished' ? (
             <span>{t.matchDetail.ft}</span>

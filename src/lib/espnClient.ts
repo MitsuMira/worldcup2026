@@ -113,12 +113,26 @@ function parseRound(comp: EspnCompetition): { type: string; group: string } {
 function computeTimeElapsed(status: EspnStatus): string {
   if (status.type.name === 'STATUS_HALFTIME') return 'HT'
   const period = status.period ?? 0
-  const clock = status.clock ?? 0
-  // clock = total game-time elapsed in seconds from kickoff (ESPN accumulates across periods)
-  // Do NOT add 45 for the second half — the value already reflects full game time
-  const min = Math.max(1, Math.floor(clock / 60))
-  if (period >= 2 && min > 90) return `90+${min - 90}`
-  if (period <= 1 && min > 45) return `45+${min - 45}`
+
+  // Prefer displayClock (e.g. "46:20") — it keeps counting during stoppage time
+  // while status.clock can freeze at 2700/5400 (45:00/90:00)
+  let min: number
+  const display = status.displayClock
+  if (display && display.includes(':')) {
+    min = parseInt(display.split(':')[0]) || 0
+  } else {
+    min = Math.floor((status.clock ?? 0) / 60)
+  }
+  min = Math.max(1, min)
+
+  if (period >= 2 && min >= 90) {
+    const extra = min - 90
+    return extra > 0 ? `90+${extra}` : '90+'
+  }
+  if (period <= 1 && min >= 45) {
+    const extra = min - 45
+    return extra > 0 ? `45+${extra}` : '45+'
+  }
   return String(min)
 }
 
