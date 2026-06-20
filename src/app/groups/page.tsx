@@ -7,45 +7,34 @@ import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown, Share2
 import Link from 'next/link'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
-import { getPredictionResult, getMatchStatus } from '@/lib/utils'
+import { getMatchStatus } from '@/lib/utils'
+import { calcPoints } from '@/lib/scoring'
+import type { KvMember } from '@/lib/kv'
 
 const STORAGE_KEY = 'wc2026_predictions'
 function loadPredictions() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
 }
 
-interface KvMember {
-  userId: string
-  name: string
-  predictions: Record<string, { homeScore: number | string; awayScore: number | string }>
-  updatedAt: string
-}
-
-function calcPoints(member: KvMember, games: EnrichedGame[]) {
-  let pts = 0, exact = 0
-  for (const game of games) {
-    const pred = member.predictions[game.id]
-    if (!pred) continue
-    const result = getPredictionResult(
-      { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,
-      game,
-    )
-    if (result === 'correct') { pts += 3; exact++ }
-    else if (result === 'correct-winner') pts += 1
-  }
-  return pts
-}
 
 function GroupStats({ code, userId, games }: { code: string; userId: string; games: EnrichedGame[] }) {
-  const { data } = useSWR<{ members: KvMember[] }>(
+  const { data: membersData } = useSWR<{ members: KvMember[] }>(
     `group-stats-${code}`,
     () => fetch(`/api/groups/${code}`, { method: 'POST' }).then(r => r.json()),
     { revalidateOnFocus: false }
   )
-  const members = data?.members ?? []
+  const { data: settingsData } = useSWR<{ minParticipation?: number }>(
+    `group-settings-list-${code}`,
+    () => fetch(`/api/groups/${code}`).then(r => r.json()),
+    { revalidateOnFocus: false }
+  )
+  const members = membersData?.members ?? []
+  const minParticipation = settingsData?.minParticipation ?? 0
   if (members.length === 0) return <div className="text-xs text-slate-600 mt-0.5">carregando…</div>
 
-  const ranked = [...members].sort((a, b) => calcPoints(b, games) - calcPoints(a, games))
+  const ranked = [...members].sort((a, b) =>
+    calcPoints(b, games, members, minParticipation).pts - calcPoints(a, games, members, minParticipation).pts
+  )
   const myRank = ranked.findIndex(m => m.userId === userId) + 1
   const count = members.length
 

@@ -8,6 +8,7 @@ import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Setti
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
+import { gameCountsForScoring, calcPoints } from '@/lib/scoring'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
@@ -41,27 +42,6 @@ function loadPredictions(): Record<string, Prediction> {
 }
 
 // Returns whether a game counts given the minParticipation setting
-function gameCountsForScoring(game: EnrichedGame, allMembers: KvMember[], minParticipation: number): boolean {
-  if (minParticipation === 0 || allMembers.length === 0) return true
-  const predictors = allMembers.filter(m => m.predictions[game.id]).length
-  return (predictors / allMembers.length) * 100 >= minParticipation
-}
-
-function calcPoints(member: KvMember, games: EnrichedGame[], allMembers: KvMember[], minParticipation: number) {
-  let pts = 0, exact = 0, winner = 0
-  for (const game of games) {
-    if (!gameCountsForScoring(game, allMembers, minParticipation)) continue
-    const pred = member.predictions[game.id]
-    if (!pred) continue
-    const result = getPredictionResult(
-      { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,
-      game,
-    )
-    if (result === 'correct') { pts += 3; exact++ }
-    else if (result === 'correct-winner') { pts += 1; winner++ }
-  }
-  return { pts, exact, winner }
-}
 
 function ResultDot({ result }: { result: PredictionResult }) {
   if (result === 'correct') return <span className="w-2 h-2 rounded-full bg-green-500 inline-block shrink-0" title="Placar exato" />
