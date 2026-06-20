@@ -48,8 +48,9 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
             const isHighlighted = s.team_id === highlightTeamId
             const isThirdQualified = i === 2 && qualifyingThirds?.has(s.team_id)
             const isThirdEliminated = i === 2 && qualifyingThirds && !qualifyingThirds.has(s.team_id) && qualifyingThirds.size > 0
-            // Mathematically eliminated: can't reach 2nd place even winning all remaining games
-            const isEliminated = i >= 2 && !canReachPosition(group, i, 1)
+            // Mathematically eliminated: can't reach 3rd place even winning all remaining games
+            // (3rd place can still qualify as best third, so only eliminate when 3rd is unreachable)
+            const isEliminated = i >= 2 && !canReachPosition(group, i, 2)
             const movement = (s as typeof s & { _liveMovement?: number })._liveMovement ?? 0
 
             return (
