@@ -1,6 +1,7 @@
 import 'server-only'
 import type { EnrichedGame, EnrichedGroup, ApiTeam, ApiStadium } from './types'
 import { FIFA_RANK } from './fifaRanking'
+import { isEspnPlaceholder } from './bracketStructure'
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
 
@@ -513,7 +514,7 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
     const teams = groupMap.get(grp)!
 
     const addTeam = (team: ApiTeam | undefined) => {
-      if (team && !teams.has(team.id))
+      if (team && !teams.has(team.id) && !isEspnPlaceholder(team.name_en))
         teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, played: 0, yellows: 0, reds: 0 })
     }
     addTeam(game.homeTeam)
