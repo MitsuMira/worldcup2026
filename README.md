@@ -7,11 +7,15 @@ Live scores, standings, schedule, knockout bracket, and predictions for the **FI
 ## Features
 
 - **Live scores** — real-time match status and elapsed time
-- **Group standings** — all 12 groups with goal difference and qualification markers
+- **Group standings** — all 12 groups with goal difference, qualification markers, and mathematical elimination detection (full FIFA H2H tiebreaker simulation)
+- **Live simulation** — while a group-stage match is in progress, standings update in real time as if the current score were final, with position movement arrows (▲▼) and a "Simulated" badge
+- **Best thirds ranking** — ranks all 12 third-placed teams to show which 8 advance, using FIFA qualification criteria
 - **Schedule** — 104 matches with filters (live / today / upcoming / finished / by group)
 - **Knockout bracket** — split-bracket view from Round of 32 through the Final, with slot labels showing where each team comes from
+- **Tournament path** — pick any team and finishing position (1st, 2nd, or best third) to see their full path through the bracket with possible opponents at each stage and match date/time
 - **Team profiles** — fixtures, group standing, stats, and tournament scorers
 - **Predictions** — predict match scores locally (stored in browser, scored automatically)
+- **Prediction groups** — create or join private leaderboards with friends; tracks points, exact scores, and ranking in real time
 - **Favorite teams** — pin teams to track next/last match and group position
 - **Multi-language** — English, Portuguese, Español
 - **Light / dark theme**
@@ -26,6 +30,7 @@ Live scores, standings, schedule, knockout bracket, and predictions for the **FI
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v3 |
 | Data fetching | SWR |
+| Storage | Vercel Redis (prediction groups) |
 | Icons | Lucide React |
 | Analytics | Vercel Analytics |
 | Deployment | Vercel |
@@ -43,35 +48,46 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). No environment variables are needed.
+Open [http://localhost:3000](http://localhost:3000).
+
+> **Note:** Prediction groups require a Redis instance. Set `REDIS_URL` in your environment (or `.env.local`) to enable that feature. Everything else works without any environment variables.
 
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── api/            # API route handlers (ESPN proxy)
+│   ├── api/            # API route handlers (ESPN proxy + group KV)
+│   ├── groups/         # Prediction groups — list, create, join, leaderboard
 │   ├── matches/[id]/   # Match detail page
+│   ├── path/           # Tournament path for a selected team
 │   ├── playoffs/       # Knockout bracket & round list
 │   ├── predictions/    # Score predictions
 │   ├── schedule/       # Full match schedule
-│   ├── standings/      # Group standings
+│   ├── standings/      # Group standings + best thirds ranking
 │   └── teams/          # Team list & profiles
 ├── components/         # Shared UI components
 ├── contexts/           # React contexts (language, settings, favorites)
 └── lib/
-    ├── bracketStructure.ts  # Knockout bracket positions & slot labels
-    ├── espnClient.ts        # ESPN API client & data enrichment
-    ├── i18n.ts              # Translations (EN / PT / ES)
-    ├── types.ts             # Shared TypeScript types
-    └── utils.ts             # Formatting, timezone, status helpers
+    ├── bracketStructure.ts      # Knockout bracket positions & slot labels
+    ├── espnClient.ts            # ESPN API client & data enrichment
+    ├── groupSimulation.ts       # Brute-force FIFA H2H elimination checker
+    ├── i18n.ts                  # Translations (EN / PT / ES)
+    ├── identity.ts              # Client-side user/group identity helpers
+    ├── kv.ts                    # Vercel Redis client & KV data model
+    ├── scoring.ts               # Shared prediction scoring logic
+    ├── simulateLiveStandings.ts # Live score → standings simulation
+    ├── types.ts                 # Shared TypeScript types
+    └── utils.ts                 # Formatting, timezone, status helpers
 ```
 
 ## Deployment
 
-The project is designed for one-click deployment on **Vercel**. No environment variables are required.
+The project is designed for one-click deployment on **Vercel**.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MitsuMira/worldcup2026)
+
+For prediction groups, add a `REDIS_URL` environment variable pointing to a Redis-compatible instance (e.g. Vercel KV, Upstash).
 
 ## Built with AI
 
