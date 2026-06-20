@@ -215,7 +215,7 @@ export default function Home() {
       {groups.length > 0 && (
         <Section title={t.home.groupStandings}>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {homeGroups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} compact isLiveSimulated={liveGroupLetters.has(getGroupLetter(g))} />)}
+            {homeGroups.map((g) => <GroupTable key={getGroupLetter(g) || g.standings[0]?.team_id} group={g} compact isLiveSimulated={liveGroupLetters.has(getGroupLetter(g))} allGames={games} />)}
           </div>
           {homeGroups.length < groups.length && (
             <div className="mt-4 text-center">

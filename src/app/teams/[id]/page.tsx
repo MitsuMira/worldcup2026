@@ -282,7 +282,7 @@ export default function TeamDetailPage() {
       {teamGroup && (
         <div className="mb-6">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.groupStanding}</h2>
-          <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} />
+          <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} allGames={games} />
         </div>
       )}
 

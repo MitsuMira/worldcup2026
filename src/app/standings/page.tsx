@@ -190,6 +190,7 @@ export default function StandingsPage() {
             group={g}
             qualifyingThirds={qualifyingThirds}
             isLiveSimulated={liveGroupLetters.has(getGroupLetter(g))}
+            allGames={gamesData?.games}
           />
         ))}
       </div>
