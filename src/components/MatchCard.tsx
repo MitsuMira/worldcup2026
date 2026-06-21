@@ -51,7 +51,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const [editing, setEditing] = useState(false)
   const [homeInput, setHomeInput] = useState('')
   const [awayInput, setAwayInput] = useState('')
+  const [etHomeInput, setEtHomeInput] = useState('')
+  const [etAwayInput, setEtAwayInput] = useState('')
+  const [penHomeInput, setPenHomeInput] = useState('')
+  const [penAwayInput, setPenAwayInput] = useState('')
   const homeRef = useRef<HTMLInputElement>(null)
+  const isKnockout = game.type !== 'group'
 
   useEffect(() => {
     try {
@@ -66,6 +71,10 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const startEdit = () => {
     setHomeInput(prediction ? String(prediction.homeScore) : '')
     setAwayInput(prediction ? String(prediction.awayScore) : '')
+    setEtHomeInput(prediction?.etHomeScore !== undefined ? String(prediction.etHomeScore) : '')
+    setEtAwayInput(prediction?.etAwayScore !== undefined ? String(prediction.etAwayScore) : '')
+    setPenHomeInput(prediction?.penHomeScore !== undefined ? String(prediction.penHomeScore) : '')
+    setPenAwayInput(prediction?.penAwayScore !== undefined ? String(prediction.penAwayScore) : '')
     setEditing(true)
     setTimeout(() => homeRef.current?.focus(), 0)
   }
@@ -74,6 +83,15 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
     const h = parseInt(homeInput)
     const a = parseInt(awayInput)
     if (isNaN(h) || isNaN(a) || h < 0 || a < 0) return
+    // For knockout draws, require ET inputs
+    const isDrawReg = isKnockout && homeInput !== '' && awayInput !== '' && homeInput === awayInput
+    if (isDrawReg && (etHomeInput === '' || etAwayInput === '')) return
+    const etH = etHomeInput !== '' ? parseInt(etHomeInput) : undefined
+    const etA = etAwayInput !== '' ? parseInt(etAwayInput) : undefined
+    const isDrawET = isKnockout && isDrawReg && etHomeInput !== '' && etAwayInput !== '' && etHomeInput === etAwayInput
+    if (isDrawET && (penHomeInput === '' || penAwayInput === '')) return
+    const penH = penHomeInput !== '' ? parseInt(penHomeInput) : undefined
+    const penA = penAwayInput !== '' ? parseInt(penAwayInput) : undefined
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       const preds: Record<string, import('@/lib/types').Prediction> = raw ? JSON.parse(raw) : {}
@@ -86,6 +104,8 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         awayTeamFlag: existing?.awayTeamFlag ?? (game.awayTeam?.flag ?? ''),
         homeScore: h,
         awayScore: a,
+        ...(isKnockout && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
+        ...(isKnockout && penH !== undefined && penA !== undefined ? { penHomeScore: penH, penAwayScore: penA } : {}),
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preds))
@@ -207,36 +227,83 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
               : null
 
             if (editing) {
+              const isDrawReg = isKnockout && homeInput !== '' && awayInput !== '' && homeInput === awayInput
+              const isDrawET = isDrawReg && etHomeInput !== '' && etAwayInput !== '' && etHomeInput === etAwayInput
+              const canSave = homeInput !== '' && awayInput !== '' &&
+                (!isDrawReg || (etHomeInput !== '' && etAwayInput !== '')) &&
+                (!isDrawET || (penHomeInput !== '' && penAwayInput !== ''))
               return (
-                <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-xs text-slate-500">🎯</span>
-                  <input
-                    ref={homeRef}
-                    type="number" min="0" max="20"
-                    value={homeInput}
-                    onChange={e => setHomeInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
-                    className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
-                  />
-                  <span className="text-slate-500 text-sm">–</span>
-                  <input
-                    type="number" min="0" max="20"
-                    value={awayInput}
-                    onChange={e => setAwayInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
-                    className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
-                  />
-                  <button
-                    onClick={savePrediction}
-                    disabled={homeInput === '' || awayInput === ''}
-                    className="p-1 rounded bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 transition-colors"
-                  >
-                    <Check size={13} />
-                  </button>
-                  <button onClick={cancelEdit} className="p-1 rounded text-slate-500 hover:text-white transition-colors">
-                    <X size={13} />
-                  </button>
-                  {lockLabel && <span className="text-xs text-orange-400 font-medium ml-1">{lockLabel}</span>}
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500">🎯</span>
+                    <input
+                      ref={homeRef}
+                      type="number" min="0" max="20"
+                      value={homeInput}
+                      onChange={e => setHomeInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                      className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                    />
+                    <span className="text-slate-500 text-sm">–</span>
+                    <input
+                      type="number" min="0" max="20"
+                      value={awayInput}
+                      onChange={e => setAwayInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                      className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                    />
+                    <button
+                      onClick={savePrediction}
+                      disabled={!canSave}
+                      className="p-1 rounded bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 transition-colors"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button onClick={cancelEdit} className="p-1 rounded text-slate-500 hover:text-white transition-colors">
+                      <X size={13} />
+                    </button>
+                    {lockLabel && <span className="text-xs text-orange-400 font-medium ml-1">{lockLabel}</span>}
+                  </div>
+                  {isDrawReg && (
+                    <div className="flex items-center gap-1.5 ml-4">
+                      <span className="text-[10px] text-slate-400 uppercase w-12">Prórr.</span>
+                      <input
+                        type="number" min="0" max="20"
+                        value={etHomeInput}
+                        onChange={e => setEtHomeInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                      />
+                      <span className="text-slate-500 text-sm">–</span>
+                      <input
+                        type="number" min="0" max="20"
+                        value={etAwayInput}
+                        onChange={e => setEtAwayInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                      />
+                    </div>
+                  )}
+                  {isDrawET && (
+                    <div className="flex items-center gap-1.5 ml-4">
+                      <span className="text-[10px] text-slate-400 uppercase w-12">Pênaltis</span>
+                      <input
+                        type="number" min="0" max="20"
+                        value={penHomeInput}
+                        onChange={e => setPenHomeInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                      />
+                      <span className="text-slate-500 text-sm">–</span>
+                      <input
+                        type="number" min="0" max="20"
+                        value={penAwayInput}
+                        onChange={e => setPenAwayInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                      />
+                    </div>
+                  )}
                 </div>
               )
             }
@@ -246,6 +313,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                 <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
                 <span className="text-sm font-black text-amber-300 tabular-nums">
                   {prediction.homeScore} – {prediction.awayScore}
+                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && (
+                    <span className="text-amber-300/70"> → {prediction.etHomeScore}–{prediction.etAwayScore} ET</span>
+                  )}
+                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && (
+                    <span className="text-amber-300/70"> → {prediction.penHomeScore}–{prediction.penAwayScore} PEN</span>
+                  )}
                 </span>
                 <button onClick={startEdit} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
                   {t.match.editPick}
@@ -268,6 +341,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                 <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
                 <span className="text-sm font-black text-amber-300/70 tabular-nums">
                   {prediction.homeScore} – {prediction.awayScore}
+                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && (
+                    <span> → {prediction.etHomeScore}–{prediction.etAwayScore} ET</span>
+                  )}
+                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && (
+                    <span> → {prediction.penHomeScore}–{prediction.penAwayScore} PEN</span>
+                  )}
                 </span>
               </div>
             )

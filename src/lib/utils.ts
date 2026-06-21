@@ -219,6 +219,37 @@ export function getTeamName(game: EnrichedGame, side: 'home' | 'away'): string {
   return game.awayTeam?.name_en ?? game.away_team_name_en ?? game.away_team_label ?? 'TBD'
 }
 
+export function isKnockoutGame(game: ApiGame): boolean {
+  return game.type !== 'group'
+}
+
+export function getKnockoutPredictionPoints(pred: Prediction, game: ApiGame): number {
+  if (game.finished !== 'TRUE') return 0
+  const ah = parseInt(game.home_score)
+  const aa = parseInt(game.away_score)
+  let pts = 0
+
+  // 3 pts: exact regulation score and game ended in regulation
+  if (pred.homeScore === ah && pred.awayScore === aa && game.decidedBy === 'regulation') pts += 3
+  // 1 pt: correct ET winner
+  if (game.decidedBy === 'et' || game.decidedBy === 'penalties') {
+    if (pred.etHomeScore !== undefined && pred.etAwayScore !== undefined) {
+      const etH = pred.etHomeScore, etA = pred.etAwayScore
+      const actualH = ah, actualA = aa
+      const predWinner = etH > etA ? 'home' : etH < etA ? 'away' : 'draw'
+      const actualWinner = actualH > actualA ? 'home' : actualH < actualA ? 'away' : 'draw'
+      if (predWinner === actualWinner && actualWinner !== 'draw') pts += 1
+    }
+  }
+  // 1 pt: correct penalty score
+  if (game.decidedBy === 'penalties' && pred.penHomeScore !== undefined && pred.penAwayScore !== undefined) {
+    if (game.pen_home_score && game.pen_away_score) {
+      if (pred.penHomeScore === parseInt(game.pen_home_score) && pred.penAwayScore === parseInt(game.pen_away_score)) pts += 1
+    }
+  }
+  return pts
+}
+
 export function getPredictionResult(
   pred: Prediction,
   game: ApiGame,

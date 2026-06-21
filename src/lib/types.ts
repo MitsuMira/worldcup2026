@@ -20,6 +20,9 @@ export interface ApiGame {
   finished: string       // "TRUE" | "FALSE"
   time_elapsed: string   // "notstarted" | minute as string, e.g. "45"
   type: string           // "group"|"r32"|"r16"|"qf"|"sf"|"third"|"final"
+  decidedBy?: 'regulation' | 'et' | 'penalties'  // parsed from ESPN status
+  pen_home_score?: string   // penalty shootout score if available
+  pen_away_score?: string
   name?: string          // ESPN event name e.g. "Group A Winner vs Group B Runner-up"
   home_team_name_en?: string
   home_team_name_fa?: string
@@ -174,8 +177,13 @@ export interface Prediction {
   awayTeamName: string
   homeTeamFlag: string
   awayTeamFlag: string
-  homeScore: number
-  awayScore: number
+  homeScore: number      // regulation time
+  awayScore: number      // regulation time
+  // knockout extras (only for non-group games)
+  etHomeScore?: number   // extra time final score (accumulated 120')
+  etAwayScore?: number
+  penHomeScore?: number  // penalty shootout score e.g. 4
+  penAwayScore?: number  // e.g. 3
   createdAt: string
 }
 

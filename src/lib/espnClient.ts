@@ -202,6 +202,13 @@ function mapEvent(event: EspnEvent): EnrichedGame {
   const isLive = st.type.state === 'in'
   const finished = (st.type.completed || st.type.state === 'post') ? 'TRUE' : 'FALSE'
 
+  let decidedBy: 'regulation' | 'et' | 'penalties' | undefined
+  if (finished === 'TRUE') {
+    if (st.type.name === 'STATUS_FINAL_AET') decidedBy = 'et'
+    else if (st.type.name === 'STATUS_FINAL_PEN') decidedBy = 'penalties'
+    else decidedBy = 'regulation'
+  }
+
   const makeTeam = (c: EspnCompetitor): ApiTeam => ({
     id: c.team.abbreviation,
     name_en: c.team.displayName,
@@ -246,6 +253,7 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     finished,
     time_elapsed: isLive ? computeTimeElapsed(st) : 'notstarted',
     type,
+    decidedBy,
     homeTeam: makeTeam(home),
     awayTeam: makeTeam(away),
     stadium,
