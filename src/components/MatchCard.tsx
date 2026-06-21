@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
@@ -10,7 +10,9 @@ import { useT } from '@/contexts/LanguageContext'
 import { isEspnPlaceholder, BRACKET_POSITIONS, MATCH_LABELS, formatSlotLabel } from '@/lib/bracketStructure'
 import type { Translations } from '@/lib/i18n'
 import { useSettings } from '@/contexts/SettingsContext'
-import { MapPin } from 'lucide-react'
+import { MapPin, Check, X } from 'lucide-react'
+
+const STORAGE_KEY = 'wc2026_predictions'
 
 function resolveTeamName(game: EnrichedGame, side: 'home' | 'away', t: Translations): string {
   const rawName = getTeamName(game, side)
@@ -46,15 +48,53 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const stageLabel = localStageLabel(game.type, game.group, t)
 
   const [prediction, setPrediction] = useState<import('@/lib/types').Prediction | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [homeInput, setHomeInput] = useState('')
+  const [awayInput, setAwayInput] = useState('')
+  const homeRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('wc2026_predictions')
+      const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const preds: Record<string, import('@/lib/types').Prediction> = JSON.parse(raw)
         setPrediction(preds[game.id] ?? null)
       }
     } catch { /* ignore */ }
   }, [game.id])
+
+  const startEdit = () => {
+    setHomeInput(prediction ? String(prediction.homeScore) : '')
+    setAwayInput(prediction ? String(prediction.awayScore) : '')
+    setEditing(true)
+    setTimeout(() => homeRef.current?.focus(), 0)
+  }
+
+  const savePrediction = () => {
+    const h = parseInt(homeInput)
+    const a = parseInt(awayInput)
+    if (isNaN(h) || isNaN(a) || h < 0 || a < 0) return
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      const preds: Record<string, import('@/lib/types').Prediction> = raw ? JSON.parse(raw) : {}
+      const existing = preds[game.id]
+      preds[game.id] = {
+        matchId: game.id,
+        homeTeamName: existing?.homeTeamName ?? homeName,
+        awayTeamName: existing?.awayTeamName ?? awayName,
+        homeTeamFlag: existing?.homeTeamFlag ?? (game.homeTeam?.flag ?? ''),
+        awayTeamFlag: existing?.awayTeamFlag ?? (game.awayTeam?.flag ?? ''),
+        homeScore: h,
+        awayScore: a,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preds))
+      setPrediction(preds[game.id])
+    } catch { /* ignore */ }
+    setEditing(false)
+  }
+
+  const cancelEdit = () => setEditing(false)
 
   return (
     <div
@@ -158,29 +198,65 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
       )}
 
       <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-        {/* Prediction: editable before game, read-only after */}
+        {/* Prediction section */}
         {showPredictLink && (() => {
           if (canPredict(game)) {
             const minsLeft = minutesUntilLock(game)
             const lockLabel = minsLeft !== null && minsLeft > 0
               ? `⏳ ${formatLockCountdown(minsLeft)}`
               : null
+
+            if (editing) {
+              return (
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-xs text-slate-500">🎯</span>
+                  <input
+                    ref={homeRef}
+                    type="number" min="0" max="20"
+                    value={homeInput}
+                    onChange={e => setHomeInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                    className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                  />
+                  <span className="text-slate-500 text-sm">–</span>
+                  <input
+                    type="number" min="0" max="20"
+                    value={awayInput}
+                    onChange={e => setAwayInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                    className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                  />
+                  <button
+                    onClick={savePrediction}
+                    disabled={homeInput === '' || awayInput === ''}
+                    className="p-1 rounded bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 transition-colors"
+                  >
+                    <Check size={13} />
+                  </button>
+                  <button onClick={cancelEdit} className="p-1 rounded text-slate-500 hover:text-white transition-colors">
+                    <X size={13} />
+                  </button>
+                  {lockLabel && <span className="text-xs text-orange-400 font-medium ml-1">{lockLabel}</span>}
+                </div>
+              )
+            }
+
             return prediction ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
                 <span className="text-sm font-black text-amber-300 tabular-nums">
                   {prediction.homeScore} – {prediction.awayScore}
                 </span>
-                <Link href={`/predictions?match=${game.id}`} className="text-xs text-slate-500 hover:text-amber-400">
+                <button onClick={startEdit} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
                   {t.match.editPick}
-                </Link>
+                </button>
                 {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link href={`/predictions?match=${game.id}`} className="text-xs text-amber-400 hover:text-amber-300 font-medium">
+                <button onClick={startEdit} className="text-xs text-amber-400 hover:text-amber-300 font-medium transition-colors">
                   {t.match.predict}
-                </Link>
+                </button>
                 {lockLabel && <span className="text-xs text-orange-400 font-medium">{lockLabel}</span>}
               </div>
             )
@@ -202,7 +278,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         {/* Match detail link */}
         <Link
           href={`/matches/${game.id}`}
-          className="text-xs text-slate-500 hover:text-blue-400 transition-colors"
+          className="text-xs text-slate-500 hover:text-blue-400 transition-colors shrink-0"
         >
           Details →
         </Link>
