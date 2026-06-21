@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import TeamFlag from './TeamFlag'
 import type { EnrichedGroup, EnrichedGame } from '@/lib/types'
-import { canTeamReachPosition } from '@/lib/groupSimulation'
+import { canTeamReachPosition, isTeamConfirmedInTop } from '@/lib/groupSimulation'
 import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
@@ -58,8 +58,11 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
               const isEliminated = i >= 2 && (
                 groupGames.length > 0
                   ? !canTeamReachPosition(group, s.team_id, 2, groupGames)
-                  : false // no game data yet, don't eliminate
+                  : false
               )
+              // Confirmed qualified: in top 2 AND no remaining scenario can displace them
+              const isConfirmedQualified = i < 2 && groupGames.length > 0 &&
+                isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
               const movement = (s as typeof s & { _liveMovement?: number })._liveMovement ?? 0
 
               return (
@@ -94,7 +97,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                       ) : (
                         <span className="text-sm font-medium truncate max-w-[90px]">{s.team_id}</span>
                       )}
-                      {isThirdQualified && (
+                      {(isConfirmedQualified || isThirdQualified) && (
                         <span className="text-[9px] font-bold text-emerald-400 shrink-0">Q</span>
                       )}
                       {(isThirdEliminated || isEliminated) && (
@@ -123,10 +126,10 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
           <span className="w-2 h-2 rounded-full bg-emerald-500/60 inline-block" />
           <span className="text-slate-500">{t.group.top2}</span>
         </span>
-        {qualifyingThirds && qualifyingThirds.size > 0 && (
+        {isQVisible(group, allGames) && (
           <span className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">Q</span>
-            <span className="text-slate-500">3º classificado</span>
+            <span className="text-slate-500">{qualifyingThirds && qualifyingThirds.size > 0 ? 'classificado' : 'classificado matematicamente'}</span>
           </span>
         )}
         {isElimZoneVisible(group) && (
@@ -142,4 +145,14 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
 
 function isElimZoneVisible(group: EnrichedGroup) {
   return group.standings.some(s => (s.played ?? 0) > 0)
+}
+
+function isQVisible(group: EnrichedGroup, allGames?: EnrichedGame[]) {
+  if (!allGames) return false
+  const groupLetter = group.group || group.standings.find(s => s.team?.groups)?.team?.groups || ''
+  const groupGames = allGames.filter(g => g.type === 'group' && g.group === groupLetter)
+  if (groupGames.length === 0) return false
+  return group.standings.slice(0, 2).some(s =>
+    isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
+  ) || group.standings[2] !== undefined
 }

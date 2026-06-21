@@ -72,19 +72,10 @@ interface EspnEvent {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseRound(comp: EspnCompetition): { type: string; group: string } {
-  // 1. competition.groups object (e.g. { name: "Group A", shortName: "A" })
-  const groupObj = comp.groups
-  if (groupObj) {
-    const src = [groupObj.name, groupObj.shortName, groupObj.abbreviation].filter(Boolean).join(' ')
-    const gm = src.match(/\b([A-L])\b/i) ?? src.match(/Group\s+([A-L])/i)
-    if (gm) return { type: 'group', group: gm[1].toUpperCase() }
-  }
-
-  // 2. competition.notes[].headline (e.g. "Group A" or "FIFA World Cup 2026 - Group A")
+  // 1. competition.notes[].headline — knockout rounds take priority over comp.groups
+  //    because ESPN sometimes attaches a group to R32 games (e.g. the group the team came from)
   for (const note of comp.notes ?? []) {
     const h = note.headline ?? ''
-    const nm = h.match(/Group\s+([A-L])\b/i)
-    if (nm) return { type: 'group', group: nm[1].toUpperCase() }
     const kh = h.toLowerCase()
     if (kh.includes('round of 32')) return { type: 'r32', group: '' }
     if (kh.includes('round of 16')) return { type: 'r16', group: '' }
@@ -92,6 +83,16 @@ function parseRound(comp: EspnCompetition): { type: string; group: string } {
     if (kh.includes('semi'))        return { type: 'sf',  group: '' }
     if (kh.includes('third') || kh.includes('3rd place')) return { type: 'third', group: '' }
     if (kh.includes('final'))       return { type: 'final', group: '' }
+    const nm = h.match(/Group\s+([A-L])\b/i)
+    if (nm) return { type: 'group', group: nm[1].toUpperCase() }
+  }
+
+  // 2. competition.groups object (e.g. { name: "Group A", shortName: "A" })
+  const groupObj = comp.groups
+  if (groupObj) {
+    const src = [groupObj.name, groupObj.shortName, groupObj.abbreviation].filter(Boolean).join(' ')
+    const gm = src.match(/\b([A-L])\b/i) ?? src.match(/Group\s+([A-L])/i)
+    if (gm) return { type: 'group', group: gm[1].toUpperCase() }
   }
 
   // 3. competition.type.id / abbreviation (numeric ESPN types)

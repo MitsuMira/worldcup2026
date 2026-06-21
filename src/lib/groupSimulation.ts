@@ -136,3 +136,51 @@ export function canTeamReachPosition(
 
   return tryFrom(0, [])
 }
+
+/**
+ * Returns true if the team is GUARANTEED to finish in top `targetPos` (0-based)
+ * in ALL possible remaining game combinations — i.e. mathematically confirmed qualified.
+ */
+export function isTeamConfirmedInTop(
+  group: EnrichedGroup,
+  teamId: string,
+  targetPos: number,
+  groupGames: EnrichedGame[],
+): boolean {
+  const teamIds = group.standings.map(s => s.team_id)
+  if (!teamIds.includes(teamId)) return false
+
+  const finishedGames: GameRecord[] = groupGames
+    .filter(g => g.finished === 'TRUE')
+    .map(g => ({
+      homeId: g.home_team_id, awayId: g.away_team_id,
+      homeScore: parseInt(g.home_score) || 0,
+      awayScore: parseInt(g.away_score) || 0,
+    }))
+
+  const remaining = groupGames
+    .filter(g => g.finished !== 'TRUE' && getMatchStatus(g) === 'scheduled')
+    .map(g => ({ homeId: g.home_team_id, awayId: g.away_team_id }))
+
+  if (remaining.length === 0) {
+    const ranked = rankTeams(teamIds, finishedGames)
+    return ranked.indexOf(teamId) <= targetPos
+  }
+
+  // Returns true only if EVERY combination keeps the team at <= targetPos
+  function allFrom(idx: number, extra: GameRecord[]): boolean {
+    if (idx === remaining.length) {
+      const ranked = rankTeams(teamIds, [...finishedGames, ...extra])
+      return ranked.indexOf(teamId) !== -1 && ranked.indexOf(teamId) <= targetPos
+    }
+    const g = remaining[idx]
+    for (const [h, a] of OUTCOMES) {
+      if (!allFrom(idx + 1, [...extra, { homeId: g.homeId, awayId: g.awayId, homeScore: h, awayScore: a }])) {
+        return false
+      }
+    }
+    return true
+  }
+
+  return allFrom(0, [])
+}
