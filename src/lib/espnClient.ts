@@ -114,16 +114,14 @@ function computeTimeElapsed(status: EspnStatus): string {
   if (status.type.name === 'STATUS_HALFTIME') return 'HT'
   const period = status.period ?? 0
 
-  // Prefer displayClock (e.g. "46:20") — it keeps counting during stoppage time
-  // while status.clock can freeze at 2700/5400 (45:00/90:00)
-  let min: number
+  // Take the max of both sources:
+  // - status.clock (seconds) may keep counting past 2700/5400 during stoppage
+  // - displayClock (e.g. "46:20") may freeze at "45:00" or may count past it
+  // Whichever is larger gives the most accurate stoppage time reading
+  const minFromClock = Math.floor((status.clock ?? 0) / 60)
   const display = status.displayClock
-  if (display && display.includes(':')) {
-    min = parseInt(display.split(':')[0]) || 0
-  } else {
-    min = Math.floor((status.clock ?? 0) / 60)
-  }
-  min = Math.max(1, min)
+  const minFromDisplay = display?.includes(':') ? (parseInt(display.split(':')[0]) || 0) : 0
+  const min = Math.max(1, minFromClock, minFromDisplay)
 
   if (period >= 2 && min >= 90) {
     const extra = min - 90
