@@ -22,7 +22,7 @@ export default function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: 12 }}
-            className="text-slate-500 no-underline inline-flex items-center active:opacity-70"
+            className="text-slate-500 no-underline active:opacity-70"
           >
             {before}
             <span style={{ color: '#0D7B6B' }}>Mitsu</span>
