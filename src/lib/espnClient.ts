@@ -72,8 +72,7 @@ interface EspnEvent {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseRound(comp: EspnCompetition): { type: string; group: string } {
-  // 1. competition.notes[].headline — knockout rounds take priority over comp.groups
-  //    because ESPN sometimes attaches a group to R32 games (e.g. the group the team came from)
+  // 1. competition.notes[].headline — most reliable signal for knockout rounds
   for (const note of comp.notes ?? []) {
     const h = note.headline ?? ''
     const kh = h.toLowerCase()
@@ -87,15 +86,8 @@ function parseRound(comp: EspnCompetition): { type: string; group: string } {
     if (nm) return { type: 'group', group: nm[1].toUpperCase() }
   }
 
-  // 2. competition.groups object (e.g. { name: "Group A", shortName: "A" })
-  const groupObj = comp.groups
-  if (groupObj) {
-    const src = [groupObj.name, groupObj.shortName, groupObj.abbreviation].filter(Boolean).join(' ')
-    const gm = src.match(/\b([A-L])\b/i) ?? src.match(/Group\s+([A-L])/i)
-    if (gm) return { type: 'group', group: gm[1].toUpperCase() }
-  }
-
-  // 3. competition.type.id / abbreviation (numeric ESPN types)
+  // 2. competition.type.abbreviation — check BEFORE comp.groups because ESPN sometimes
+  //    attaches a group (team's origin group) to R32 knockout games
   const typeId = (comp as unknown as Record<string, unknown>)?.type as Record<string, string> | undefined
   if (typeId?.abbreviation) {
     const a = typeId.abbreviation.toUpperCase()
@@ -105,6 +97,14 @@ function parseRound(comp: EspnCompetition): { type: string; group: string } {
     if (['SF', 'SEMI'].includes(a))              return { type: 'sf',  group: '' }
     if (['THIRD', '3RD'].includes(a))            return { type: 'third', group: '' }
     if (['FINAL', 'F'].includes(a))              return { type: 'final', group: '' }
+  }
+
+  // 3. competition.groups object (e.g. { name: "Group A", shortName: "A" })
+  const groupObj = comp.groups
+  if (groupObj) {
+    const src = [groupObj.name, groupObj.shortName, groupObj.abbreviation].filter(Boolean).join(' ')
+    const gm = src.match(/\b([A-L])\b/i) ?? src.match(/Group\s+([A-L])/i)
+    if (gm) return { type: 'group', group: gm[1].toUpperCase() }
   }
 
   // Default — treat as group stage; group letter resolved later via standings map
@@ -185,18 +185,21 @@ function mapEvent(event: EspnEvent): EnrichedGame {
   //   "Round of 16 / R16" teams        → current game is QF
   //   "Round of 32 / R32" teams        → current game is R16
   //   "Group X Winner/2nd Place" teams → current game is R32
-  if (type === 'group' && !group) {
+  // Also check team display names when type came from comp.groups:
+  // ESPN sometimes attaches a group to R32 games (e.g., "Group E" for Germany's R32 slot)
+  // even though the game is actually a knockout match.
+  if (type === 'group') {
     const combined = `${home.team.displayName} ${away.team.displayName}`.toLowerCase()
     if (/\bsemifinal\b|\bsemi-final\b/.test(combined)) {
-      type = /loser/.test(combined) ? 'third' : 'final'
+      type = /loser/.test(combined) ? 'third' : 'final'; group = ''
     } else if (/\bquarterfinal\b|\bquarter-final\b|\bquarter final\b/.test(combined)) {
-      type = 'sf'
+      type = 'sf'; group = ''
     } else if (/round.of.16|\br16\b/.test(combined)) {
-      type = 'qf'
+      type = 'qf'; group = ''
     } else if (/round.of.32|\br32\b/.test(combined)) {
-      type = 'r16'
-    } else if (/\b(winner|loser|2nd place|3rd place|runner)\b/.test(combined)) {
-      type = 'r32'
+      type = 'r16'; group = ''
+    } else if (/\b(winner|loser|2nd place|3rd place|runner|melhor|mejor|best.3|place)\b/.test(combined) && !group) {
+      type = 'r32'; group = ''
     }
   }
   const st = comp.status
