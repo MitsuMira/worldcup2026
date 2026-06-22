@@ -75,7 +75,7 @@ export interface Translations {
     h2hTitle: string; noH2H: string; formTitle: string; watching: string
   }
   group: { top2: string }
-  footer: { madeWith: string; madeByUrl: string; tagline: string; dataVia: string; privacy: string; github: string; alsoBy: string }
+  footer: { project: string; dataVia: string; privacy: string; github: string; alsoBy: string }
   loading: { matches: string; schedule: string; standings: string; teams: string; generic: string }
   errors: { games: string; schedule: string; standings: string; teams: string; predictions: string }
 }
@@ -178,9 +178,7 @@ export const en: Translations = {
   },
   group: { top2: 'Top 2 advance' },
   footer: {
-    madeWith: 'Made with ♥ by MitsuMira',
-    madeByUrl: 'https://mitsumira.com',
-    tagline: '3D printing & robotics services',
+    project: 'A MitsuMira project · 3D printing & robotics',
     dataVia: 'Data via ESPN',
     privacy: 'Privacy',
     github: 'GitHub',
@@ -292,9 +290,7 @@ export const pt: Translations = {
   },
   group: { top2: 'Top 2 avançam' },
   footer: {
-    madeWith: 'Feito com ♥ por MitsuMira',
-    madeByUrl: 'https://mitsumira.com',
-    tagline: 'Impressão 3D e robótica',
+    project: 'Um projeto MitsuMira · Impressão 3D & robótica',
     dataVia: 'Dados via ESPN',
     privacy: 'Privacidade',
     github: 'GitHub',
@@ -406,9 +402,7 @@ export const es: Translations = {
   },
   group: { top2: 'Top 2 avanzan' },
   footer: {
-    madeWith: 'Hecho con ♥ por MitsuMira',
-    madeByUrl: 'https://mitsumira.com',
-    tagline: 'Impresión 3D y robótica',
+    project: 'Un proyecto MitsuMira · Impresión 3D & robótica',
     dataVia: 'Datos via ESPN',
     privacy: 'Privacidad',
     github: 'GitHub',
