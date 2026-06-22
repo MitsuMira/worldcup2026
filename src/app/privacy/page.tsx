@@ -8,6 +8,7 @@ const content: Record<Lang, {
   intro: string
   sections: { title: string; body: string }[]
   footer: string
+  contact: string
 }> = {
   en: {
     heading: 'Privacy Notice',
@@ -31,6 +32,7 @@ const content: Record<Lang, {
       },
     ],
     footer: 'No Cookies · No Accounts · No Ads\nWe don\'t use cookies, don\'t create user accounts, and don\'t display ads or share data with advertisers.',
+    contact: 'Questions or requests? Contact us at',
   },
   pt: {
     heading: 'Aviso de Privacidade',
@@ -54,6 +56,7 @@ const content: Record<Lang, {
       },
     ],
     footer: 'Sem Cookies · Sem Contas · Sem Anúncios\nNão usamos cookies, não criamos contas de utilizador e não exibimos anúncios nem partilhamos dados com anunciantes.',
+    contact: 'Dúvidas ou pedidos? Contacte-nos em',
   },
   es: {
     heading: 'Aviso de Privacidad',
@@ -77,6 +80,7 @@ const content: Record<Lang, {
       },
     ],
     footer: 'Sin Cookies · Sin Cuentas · Sin Anuncios\nNo usamos cookies, no creamos cuentas de usuario y no mostramos anuncios ni compartimos datos con anunciantes.',
+    contact: '¿Preguntas o solicitudes? Contáctanos en',
   },
 }
 
@@ -100,6 +104,12 @@ export default function PrivacyPage() {
 
       <div className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 whitespace-pre-line leading-relaxed">
         {c.footer}
+      </div>
+      <div className="mt-4 text-xs text-slate-500">
+        {c.contact}{' '}
+        <a href="mailto:wc2026@mitsumira.com" className="text-slate-300 hover:text-white underline">
+          wc2026@mitsumira.com
+        </a>
       </div>
     </main>
   )
