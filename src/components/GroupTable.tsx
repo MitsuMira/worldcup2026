@@ -81,7 +81,9 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold w-4 shrink-0 ${
-                        i < 2 ? 'text-emerald-500' : i === 3 ? 'text-red-500' : 'text-slate-500'
+                        isConfirmedQualified ? 'text-emerald-500'
+                        : isEliminated ? 'text-red-500'
+                        : 'text-slate-500'
                       }`}>{i + 1}</span>
                       {isLiveSimulated && movement !== 0 && (
                         <span className={`text-[9px] font-bold shrink-0 leading-none ${movement > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
