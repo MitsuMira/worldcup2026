@@ -4,20 +4,31 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
-import type { ApiTeam } from '@/lib/types'
+import type { ApiTeam, EnrichedGroup, EnrichedGame } from '@/lib/types'
 import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
+import { isTeamConfirmedInTop, canTeamReachPosition } from '@/lib/groupSimulation'
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+
+interface TeamStatus {
+  position: number        // 1–4 current standing position
+  isConfirmedQualified: boolean  // confirmed top-2
+  isConfirmedFirst: boolean
+  isConfirmedSecond: boolean
+  isEliminated: boolean          // can't reach 3rd
+}
 
 export default function TeamsPage() {
   const { t } = useT()
   const { isFavorite, toggleFavorite } = useFavorites()
   const { data, error, isLoading } = useSWR<{ teams: ApiTeam[] }>('/api/teams', fetcher, { revalidateOnFocus: false })
+  const { data: groupsData } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { revalidateOnFocus: false })
+  const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { revalidateOnFocus: false })
   const [groupFilter, setGroupFilter] = useState('All')
   const [search, setSearch] = useState('')
 
@@ -33,6 +44,35 @@ export default function TeamsPage() {
     acc[g] = filtered.filter((tm) => tm.groups === g)
     return acc
   }, {})
+
+  // Build qualification/position status for every team using the same
+  // brute-force simulation that GroupTable uses.
+  const teamStatusMap = useMemo(() => {
+    const groups = groupsData?.groups ?? []
+    const games = gamesData?.games ?? []
+    if (!groups.length || !games.length) return new Map<string, TeamStatus>()
+
+    const map = new Map<string, TeamStatus>()
+    for (const group of groups) {
+      const groupLetter = group.group || group.standings.find(s => s.team?.groups)?.team?.groups || ''
+      const groupGames = games.filter(g => g.type === 'group' && g.group === groupLetter)
+
+      group.standings.forEach((s, i) => {
+        const hasGames = groupGames.length > 0
+        const isConfirmedQualified = i < 2 && hasGames &&
+          isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
+        const isConfirmedFirst = i === 0 && hasGames &&
+          isTeamConfirmedInTop(group, s.team_id, 0, groupGames)
+        const isConfirmedSecond = i === 1 && isConfirmedQualified &&
+          !canTeamReachPosition(group, s.team_id, 0, groupGames)
+        const isEliminated = i >= 2 && hasGames &&
+          !canTeamReachPosition(group, s.team_id, 2, groupGames)
+
+        map.set(s.team_id, { position: i + 1, isConfirmedQualified, isConfirmedFirst, isConfirmedSecond, isEliminated })
+      })
+    }
+    return map
+  }, [groupsData, gamesData])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -88,12 +128,12 @@ export default function TeamsPage() {
               <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
                 {t.match.stageGroup} {g}
               </h2>
-              <TeamGrid teams={groupTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} />
+              <TeamGrid teams={groupTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
             </div>
           )
         })
       ) : (
-        <TeamGrid teams={filtered} isFavorite={isFavorite} toggleFavorite={toggleFavorite} />
+        <TeamGrid teams={filtered} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
       )}
 
       {!isLoading && filtered.length === 0 && !error && (
@@ -107,15 +147,26 @@ function TeamGrid({
   teams,
   isFavorite,
   toggleFavorite,
+  statusMap,
 }: {
   teams: ApiTeam[]
   isFavorite: (id: string) => boolean
   toggleFavorite: (id: string) => void
+  statusMap: Map<string, TeamStatus>
 }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
       {teams.map((team) => {
         const fav = isFavorite(team.id)
+        const status = statusMap.get(team.id)
+        const positionColor = status
+          ? (status.isConfirmedFirst || status.isConfirmedSecond)
+            ? 'text-emerald-400'
+            : status.isEliminated
+            ? 'text-red-400'
+            : 'text-slate-500'
+          : 'text-slate-500'
+
         return (
           <div key={team.id} className="relative group">
             <Link
@@ -130,9 +181,20 @@ function TeamGrid({
                 {FIFA_RANK[team.fifa_code] != null && (
                   <div className="text-[10px] text-amber-400/80 mt-0.5">🏆 #{FIFA_RANK[team.fifa_code]} FIFA</div>
                 )}
+                {status && (
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    <span className={`text-[10px] font-bold ${positionColor}`}>{status.position}°</span>
+                    {status.isConfirmedQualified && (
+                      <span className="text-[9px] font-bold text-emerald-400">Q</span>
+                    )}
+                    {status.isEliminated && (
+                      <span className="text-[9px] font-bold text-red-500">✕</span>
+                    )}
+                  </div>
+                )}
               </div>
             </Link>
-            {/* Favorite star — sits on top-right corner */}
+            {/* Favorite star */}
             <button
               onClick={(e) => { e.preventDefault(); toggleFavorite(team.id) }}
               className={`absolute top-2 right-2 p-1 rounded-lg transition-colors ${
