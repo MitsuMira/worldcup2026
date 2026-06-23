@@ -40,7 +40,7 @@ export interface Translations {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
     theme: string; themeLight: string; themeDark: string
   }
-  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string }
+  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string }
   favorites: {
     myTeams: string; noFavorites: string; addFavorites: string
     nextMatch: string; lastMatch: string; groupPos: string
@@ -129,7 +129,7 @@ export const en: Translations = {
     close: 'Close',
     theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
-  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.' },
+  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated' },
   favorites: {
     myTeams: '⭐ My Teams', noFavorites: 'No favorite teams yet.',
     addFavorites: 'Tap the ⭐ on any team to track them here.',
@@ -241,7 +241,7 @@ export const pt: Translations = {
     close: 'Fechar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
-  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.' },
+  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado' },
   favorites: {
     myTeams: '⭐ Meus Times', noFavorites: 'Nenhum time favorito ainda.',
     addFavorites: 'Toque em ⭐ em qualquer seleção para acompanhá-la aqui.',
@@ -353,7 +353,7 @@ export const es: Translations = {
     close: 'Cerrar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
-  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.' },
+  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado' },
   favorites: {
     myTeams: '⭐ Mis Equipos', noFavorites: 'Aún no tienes equipos favoritos.',
     addFavorites: 'Toca ⭐ en cualquier selección para seguirla aquí.',

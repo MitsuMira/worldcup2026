@@ -154,6 +154,7 @@ function TeamGrid({
   toggleFavorite: (id: string) => void
   statusMap: Map<string, TeamStatus>
 }) {
+  const { t } = useT()
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
       {teams.map((team) => {
@@ -185,10 +186,10 @@ function TeamGrid({
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span className={`text-[10px] font-bold ${positionColor}`}>{status.position}°</span>
                     {status.isConfirmedQualified && (
-                      <span className="text-[9px] font-bold text-emerald-400">Q</span>
+                      <span className="text-[9px] font-bold text-emerald-400">{t.teams.qualified}</span>
                     )}
                     {status.isEliminated && (
-                      <span className="text-[9px] font-bold text-red-500">✕</span>
+                      <span className="text-[9px] font-bold text-red-500">{t.teams.eliminated}</span>
                     )}
                   </div>
                 )}

@@ -429,6 +429,15 @@ export default function GroupPage() {
     return () => window.removeEventListener('storage', onStorage)
   }, [code, upsertToKv])
 
+  // Sync server-side group label to localStorage so the /groups list stays up to date.
+  useEffect(() => {
+    if (!settingsData?.label) return
+    const stored = getGroups().find(g => g.code === code)
+    if (stored && stored.label !== settingsData.label) {
+      saveGroup({ ...stored, label: settingsData.label })
+    }
+  }, [settingsData?.label, code])
+
   const minParticipation = settings.minParticipation ?? 0
 
   const rankedMembers = useMemo(() =>
