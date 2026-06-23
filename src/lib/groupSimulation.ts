@@ -5,7 +5,6 @@
  */
 import type { EnrichedGroup, EnrichedGame } from './types'
 import { FIFA_RANK } from './fifaRanking'
-import { getMatchStatus } from './utils'
 
 interface GameRecord {
   homeId: string
@@ -109,8 +108,9 @@ export function canTeamReachPosition(
       awayScore: parseInt(g.away_score) || 0,
     }))
 
+  // Include live (in-progress) games as remaining — their outcome is still uncertain
   const remaining = groupGames
-    .filter(g => g.finished !== 'TRUE' && getMatchStatus(g) === 'scheduled')
+    .filter(g => g.finished !== 'TRUE')
     .map(g => ({ homeId: g.home_team_id, awayId: g.away_team_id }))
 
   // Fast path: no remaining games, just check current position
@@ -158,8 +158,9 @@ export function isTeamConfirmedInTop(
       awayScore: parseInt(g.away_score) || 0,
     }))
 
+  // Include live (in-progress) games as remaining — their outcome is still uncertain
   const remaining = groupGames
-    .filter(g => g.finished !== 'TRUE' && getMatchStatus(g) === 'scheduled')
+    .filter(g => g.finished !== 'TRUE')
     .map(g => ({ homeId: g.home_team_id, awayId: g.away_team_id }))
 
   if (remaining.length === 0) {

@@ -593,9 +593,17 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
 export async function fetchAllTeams(): Promise<ApiTeam[]> {
   const games = await fetchEnrichedGames()
   const teamMap = new Map<string, ApiTeam>()
+  const addTeam = (team: ApiTeam | undefined) => {
+    if (!team) return
+    const existing = teamMap.get(team.id)
+    // Prefer the entry that carries the group letter; playoff entries have groups = ''
+    if (!existing || (!existing.groups && team.groups)) {
+      teamMap.set(team.id, team)
+    }
+  }
   for (const g of games) {
-    if (g.homeTeam) teamMap.set(g.homeTeam.id, g.homeTeam)
-    if (g.awayTeam) teamMap.set(g.awayTeam.id, g.awayTeam)
+    addTeam(g.homeTeam)
+    addTeam(g.awayTeam)
   }
   return [...teamMap.values()].sort((a, b) => a.name_en.localeCompare(b.name_en))
 }

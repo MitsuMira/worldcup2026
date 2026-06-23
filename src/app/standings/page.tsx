@@ -40,7 +40,10 @@ function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
     .map(g => g.standings[2])
     .filter(s => s && (s.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
 
-  if (thirds.length < QUALIFYING_THIRDS) return new Set() // not enough data yet
+  // All groups must have a completed third-place team before the ranking is final.
+  // Showing Q while some groups are still playing would be premature — an unfinished
+  // group's third-place team could displace one of the current "top 8" once they finish.
+  if (thirds.length < groups.length) return new Set()
 
   const sorted = [...thirds].sort((a, b) => {
     const pd = Number(b.pts) - Number(a.pts); if (pd) return pd
