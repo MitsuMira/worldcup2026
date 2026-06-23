@@ -84,8 +84,11 @@ function rankTeams(teamIds: string[], allGames: GameRecord[]): string[] {
   return result
 }
 
-// Possible scores for each hypothetical game outcome
-const OUTCOMES: [number, number][] = [[1, 0], [0, 0], [0, 1]]
+// Hypothetical scorelines used in brute-force simulation.
+// Large-margin results (e.g. 5-0) are included so goal-difference swings
+// that could change who qualifies are correctly detected.
+// 5^N iterations: for N=4 remaining games → 625 checks, still instant.
+const OUTCOMES: [number, number][] = [[5, 0], [1, 0], [0, 0], [0, 1], [0, 5]]
 
 /**
  * Returns true if there exists ANY combination of remaining game outcomes

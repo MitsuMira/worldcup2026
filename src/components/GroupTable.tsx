@@ -63,6 +63,13 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
               // Confirmed qualified: in top 2 AND no remaining scenario can displace them
               const isConfirmedQualified = i < 2 && groupGames.length > 0 &&
                 isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
+              // Confirmed in specific position (for position-number coloring):
+              // "1" goes green only when locked into 1st — confirmed top-1.
+              // "2" goes green only when confirmed top-2 AND can no longer reach 1st.
+              const isConfirmedFirst = i === 0 && groupGames.length > 0 &&
+                isTeamConfirmedInTop(group, s.team_id, 0, groupGames)
+              const isConfirmedSecond = i === 1 && isConfirmedQualified &&
+                !canTeamReachPosition(group, s.team_id, 0, groupGames)
               const movement = (s as typeof s & { _liveMovement?: number })._liveMovement ?? 0
 
               return (
@@ -81,7 +88,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold w-4 shrink-0 ${
-                        isConfirmedQualified ? 'text-emerald-500'
+                        (isConfirmedFirst || isConfirmedSecond) ? 'text-emerald-500'
                         : isEliminated ? 'text-red-500'
                         : 'text-slate-500'
                       }`}>{i + 1}</span>
