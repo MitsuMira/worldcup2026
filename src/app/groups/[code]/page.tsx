@@ -434,7 +434,13 @@ export default function GroupPage() {
   const rankedMembers = useMemo(() =>
     members
       .map(m => ({ member: m, ...calcPoints(m, games, members, minParticipation) }))
-      .sort((a, b) => b.pts - a.pts || b.exact - a.exact),
+      .sort((a, b) => b.pts - a.pts || b.exact - a.exact)
+      .map((entry, _, arr) => ({
+        ...entry,
+        // Standard competition rank: tied members share the rank of the first among them.
+        // e.g. two players tied at 1st → both show "1", next player shows "3".
+        rank: arr.findIndex(e => e.pts === entry.pts && e.exact === entry.exact) + 1,
+      })),
     [members, games, minParticipation]
   )
   const rankedOrder = rankedMembers.map(r => r.member.userId)
@@ -568,8 +574,8 @@ export default function GroupPage() {
         <div className="text-center text-slate-500 text-sm py-12">Carregando grupo…</div>
       ) : tab === 'leaderboard' ? (
         <div className="space-y-2">
-          {rankedMembers.map(({ member }, i) => (
-            <MemberRow key={member.userId} member={member} rank={i + 1}
+          {rankedMembers.map(({ member, rank }) => (
+            <MemberRow key={member.userId} member={member} rank={rank}
               isMe={member.userId === userId} games={games}
               allMembers={members} minParticipation={minParticipation}
               expanded={expanded === member.userId}
