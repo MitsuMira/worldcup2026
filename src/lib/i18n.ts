@@ -1,7 +1,7 @@
 export type Lang = 'en' | 'pt' | 'es'
 
 export interface Translations {
-  nav: { home: string; schedule: string; standings: string; playoffs: string; teams: string; predictions: string }
+  nav: { home: string; schedule: string; standings: string; playoffs: string; teams: string; players: string; predictions: string }
   countdown: { label: string; days: string; hours: string; min: string; sec: string }
   ceremony: {
     title: string; subtitle: string; countdownLabel: string
@@ -41,6 +41,7 @@ export interface Translations {
     theme: string; themeLight: string; themeDark: string
   }
   teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string }
+  players: { title: string; subtitle: string; search: string; allPos: string; noPlayers: string }
   favorites: {
     myTeams: string; noFavorites: string; addFavorites: string
     nextMatch: string; lastMatch: string; groupPos: string
@@ -85,7 +86,7 @@ export interface Translations {
 }
 
 export const en: Translations = {
-  nav: { home: 'Home', schedule: 'Schedule', standings: 'Standings', playoffs: 'Playoffs', teams: 'Teams', predictions: 'Predictions' },
+  nav: { home: 'Home', schedule: 'Schedule', standings: 'Standings', playoffs: 'Playoffs', teams: 'Teams', players: 'Players', predictions: 'Predictions' },
   countdown: { label: 'Kickoff countdown', days: 'Days', hours: 'Hours', min: 'Min', sec: 'Sec' },
   ceremony: {
     title: '🎭 Opening Ceremony',
@@ -134,6 +135,7 @@ export const en: Translations = {
     theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
   teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated' },
+  players: { title: 'Players', subtitle: 'Tournament stats · All players with appearances', search: 'Search players…', allPos: 'All', noPlayers: 'No players found.' },
   favorites: {
     myTeams: '⭐ My Teams', noFavorites: 'No favorite teams yet.',
     addFavorites: 'Tap the ⭐ on any team to track them here.',
@@ -201,7 +203,7 @@ export const en: Translations = {
 }
 
 export const pt: Translations = {
-  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', predictions: 'Palpites' },
+  nav: { home: 'Início', schedule: 'Calendário', standings: 'Classificação', playoffs: 'Playoffs', teams: 'Seleções', players: 'Jogadores', predictions: 'Palpites' },
   countdown: { label: 'Contagem regressiva', days: 'Dias', hours: 'Horas', min: 'Min', sec: 'Seg' },
   ceremony: {
     title: '🎭 Cerimônia de Abertura',
@@ -250,6 +252,7 @@ export const pt: Translations = {
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
   teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado' },
+  players: { title: 'Jogadores', subtitle: 'Estatísticas do torneio · Todos com minutagem', search: 'Buscar jogadores…', allPos: 'Todos', noPlayers: 'Nenhum jogador encontrado.' },
   favorites: {
     myTeams: '⭐ Meus Times', noFavorites: 'Nenhum time favorito ainda.',
     addFavorites: 'Toque em ⭐ em qualquer seleção para acompanhá-la aqui.',
@@ -317,7 +320,7 @@ export const pt: Translations = {
 }
 
 export const es: Translations = {
-  nav: { home: 'Inicio', schedule: 'Calendario', standings: 'Clasificación', playoffs: 'Playoffs', teams: 'Selecciones', predictions: 'Predicciones' },
+  nav: { home: 'Inicio', schedule: 'Calendario', standings: 'Clasificación', playoffs: 'Playoffs', teams: 'Selecciones', players: 'Jugadores', predictions: 'Predicciones' },
   countdown: { label: 'Cuenta regresiva', days: 'Días', hours: 'Horas', min: 'Min', sec: 'Seg' },
   ceremony: {
     title: '🎭 Ceremonia de Inauguración',
@@ -366,6 +369,7 @@ export const es: Translations = {
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
   teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado' },
+  players: { title: 'Jugadores', subtitle: 'Estadísticas del torneo · Todos con minutos jugados', search: 'Buscar jugadores…', allPos: 'Todos', noPlayers: 'No se encontraron jugadores.' },
   favorites: {
     myTeams: '⭐ Mis Equipos', noFavorites: 'Aún no tienes equipos favoritos.',
     addFavorites: 'Toca ⭐ en cualquier selección para seguirla aquí.',
