@@ -50,6 +50,10 @@ export interface Translations {
     backToTeams: string; allMatches: string; groupStanding: string
     stats: string; played: string; won: string; drawn: string; lost: string
     noMatches: string; upcomingMatches: string; pastMatches: string; scorers: string
+    squad: string; headCoach: string
+    posGK: string; posDF: string; posMF: string; posFW: string
+    ageUnit: string; intlCaps: string; appsShort: string
+    yellowCards: string; redCards: string
   }
   predictions: {
     title: string; subtitle: string; points: string; exactScores: string; pending: string
@@ -140,6 +144,10 @@ export const en: Translations = {
     backToTeams: '← Teams', allMatches: 'All Matches', groupStanding: 'Group Standing',
     stats: 'Stats', played: 'P', won: 'W', drawn: 'D', lost: 'L',
     noMatches: 'No matches yet.', upcomingMatches: 'Upcoming', pastMatches: 'Results', scorers: 'Tournament Scorers',
+    squad: 'Squad', headCoach: 'Head coach',
+    posGK: 'Goalkeepers', posDF: 'Defenders', posMF: 'Midfielders', posFW: 'Forwards',
+    ageUnit: 'yrs', intlCaps: 'intl. caps', appsShort: 'apps',
+    yellowCards: 'yellow cards', redCards: 'red cards',
   },
   predictions: {
     title: 'Predictions', subtitle: 'Predict match scores · Stored locally in your browser',
@@ -252,6 +260,10 @@ export const pt: Translations = {
     backToTeams: '← Seleções', allMatches: 'Todas as Partidas', groupStanding: 'Classificação do Grupo',
     stats: 'Estatísticas', played: 'J', won: 'V', drawn: 'E', lost: 'D',
     noMatches: 'Nenhuma partida ainda.', upcomingMatches: 'Próximas', pastMatches: 'Resultados', scorers: 'Artilheiros',
+    squad: 'Elenco', headCoach: 'Técnico',
+    posGK: 'Goleiros', posDF: 'Defensores', posMF: 'Meias', posFW: 'Atacantes',
+    ageUnit: 'anos', intlCaps: 'caps internacionais', appsShort: 'jgs',
+    yellowCards: 'cartões amarelos', redCards: 'cartões vermelhos',
   },
   predictions: {
     title: 'Palpites', subtitle: 'Preveja os placares · Salvo localmente no seu navegador',
@@ -364,6 +376,10 @@ export const es: Translations = {
     backToTeams: '← Selecciones', allMatches: 'Todos los Partidos', groupStanding: 'Clasificación del Grupo',
     stats: 'Estadísticas', played: 'PJ', won: 'G', drawn: 'E', lost: 'P',
     noMatches: 'Sin partidos aún.', upcomingMatches: 'Próximos', pastMatches: 'Resultados', scorers: 'Goleadores',
+    squad: 'Plantilla', headCoach: 'Entrenador',
+    posGK: 'Porteros', posDF: 'Defensores', posMF: 'Centrocampistas', posFW: 'Delanteros',
+    ageUnit: 'años', intlCaps: 'caps internacionales', appsShort: 'pj',
+    yellowCards: 'tarjetas amarillas', redCards: 'tarjetas rojas',
   },
   predictions: {
     title: 'Predicciones', subtitle: 'Predice los marcadores · Guardado localmente en tu navegador',

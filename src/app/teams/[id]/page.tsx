@@ -250,14 +250,14 @@ export default function TeamDetailPage() {
                   <div className="flex items-center gap-1.5 bg-slate-800 rounded-lg px-3 py-1.5">
                     <span className="text-base">🟨</span>
                     <span className="text-white font-bold text-sm">{totalYellow}</span>
-                    <span className="text-slate-500 text-xs">cartões amarelos</span>
+                    <span className="text-slate-500 text-xs">{t.teamDetail.yellowCards}</span>
                   </div>
                 )}
                 {totalRed > 0 && (
                   <div className="flex items-center gap-1.5 bg-slate-800 rounded-lg px-3 py-1.5">
                     <span className="text-base">🟥</span>
                     <span className="text-white font-bold text-sm">{totalRed}</span>
-                    <span className="text-slate-500 text-xs">cartões vermelhos</span>
+                    <span className="text-slate-500 text-xs">{t.teamDetail.redCards}</span>
                   </div>
                 )}
               </div>
@@ -365,7 +365,6 @@ function matchFifaToEspn(player: FifaPlayer, playerStats: Map<string, PlayerStat
   return null
 }
 
-const POS_LABEL: Record<string, string> = { GK: 'Goalkeepers', DF: 'Defenders', MF: 'Midfielders', FW: 'Forwards' }
 const POS_ORDER: FifaPlayer['pos'][] = ['GK', 'DF', 'MF', 'FW']
 const POS_COLOR: Record<string, string> = {
   GK: 'bg-amber-500/20 text-amber-400',
@@ -375,20 +374,26 @@ const POS_COLOR: Record<string, string> = {
 }
 
 function SquadSection({ team, playerStats }: { team: ApiTeam; playerStats: Map<string, PlayerStat> }) {
+  const { t } = useT()
   const fifaSquad = team.fifa_code ? FIFA_SQUADS_BY_CODE[team.fifa_code] : undefined
+  const posLabel: Record<string, string> = {
+    GK: t.teamDetail.posGK,
+    DF: t.teamDetail.posDF,
+    MF: t.teamDetail.posMF,
+    FW: t.teamDetail.posFW,
+  }
 
   if (!fifaSquad) {
-    // Fallback: ESPN-only players who appeared
     const list = [...playerStats.values()].sort((a, b) => b.minutesPlayed - a.minutesPlayed)
     if (!list.length) return null
     return (
       <div className="mb-6">
-        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Squad</h2>
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.squad}</h2>
         <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800/50">
           {list.map(p => (
             <div key={p.name} className="flex items-center gap-3 px-3 py-2.5">
               <span className="text-sm text-white font-medium flex-1">{p.name}</span>
-              {p.apps > 0 && <span className="text-xs text-slate-500">{p.apps} apps · {p.minutesPlayed}&apos;</span>}
+              {p.apps > 0 && <span className="text-xs text-slate-500">{p.apps} {t.teamDetail.appsShort} · {p.minutesPlayed}&apos;</span>}
               {p.goals > 0 && <span className="text-xs text-white font-bold">⚽{p.goals}</span>}
             </div>
           ))}
@@ -399,49 +404,48 @@ function SquadSection({ team, playerStats }: { team: ApiTeam; playerStats: Map<s
 
   return (
     <div className="mb-6">
-      {/* Coach */}
       {fifaSquad.coachName && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
           <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-base shrink-0">🧑‍💼</div>
           <div className="min-w-0">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide">Head coach</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{t.teamDetail.headCoach}</div>
             <div className="text-sm text-white font-semibold truncate">{toTitleCase(fifaSquad.coachName)}</div>
           </div>
           <span className="text-xs text-slate-500 shrink-0 ml-auto">{fifaSquad.coachNationality}</span>
         </div>
       )}
 
-      <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Squad</h2>
+      <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.squad}</h2>
 
       {POS_ORDER.map(pos => {
         const players = fifaSquad.players.filter(p => p.pos === pos)
         if (!players.length) return null
         return (
           <div key={pos} className="mb-3">
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1 mb-1.5">{POS_LABEL[pos]}</div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1 mb-1.5">{posLabel[pos]}</div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800/40">
               {players.map(p => {
                 const stat = matchFifaToEspn(p, playerStats)
                 const age = calcAge(p.dob)
-                const club = p.club.replace(/\s*\([A-Z]{2,3}\)$/, '') // strip "(ENG)" etc
+                const club = p.club.replace(/\s*\([A-Z]{2,3}\)$/, '')
                 return (
                   <div key={p.number} className="flex items-center gap-2.5 px-3 py-2.5">
                     <span className="text-xs text-slate-600 w-5 text-right shrink-0">{p.number}</span>
                     <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${POS_COLOR[pos]}`}>{pos}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white font-medium truncate">{toTitleCase(p.name)}</div>
-                      <div className="text-[10px] text-slate-500 truncate">{club} · {age} y.o.</div>
+                      <div className="text-[10px] text-slate-500 truncate">{club} · {age} {t.teamDetail.ageUnit}</div>
                     </div>
                     {stat?.everPlayed ? (
                       <div className="flex items-center gap-2 text-xs shrink-0">
-                        <span className="text-slate-400">{stat.apps}g</span>
+                        <span className="text-slate-400">{stat.apps} {t.teamDetail.appsShort}</span>
                         <span className="text-slate-600">{stat.minutesPlayed}&apos;</span>
                         {stat.goals > 0 && <span className="font-bold text-white">⚽{stat.goals}</span>}
                         {stat.yellowCards > 0 && <span>🟨</span>}
                         {stat.redCards > 0 && <span>🟥</span>}
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-600 shrink-0">{p.caps} caps</span>
+                      <span className="text-[10px] text-slate-600 shrink-0">{p.caps} {t.teamDetail.intlCaps}</span>
                     )}
                   </div>
                 )
