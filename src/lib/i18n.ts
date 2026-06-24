@@ -112,10 +112,10 @@ export const en: Translations = {
     qualTitle: 'How qualification works',
     qualRules: [
       'Format: 48 teams in 12 groups of 4. The top 2 from each group advance to the Round of 32. The 8 best third-placed teams also qualify — 32 teams total.',
-      'Tied on points? Step 1 — head-to-head results among the tied teams only: points → goal difference → goals scored.',
-      'Still tied? Step 2 — overall group stats: goal difference → goals scored → fair play (fewest yellow/red cards).',
-      'Still tied? Step 3 — FIFA ranking (lower number = better).',
-      'Ranking the 8 best third-placed teams: Points → Goal difference → Goals scored → Fair play → FIFA ranking.',
+      'Teams tied on points? Step 1 — a mini-table using only the matches played between the tied teams: points earned in those matches → goal difference in those matches → goals scored in those matches.',
+      'Still tied? Step 2 — all group matches: goal difference → goals scored → conduct score (fewest yellow/red cards).',
+      'Still tied? Step 3 — FIFA/Coca‑Cola Men\'s World Ranking.',
+      'Ranking the 8 best third-placed teams: Points → Goal difference → Goals scored → Conduct score (cards) → FIFA ranking.',
     ],
   },
   playoffs: {
@@ -223,11 +223,11 @@ export const pt: Translations = {
     team: 'Seleção', top2: 'Top 2 avançam', noData: 'Nenhum dado de classificação ainda.',
     qualTitle: 'Como funciona a classificação',
     qualRules: [
-      'Formato: 48 seleções em 12 grupos de 4. Os 2 primeiros de cada grupo avançam para as oitavas. Os 8 melhores terceiros colocados também passam — 32 classificados no total.',
-      'Empatados em pontos? 1º critério — confronto direto entre os times empatados: pontos → saldo de gols → gols marcados.',
-      'Ainda empatados? 2º critério — estatísticas gerais do grupo: saldo de gols → gols marcados → fair play (menos cartões amarelos/vermelhos).',
-      'Ainda empatados? 3º critério — Ranking FIFA (número menor = melhor colocação).',
-      'Para classificar os 8 melhores 3ºs colocados: Pontos → Saldo de gols → Gols marcados → Fair play → Ranking FIFA.',
+      'Formato: 48 seleções em 12 grupos de 4. Os 2 primeiros de cada grupo avançam para as oitavas. Os 8 melhores terceiros também passam — 32 classificados no total.',
+      'Empatados em pontos? Passo 1 — mini-tabela formada apenas pelos jogos entre as seleções empatadas: pontos nesses jogos → saldo de gols nesses jogos → gols marcados nesses jogos.',
+      'Ainda empatados? Passo 2 — todos os jogos do grupo: saldo de gols → gols marcados → fair play (menos cartões amarelos/vermelhos).',
+      'Ainda empatados? Passo 3 — Ranking FIFA/Coca‑Cola Masculino.',
+      'Para classificar os 8 melhores 3ºs colocados: Pontos → Saldo de gols → Gols marcados → Fair play (cartões) → Ranking FIFA.',
     ],
   },
   playoffs: {
@@ -336,10 +336,10 @@ export const es: Translations = {
     qualTitle: 'Cómo funciona la clasificación',
     qualRules: [
       'Formato: 48 selecciones en 12 grupos de 4. Los 2 primeros de cada grupo avanzan a la Fase de 32. Los 8 mejores terceros también clasifican — 32 en total.',
-      '¿Empate en puntos? Paso 1 — enfrentamiento directo entre los equipos empatados: puntos → diferencia de goles → goles marcados.',
-      '¿Aún empatados? Paso 2 — estadísticas generales del grupo: diferencia de goles → goles marcados → fair play (menos tarjetas amarillas/rojas).',
-      '¿Aún empatados? Paso 3 — Ranking FIFA (número menor = mejor clasificación).',
-      'Para clasificar los 8 mejores terceros: Puntos → Diferencia de goles → Goles marcados → Fair play → Ranking FIFA.',
+      '¿Empate en puntos? Paso 1 — minitabla formada solo con los partidos entre los equipos empatados: puntos en esos partidos → diferencia de goles en esos partidos → goles marcados en esos partidos.',
+      '¿Aún empatados? Paso 2 — todos los partidos del grupo: diferencia de goles → goles marcados → fair play (menos tarjetas amarillas/rojas).',
+      '¿Aún empatados? Paso 3 — Ranking FIFA/Coca‑Cola Masculino.',
+      'Para clasificar los 8 mejores terceros: Puntos → Diferencia de goles → Goles marcados → Fair play (tarjetas) → Ranking FIFA.',
     ],
   },
   playoffs: {
