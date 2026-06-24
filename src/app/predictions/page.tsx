@@ -28,12 +28,34 @@ export default function PredictionsPage() {
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({})
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string; etHome: string; etAway: string; penHome: string; penAway: string }>>({})
   const [tab, setTab] = useState<'predict' | 'results'>('predict')
+  const [editingIds, setEditingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => { setPredictions(loadPredictions()) }, [])
 
   const games = data?.games ?? []
   const scheduledGames = games.filter((g) => canPredict(g))
   const finishedGames = games.filter((g) => getMatchStatus(g) === 'finished')
+
+  const startEdit = useCallback((game: EnrichedGame) => {
+    const existing = predictions[game.id]
+    setInputs(prev => ({
+      ...prev,
+      [game.id]: {
+        home: existing ? String(existing.homeScore) : '',
+        away: existing ? String(existing.awayScore) : '',
+        etHome: existing?.etHomeScore !== undefined ? String(existing.etHomeScore) : '',
+        etAway: existing?.etAwayScore !== undefined ? String(existing.etAwayScore) : '',
+        penHome: existing?.penHomeScore !== undefined ? String(existing.penHomeScore) : '',
+        penAway: existing?.penAwayScore !== undefined ? String(existing.penAwayScore) : '',
+      }
+    }))
+    setEditingIds(prev => new Set([...prev, game.id]))
+  }, [predictions])
+
+  const cancelEdit = useCallback((gameId: string) => {
+    setEditingIds(prev => { const next = new Set(prev); next.delete(gameId); return next })
+    setInputs(prev => { const next = { ...prev }; delete next[gameId]; return next })
+  }, [])
 
   const submit = useCallback((game: EnrichedGame) => {
     const inp = inputs[game.id]
@@ -62,14 +84,17 @@ export default function PredictionsPage() {
     setPredictions(updated)
     savePredictions(updated)
     setInputs((prev) => { const next = { ...prev }; delete next[game.id]; return next })
+    setEditingIds(prev => { const next = new Set(prev); next.delete(game.id); return next })
   }, [inputs, predictions])
 
-  const clearPrediction = (matchId: string) => {
+  const clearPrediction = useCallback((matchId: string) => {
     const updated = { ...predictions }
     delete updated[matchId]
     setPredictions(updated)
     savePredictions(updated)
-  }
+    setEditingIds(prev => { const next = new Set(prev); next.delete(matchId); return next })
+    setInputs(prev => { const next = { ...prev }; delete next[matchId]; return next })
+  }, [predictions])
 
   const finishedPredictions = finishedGames
     .filter((g) => predictions[g.id])
@@ -148,6 +173,7 @@ export default function PredictionsPage() {
           )}
           {scheduledGames.map((game) => {
             const existing = predictions[game.id]
+            const isEditing = editingIds.has(game.id)
             const inp = inputs[game.id] ?? { home: '', away: '', etHome: '', etAway: '', penHome: '', penAway: '' }
             const isLive = getMatchStatus(game) === 'live'
             const knockout = isKnockoutGame(game)
@@ -178,7 +204,7 @@ export default function PredictionsPage() {
                     <TeamFlag team={game.homeTeam} name={getTeamName(game, 'home')} size="sm" />
                     <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'home')}</span>
                   </div>
-                  {existing ? (
+                  {existing && !isEditing ? (
                     <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                       <div className="flex items-center gap-1">
                         <span className="text-2xl font-black text-amber-400 w-8 text-center">{existing.homeScore}</span>
@@ -248,10 +274,24 @@ export default function PredictionsPage() {
                 </div>
                 <GamePreview gameId={game.id} homeName={getTeamName(game, 'home')} awayName={getTeamName(game, 'away')} />
                 <div className="mt-3 flex justify-end gap-2">
-                  {existing ? (
-                    <button onClick={() => clearPrediction(game.id)} className="text-xs text-slate-500 hover:text-red-400 transition-colors">
-                      {t.predictions.clear}
+                  {existing && !isEditing ? (
+                    <button onClick={() => startEdit(game)} className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
+                      {t.match.editPick}
                     </button>
+                  ) : existing && isEditing ? (
+                    <>
+                      <button onClick={() => cancelEdit(game.id)} className="text-xs text-slate-500 hover:text-white transition-colors">
+                        Cancelar
+                      </button>
+                      <button onClick={() => clearPrediction(game.id)} className="text-xs text-slate-500 hover:text-red-400 transition-colors">
+                        {t.predictions.clear}
+                      </button>
+                      <button onClick={() => submit(game)} disabled={!canSubmit}
+                        className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors"
+                      >
+                        {t.predictions.save}
+                      </button>
+                    </>
                   ) : (
                     <button onClick={() => submit(game)} disabled={!canSubmit}
                       className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors"
