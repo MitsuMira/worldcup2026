@@ -39,6 +39,9 @@ interface PlayerRow {
 
 type SortKey = 'goals' | 'apps' | 'minutesPlayed' | 'yellowCards' | 'redCards'
 
+// Grid template shared between header and rows for perfect column alignment
+const GRID = 'grid grid-cols-[1.25rem_1fr_2.25rem_2.25rem_2.25rem_2.5rem_3rem] gap-x-2'
+
 export default function PlayersPage() {
   const { t } = useT()
   const [search, setSearch] = useState('')
@@ -61,9 +64,7 @@ export default function PlayersPage() {
     finishedIds.length > 0 ? ['all-players', ...finishedIds] : null,
     () =>
       Promise.allSettled(
-        finishedIds.map((id) =>
-          fetch(`/api/match/${id}`).then((r) => r.json()),
-        ),
+        finishedIds.map((id) => fetch(`/api/match/${id}`).then((r) => r.json())),
       ).then((results) =>
         results.map((r) => (r.status === 'fulfilled' ? (r.value as MatchDetail) : null)),
       ),
@@ -79,6 +80,7 @@ export default function PlayersPage() {
   const playerRows = useMemo<PlayerRow[]>(() => {
     if (!matchDetailsList || !teams.length) return []
 
+    // Key: "teamId\x00playerName" → stats
     const statsMap = new Map<string, {
       teamId: string; apps: number; minutesPlayed: number
       goals: number; yellowCards: number; redCards: number
@@ -96,6 +98,7 @@ export default function PlayersPage() {
       if (!detail?.events) continue
       const events = detail.events
 
+      // ── Accumulate appearance + minutes ───────────────────────────────────
       for (const [lineup, teamId] of [
         [detail.homeLineup, detail.homeTeamId],
         [detail.awayLineup, detail.awayTeamId],
@@ -122,11 +125,10 @@ export default function PlayersPage() {
         }
       }
 
+      // ── Goals and cards — always use event.teamId to avoid false matches ──
       for (const event of events) {
-        if (event.type === 'sub' || event.type === 'missed_penalty') continue
-        const key1 = `${detail.homeTeamId}\x00${event.primaryPlayer}`
-        const key2 = `${detail.awayTeamId}\x00${event.primaryPlayer}`
-        const stat = statsMap.get(key1) ?? statsMap.get(key2)
+        if (event.type === 'sub' || event.type === 'missed_penalty' || event.type === 'owngoal') continue
+        const stat = statsMap.get(`${event.teamId}\x00${event.primaryPlayer}`)
         if (!stat) continue
         if (event.type === 'goal' || event.type === 'penalty') stat.goals++
         else if (event.type === 'yellow') stat.yellowCards++
@@ -175,9 +177,7 @@ export default function PlayersPage() {
     return [...rows].sort((a, b) => {
       const diff = (b[sortBy] as number) - (a[sortBy] as number)
       const primary = sortDir === 'desc' ? diff : -diff
-      if (primary !== 0) return primary
-      // secondary sort: goals desc, then name
-      return (b.goals - a.goals) || a.name.localeCompare(b.name)
+      return primary !== 0 ? primary : (b.goals - a.goals) || a.name.localeCompare(b.name)
     })
   }, [playerRows, posFilter, search, sortBy, sortDir])
 
@@ -188,17 +188,21 @@ export default function PlayersPage() {
     else { setSortBy(key); setSortDir('desc') }
   }
 
-  const SortBtn = ({ k, label }: { k: SortKey; label: string }) => (
+  const arrow = (k: SortKey) =>
+    sortBy === k
+      ? sortDir === 'desc'
+        ? <ChevronDown size={10} className="inline-block" />
+        : <ChevronUp size={10} className="inline-block" />
+      : null
+
+  const colBtn = (k: SortKey, label: string) => (
     <button
       onClick={() => handleSort(k)}
-      className={`flex items-center gap-0.5 transition-colors ${sortBy === k ? 'text-blue-400' : 'hover:text-white'}`}
+      className={`flex items-center justify-center gap-0.5 w-full transition-colors ${
+        sortBy === k ? 'text-blue-400' : 'text-slate-500 hover:text-white'
+      }`}
     >
-      {label}
-      {sortBy === k
-        ? sortDir === 'desc'
-          ? <ChevronDown size={11} />
-          : <ChevronUp size={11} />
-        : null}
+      {label}{arrow(k)}
     </button>
   )
 
@@ -224,9 +228,7 @@ export default function PlayersPage() {
               key={pos}
               onClick={() => setPosFilter(pos)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                posFilter === pos
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
+                posFilter === pos ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
               }`}
             >
               {pos === 'All' ? t.players.allPos : pos}
@@ -244,29 +246,28 @@ export default function PlayersPage() {
 
       {!loading && filtered.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-700 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            <span className="w-5 shrink-0" />
-            <span className="flex-1">{t.players.title}</span>
-            <SortBtn k="goals" label="⚽" />
-            <SortBtn k="yellowCards" label="🟨" />
-            <SortBtn k="redCards" label="🟥" />
-            <SortBtn k="apps" label={t.teamDetail.appsShort} />
-            <SortBtn k="minutesPlayed" label="Min" />
-            <span className="hidden lg:block w-32 text-right">{t.teamDetail.squad}</span>
+          {/* Header — same grid template as rows */}
+          <div className={`${GRID} items-center px-3 py-2 border-b border-slate-700 text-[10px] font-bold uppercase tracking-widest`}>
+            <span /> {/* rank placeholder */}
+            <span className="text-slate-500">{t.players.title}</span>
+            {colBtn('goals', '⚽')}
+            {colBtn('yellowCards', '🟨')}
+            {colBtn('redCards', '🟥')}
+            {colBtn('apps', t.teamDetail.appsShort)}
+            {colBtn('minutesPlayed', 'min')}
           </div>
 
           {/* Rows */}
           {filtered.map((row, i) => (
             <div
               key={`${row.teamId}:${row.name}`}
-              className="flex items-center gap-3 px-3 py-2.5 border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+              className={`${GRID} items-center px-3 py-2.5 border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors`}
             >
               {/* Rank */}
-              <span className="text-xs text-slate-600 w-5 text-right shrink-0">{i + 1}</span>
+              <span className="text-xs text-slate-600 text-right">{i + 1}</span>
 
-              {/* Flag + Name + Pos */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* Flag + Name + meta */}
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="shrink-0">
                   {row.team && <TeamFlag team={row.team} size="sm" />}
                 </div>
@@ -274,46 +275,40 @@ export default function PlayersPage() {
                   <div className="text-sm font-medium text-white truncate leading-tight">
                     {toTitleCase(row.name)}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-slate-500">{row.teamId}</span>
+                  <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                    <span className="text-[10px] text-slate-500 shrink-0">{row.teamId}</span>
                     {row.pos && (
-                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${POS_COLOR[row.pos] ?? 'bg-slate-700 text-slate-400'}`}>
+                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${POS_COLOR[row.pos] ?? 'bg-slate-700 text-slate-400'}`}>
                         {row.pos}
                       </span>
+                    )}
+                    {row.club && (
+                      <span className="text-[10px] text-slate-600 truncate">· {row.club}</span>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Goals */}
-              <span className={`text-sm font-bold w-7 text-center shrink-0 ${row.goals > 0 ? 'text-white' : 'text-slate-700'}`}>
+              <span className={`text-sm font-bold text-center ${row.goals > 0 ? 'text-white' : 'text-slate-700'}`}>
                 {row.goals > 0 ? row.goals : '–'}
               </span>
 
               {/* Yellow cards */}
-              <span className={`text-sm w-7 text-center shrink-0 ${row.yellowCards > 0 ? 'text-amber-400 font-bold' : 'text-slate-700'}`}>
+              <span className={`text-sm text-center ${row.yellowCards > 0 ? 'text-amber-400 font-semibold' : 'text-slate-700'}`}>
                 {row.yellowCards > 0 ? row.yellowCards : '–'}
               </span>
 
               {/* Red cards */}
-              <span className={`text-sm w-7 text-center shrink-0 ${row.redCards > 0 ? 'text-red-400 font-bold' : 'text-slate-700'}`}>
+              <span className={`text-sm text-center ${row.redCards > 0 ? 'text-red-400 font-semibold' : 'text-slate-700'}`}>
                 {row.redCards > 0 ? row.redCards : '–'}
               </span>
 
-              {/* Apps */}
-              <span className="text-xs text-slate-400 w-7 text-center shrink-0">
-                {row.apps}
-              </span>
+              {/* Appearances */}
+              <span className="text-xs text-slate-400 text-center">{row.apps}</span>
 
               {/* Minutes */}
-              <span className="text-xs text-slate-500 w-12 text-right shrink-0">
-                {row.minutesPlayed}&apos;
-              </span>
-
-              {/* Club */}
-              <span className="hidden lg:block text-[10px] text-slate-500 w-32 truncate text-right shrink-0">
-                {row.club}
-              </span>
+              <span className="text-xs text-slate-500 text-right">{row.minutesPlayed}&apos;</span>
             </div>
           ))}
         </div>
