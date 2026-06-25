@@ -46,6 +46,8 @@ export default function PlayersPage() {
   const { t } = useT()
   const [search, setSearch] = useState('')
   const [posFilter, setPosFilter] = useState<'All' | 'GK' | 'DF' | 'MF' | 'FW'>('All')
+  const [teamFilter, setTeamFilter] = useState('')
+  const [clubFilter, setClubFilter] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('goals')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
 
@@ -161,9 +163,23 @@ export default function PlayersPage() {
     })
   }, [matchDetailsList, teams, teamByCode])
 
+  const teamOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    playerRows.forEach((r) => { if (r.teamId && !seen.has(r.teamId)) seen.set(r.teamId, r.team?.name_en ?? r.teamId) })
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [playerRows])
+
+  const clubOptions = useMemo(() => {
+    const seen = new Set<string>()
+    playerRows.forEach((r) => { if (r.club) seen.add(r.club) })
+    return [...seen].sort((a, b) => a.localeCompare(b))
+  }, [playerRows])
+
   const filtered = useMemo(() => {
     let rows = playerRows
     if (posFilter !== 'All') rows = rows.filter((r) => r.pos === posFilter)
+    if (teamFilter) rows = rows.filter((r) => r.teamId === teamFilter)
+    if (clubFilter) rows = rows.filter((r) => r.club === clubFilter)
     if (search) {
       const s = search.toLowerCase()
       rows = rows.filter(
@@ -179,7 +195,7 @@ export default function PlayersPage() {
       const primary = sortDir === 'desc' ? diff : -diff
       return primary !== 0 ? primary : (b.goals - a.goals) || a.name.localeCompare(b.name)
     })
-  }, [playerRows, posFilter, search, sortBy, sortDir])
+  }, [playerRows, posFilter, teamFilter, clubFilter, search, sortBy, sortDir])
 
   const loading = gamesLoading || (finishedIds.length > 0 && detailsLoading)
 
@@ -214,14 +230,36 @@ export default function PlayersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <input
-          type="text"
-          placeholder={t.players.search}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-64"
-        />
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            placeholder={t.players.search}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-56"
+          />
+          <select
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 flex-1 sm:flex-none sm:w-44"
+          >
+            <option value="">All teams</option>
+            {teamOptions.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={clubFilter}
+            onChange={(e) => setClubFilter(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 flex-1 sm:flex-none sm:w-44"
+          >
+            <option value="">All clubs</option>
+            {clubOptions.map((club) => (
+              <option key={club} value={club}>{club}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex gap-2">
           {(['All', 'GK', 'DF', 'MF', 'FW'] as const).map((pos) => (
             <button
