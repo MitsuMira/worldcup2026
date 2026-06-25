@@ -108,8 +108,11 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                       ) : (
                         <span className="text-sm font-medium truncate max-w-[90px]">{s.team_id}</span>
                       )}
-                      {(isConfirmedQualified || isThirdQualified) && (
+                      {(isConfirmedFirst || isConfirmedSecond || isThirdQualified) && (
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 inline-block" />
+                      )}
+                      {isConfirmedQualified && !isConfirmedFirst && !isConfirmedSecond && (
+                        <span className="text-[9px] font-bold text-emerald-400 shrink-0">Q</span>
                       )}
                       {(isThirdEliminated || isEliminated) && (
                         <span className="text-[9px] font-bold text-red-500 shrink-0">✕</span>
@@ -137,10 +140,16 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
           <span className="w-2 h-2 rounded-full bg-emerald-500/60 inline-block" />
           <span className="text-slate-500">{t.group.top2}</span>
         </span>
-        {isQVisible(group, allGames) && (
+        {isConfirmedPositionVisible(group, allGames) && (
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-            <span className="text-slate-500">{qualifyingThirds && qualifyingThirds.size > 0 ? 'classificado' : 'classificado matematicamente'}</span>
+            <span className="text-slate-500">classificado</span>
+          </span>
+        )}
+        {isMathQVisible(group, allGames) && (
+          <span className="flex items-center gap-1.5">
+            <span className="text-emerald-400 font-bold">Q</span>
+            <span className="text-slate-500">classificado matematicamente</span>
           </span>
         )}
         {isElimZoneVisible(group) && (
@@ -158,12 +167,34 @@ function isElimZoneVisible(group: EnrichedGroup) {
   return group.standings.some(s => (s.played ?? 0) > 0)
 }
 
-function isQVisible(group: EnrichedGroup, allGames?: EnrichedGame[]) {
-  if (!allGames) return false
+function getGroupGames(group: EnrichedGroup, allGames?: EnrichedGame[]) {
+  if (!allGames) return []
   const groupLetter = group.group || group.standings.find(s => s.team?.groups)?.team?.groups || ''
-  const groupGames = allGames.filter(g => g.type === 'group' && g.group === groupLetter)
+  return allGames.filter(g => g.type === 'group' && g.group === groupLetter)
+}
+
+// Show green dot legend when at least one team has a locked position
+function isConfirmedPositionVisible(group: EnrichedGroup, allGames?: EnrichedGame[]) {
+  const groupGames = getGroupGames(group, allGames)
   if (groupGames.length === 0) return false
-  return group.standings.slice(0, 2).some(s =>
-    isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
-  ) || group.standings[2] !== undefined
+  const s0 = group.standings[0], s1 = group.standings[1]
+  const confirmedFirst = s0 && isTeamConfirmedInTop(group, s0.team_id, 0, groupGames)
+  const confirmedSecond = s1 && isTeamConfirmedInTop(group, s1.team_id, 1, groupGames) &&
+    !canTeamReachPosition(group, s1.team_id, 0, groupGames)
+  return !!(confirmedFirst || confirmedSecond)
+}
+
+// Show Q legend when at least one team is mathematically confirmed in top 2 but position not locked
+function isMathQVisible(group: EnrichedGroup, allGames?: EnrichedGame[]) {
+  const groupGames = getGroupGames(group, allGames)
+  if (groupGames.length === 0) return false
+  const s0 = group.standings[0], s1 = group.standings[1]
+  const confirmedFirst = s0 && isTeamConfirmedInTop(group, s0.team_id, 0, groupGames)
+  const confirmedSecond = s1 && isTeamConfirmedInTop(group, s1.team_id, 1, groupGames) &&
+    !canTeamReachPosition(group, s1.team_id, 0, groupGames)
+  return group.standings.slice(0, 2).some((s, i) => {
+    const mathQ = isTeamConfirmedInTop(group, s.team_id, 1, groupGames)
+    const posLocked = i === 0 ? confirmedFirst : confirmedSecond
+    return mathQ && !posLocked
+  })
 }
