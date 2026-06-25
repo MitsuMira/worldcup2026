@@ -163,23 +163,10 @@ export default function PlayersPage() {
     })
   }, [matchDetailsList, teams, teamByCode])
 
-  const teamOptions = useMemo(() => {
-    const seen = new Map<string, string>()
-    playerRows.forEach((r) => { if (r.teamId && !seen.has(r.teamId)) seen.set(r.teamId, r.team?.name_en ?? r.teamId) })
-    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
-  }, [playerRows])
-
-  const clubOptions = useMemo(() => {
-    const seen = new Set<string>()
-    playerRows.forEach((r) => { if (r.club) seen.add(r.club) })
-    return [...seen].sort((a, b) => a.localeCompare(b))
-  }, [playerRows])
-
-  const filtered = useMemo(() => {
+  // Base rows after pos + search filters (before team/club dropdowns)
+  const baseRows = useMemo(() => {
     let rows = playerRows
     if (posFilter !== 'All') rows = rows.filter((r) => r.pos === posFilter)
-    if (teamFilter) rows = rows.filter((r) => r.teamId === teamFilter)
-    if (clubFilter) rows = rows.filter((r) => r.club === clubFilter)
     if (search) {
       const s = search.toLowerCase()
       rows = rows.filter(
@@ -190,12 +177,35 @@ export default function PlayersPage() {
           r.club.toLowerCase().includes(s),
       )
     }
+    return rows
+  }, [playerRows, posFilter, search])
+
+  // Team options: only teams present in rows already filtered by club (and pos/search)
+  const teamOptions = useMemo(() => {
+    const src = clubFilter ? baseRows.filter((r) => r.club === clubFilter) : baseRows
+    const seen = new Map<string, string>()
+    src.forEach((r) => { if (r.teamId && !seen.has(r.teamId)) seen.set(r.teamId, r.team?.name_en ?? r.teamId) })
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [baseRows, clubFilter])
+
+  // Club options: only clubs present in rows already filtered by team (and pos/search)
+  const clubOptions = useMemo(() => {
+    const src = teamFilter ? baseRows.filter((r) => r.teamId === teamFilter) : baseRows
+    const seen = new Set<string>()
+    src.forEach((r) => { if (r.club) seen.add(r.club) })
+    return [...seen].sort((a, b) => a.localeCompare(b))
+  }, [baseRows, teamFilter])
+
+  const filtered = useMemo(() => {
+    let rows = baseRows
+    if (teamFilter) rows = rows.filter((r) => r.teamId === teamFilter)
+    if (clubFilter) rows = rows.filter((r) => r.club === clubFilter)
     return [...rows].sort((a, b) => {
       const diff = (b[sortBy] as number) - (a[sortBy] as number)
       const primary = sortDir === 'desc' ? diff : -diff
       return primary !== 0 ? primary : (b.goals - a.goals) || a.name.localeCompare(b.name)
     })
-  }, [playerRows, posFilter, teamFilter, clubFilter, search, sortBy, sortDir])
+  }, [baseRows, teamFilter, clubFilter, sortBy, sortDir])
 
   const loading = gamesLoading || (finishedIds.length > 0 && detailsLoading)
 
