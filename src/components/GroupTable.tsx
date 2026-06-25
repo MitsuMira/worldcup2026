@@ -136,10 +136,6 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
         </table>
       </div>
       <div className="px-4 py-2 border-t border-slate-800/50 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-600">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500/60 inline-block" />
-          <span className="text-slate-500">{t.group.top2}</span>
-        </span>
         {isConfirmedPositionVisible(group, allGames) && (
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
