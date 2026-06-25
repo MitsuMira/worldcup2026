@@ -37,10 +37,10 @@ interface PlayerRow {
   club: string
 }
 
-type SortKey = 'goals' | 'apps' | 'minutesPlayed' | 'yellowCards' | 'redCards'
+type SortKey = 'goals' | 'minutesPlayed'
 
 // Grid template shared between header and rows for perfect column alignment
-const GRID = 'grid grid-cols-[1.25rem_1fr_2.25rem_2.25rem_2.25rem_2.5rem_3rem] gap-x-2'
+const GRID = 'grid grid-cols-[1.25rem_1fr_2.25rem_3.5rem] gap-x-2'
 
 export default function PlayersPage() {
   const { t } = useT()
@@ -245,72 +245,58 @@ export default function PlayersPage() {
       )}
 
       {!loading && filtered.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          {/* Header — same grid template as rows */}
-          <div className={`${GRID} items-center px-3 py-2 border-b border-slate-700 text-[10px] font-bold uppercase tracking-widest`}>
-            <span /> {/* rank placeholder */}
-            <span className="text-slate-500">{t.players.title}</span>
-            {colBtn('goals', '⚽')}
-            {colBtn('yellowCards', '🟨')}
-            {colBtn('redCards', '🟥')}
-            {colBtn('apps', t.teamDetail.appsShort)}
-            {colBtn('minutesPlayed', 'min')}
-          </div>
-
-          {/* Rows */}
-          {filtered.map((row, i) => (
-            <div
-              key={`${row.teamId}:${row.name}`}
-              className={`${GRID} items-center px-3 py-2.5 border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors`}
-            >
-              {/* Rank */}
-              <span className="text-xs text-slate-600 text-right">{i + 1}</span>
-
-              {/* Flag + Name + meta */}
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="shrink-0">
-                  {row.team && <TeamFlag team={row.team} size="sm" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-white truncate leading-tight">
-                    {toTitleCase(row.name)}
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5 min-w-0">
-                    <span className="text-[10px] text-slate-500 shrink-0">{row.teamId}</span>
-                    {row.pos && (
-                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${POS_COLOR[row.pos] ?? 'bg-slate-700 text-slate-400'}`}>
-                        {row.pos}
-                      </span>
-                    )}
-                    {row.club && (
-                      <span className="text-[10px] text-slate-600 truncate">· {row.club}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Goals */}
-              <span className={`text-sm font-bold text-center ${row.goals > 0 ? 'text-white' : 'text-slate-700'}`}>
-                {row.goals > 0 ? row.goals : '–'}
-              </span>
-
-              {/* Yellow cards */}
-              <span className={`text-sm text-center ${row.yellowCards > 0 ? 'text-amber-400 font-semibold' : 'text-slate-700'}`}>
-                {row.yellowCards > 0 ? row.yellowCards : '–'}
-              </span>
-
-              {/* Red cards */}
-              <span className={`text-sm text-center ${row.redCards > 0 ? 'text-red-400 font-semibold' : 'text-slate-700'}`}>
-                {row.redCards > 0 ? row.redCards : '–'}
-              </span>
-
-              {/* Appearances */}
-              <span className="text-xs text-slate-400 text-center">{row.apps}</span>
-
-              {/* Minutes */}
-              <span className="text-xs text-slate-500 text-right">{row.minutesPlayed}&apos;</span>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden overflow-x-auto">
+          <div className="min-w-[320px]">
+            {/* Header — same grid template as rows */}
+            <div className={`${GRID} items-center px-3 py-2 border-b border-slate-700 text-[10px] font-bold uppercase tracking-widest`}>
+              <span /> {/* rank placeholder */}
+              <span className="text-slate-500">{t.players.title}</span>
+              {colBtn('goals', '⚽')}
+              {colBtn('minutesPlayed', 'min')}
             </div>
-          ))}
+
+            {/* Rows */}
+            {filtered.map((row, i) => (
+              <div
+                key={`${row.teamId}:${row.name}`}
+                className={`${GRID} items-center px-3 py-2.5 border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors`}
+              >
+                {/* Rank */}
+                <span className="text-xs text-slate-600 text-right">{i + 1}</span>
+
+                {/* Flag + Name + meta */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="shrink-0">
+                    {row.team && <TeamFlag team={row.team} size="sm" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-white truncate leading-tight">
+                      {toTitleCase(row.name)}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                      <span className="text-[10px] text-slate-500 shrink-0">{row.teamId}</span>
+                      {row.pos && (
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${POS_COLOR[row.pos] ?? 'bg-slate-700 text-slate-400'}`}>
+                          {row.pos}
+                        </span>
+                      )}
+                      {row.club && (
+                        <span className="text-[10px] text-slate-600 truncate">· {row.club}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Goals */}
+                <span className={`text-sm font-bold text-center ${row.goals > 0 ? 'text-white' : 'text-slate-700'}`}>
+                  {row.goals > 0 ? row.goals : '–'}
+                </span>
+
+                {/* Minutes */}
+                <span className="text-xs text-slate-500 text-right">{row.minutesPlayed}&apos;</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
