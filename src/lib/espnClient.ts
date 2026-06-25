@@ -1,7 +1,7 @@
 import 'server-only'
 import type { EnrichedGame, EnrichedGroup, ApiTeam, ApiStadium } from './types'
 import { FIFA_RANK } from './fifaRanking'
-import { isEspnPlaceholder } from './bracketStructure'
+import { isEspnPlaceholder, BRACKET_POSITIONS } from './bracketStructure'
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
 
@@ -200,6 +200,21 @@ function mapEvent(event: EspnEvent): EnrichedGame {
       type = 'r16'; group = ''
     } else if (/\b(winner|loser|2nd place|3rd place|runner|melhor|mejor|best.3|place)\b/.test(combined) && !group) {
       type = 'r32'; group = ''
+    } else {
+      // Final fallback: look up the game's date+city in the fixed bracket schedule.
+      // Catches R32/R16/QF/SF games where both teams have real names (not placeholders)
+      // but ESPN still attaches comp.groups from a participant's origin group —
+      // e.g. South Africa's Group A tag leaks onto the Canada vs South Africa R32 game.
+      const cityRaw = comp.venue?.address?.city ?? ''
+      const citySplit = cityRaw.split(',')[0].trim()
+      const utcDateStr = event.date.slice(0, 10)
+      const [y, mo, d] = utcDateStr.split('-').map(Number)
+      const prevDateStr = new Date(Date.UTC(y, mo - 1, d - 1)).toISOString().slice(0, 10)
+      for (const dateStr of [utcDateStr, prevDateStr]) {
+        const bp = BRACKET_POSITIONS.get(`${dateStr}_${cityRaw}`) ??
+                   BRACKET_POSITIONS.get(`${dateStr}_${citySplit}`)
+        if (bp) { type = bp.round; group = ''; break }
+      }
     }
   }
   const st = comp.status

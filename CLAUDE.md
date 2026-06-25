@@ -188,6 +188,15 @@ environment variables.
   the wrong group). Example: Canada vs South Africa (R32) was tagged as Group A because
   South Africa is from Group A — Canada is now correctly excluded.
 
+- **R32 game mis-classified as group stage when both teams have real names**: Once group
+  stage is done and ESPN confirms real team names for R32 games (e.g. Canada vs South
+  Africa for M73), `parseRound()`'s team-name fallback doesn't trigger (no placeholder
+  keywords in "Canada" or "South Africa"), so the game stays as `type:'group'` and
+  never appears in the knockout bracket. Fixed in `mapEvent()` with a final fallback that
+  looks up `comp.venue.address.city + event.date` in `BRACKET_POSITIONS`; if the game's
+  date+city matches a known bracket slot, the slot's round type overrides 'group'. Tries
+  both the UTC date and the previous day to handle venue timezone offsets.
+
 - **Scoreboard group letter missing**: For some games, `parseRound()` cannot extract
   a group letter from the scoreboard response. Fixed by a post-pass that looks up the
   team's group from a separate standings fetch (`fetchTeamGroupMap`), which uses
