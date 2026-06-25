@@ -46,17 +46,19 @@ src/
 │   ├── groups/         # Prediction groups — list, create, join, leaderboard
 │   ├── matches/[id]/   # Match detail page
 │   ├── path/           # Tournament path explorer (pick team → full bracket path)
+│   ├── players/        # All-player stats table (goals, cards, apps, minutes, club)
 │   ├── playoffs/       # Knockout bracket & round list
 │   ├── predictions/    # Personal score predictions
 │   ├── schedule/       # Full 104-match schedule with filters
 │   ├── standings/      # Group standings + best-thirds ranking
-│   └── teams/          # Team list & individual team profiles
+│   └── teams/          # Team list & individual team profiles with squad section
 ├── components/         # Shared React components
 ├── contexts/           # React contexts: LanguageContext, SettingsContext, FavoriteTeamsContext
 └── lib/
     ├── bracketStructure.ts      # Knockout bracket slot positions & human-readable slot labels
     ├── espnClient.ts            # ESPN API client — scoreboard fetch, group derivation, FIFA tiebreaker sort
     ├── fifaRanking.ts           # Static FIFA ranking map (team abbreviation → rank number)
+    ├── fifaSquads.ts            # Official FIFA WC2026 squad data (48 teams, 1248 players, keyed by FIFA code)
     ├── groupSimulation.ts       # Brute-force mathematical elimination/qualification checker
     ├── i18n.ts                  # Translations: EN / PT / ES
     ├── identity.ts              # Client-side user/group identity helpers (localStorage)
@@ -116,10 +118,46 @@ score inputs appear. Predictions lock when the match starts (`canPredict()` in `
 After group stage, 12 third-placed teams are ranked by FIFA qualification criteria
 (pts → GD → GF → conduct → FIFA rank) to determine which 8 advance to the Round of 32.
 
+### Players page (`src/app/players/page.tsx`)
+Aggregates stats for all players across all finished matches client-side. Fetches every
+`/api/match/[id]` in parallel via `Promise.allSettled`, accumulates per-player
+appearances, minutes played, goals, yellow/red cards. Stats key format: `"teamId\x00playerName"`
+(null-byte separator prevents same-name cross-team collisions). Event attribution always
+uses `event.teamId` directly — never home/away fallback — to avoid assigning goals to the
+wrong team's same-named player. Own goals (`event.type === 'owngoal'`) and missed
+penalties are excluded. Club and position are resolved by matching ESPN names against
+`FIFA_SQUADS_BY_CODE` via a normalised-string fuzzy match (diacritic-stripped, letters only,
+checking `lastName` ≥4, `nameOnShirt` ≥4, or exact full name ≥5 chars).
+
+### FIFA squad data (`src/lib/fifaSquads.ts`)
+Static data file keyed by FIFA team code (e.g. `"BRA"`, `"ARG"`). Each entry contains
+`coach` and `players[]` with `name`, `lastName`, `nameOnShirt`, `pos` (GK/DF/MF/FW),
+`club`, `dob` (DD/MM/YYYY), and `caps`. Used in the team detail squad section and the
+players page for position/club enrichment.
+
+### Squad section (`src/app/teams/[id]/page.tsx`)
+Rendered by a `SquadSection` component (React component so it can call `useT()`).
+Groups players by `POS_ORDER` (GK→DF→MF→FW). Merges FIFA static data with live ESPN
+match stats via `matchFifaToEspn()` which does the same normalised-string fuzzy match.
+Shows age (computed from `dob`), international caps, club, and any tournament stats.
+
+### Group qualification indicators (`src/components/GroupTable.tsx`)
+Three distinct visual states for teams in group standings:
+- **Green number** (`text-emerald-500`): position is locked (confirmed 1st, or confirmed 2nd
+  and mathematically cannot reach 1st)
+- **Green dot (●)**: same as above — shown inline after the team name
+- **Q badge**: team is mathematically guaranteed to qualify (confirmed top-2) but 1st vs 2nd
+  is still undecided
+- **✕ badge**: team is mathematically eliminated
+- **Red number** (`text-red-500`): team is eliminated from qualifying positions
+
+The legend at the bottom of each card shows only the indicators currently relevant to that group.
+
 ### i18n
 Three locales: `en`, `pt`, `es`. Language is stored in `localStorage` and provided
 via `LanguageContext`. All UI strings go through `useT()` hook. Locale selection is in
-the Navbar settings panel.
+the Navbar settings panel. The `players` and `teamDetail` (squad sub-section) namespaces
+were added as part of the squad/players features.
 
 ---
 
@@ -140,6 +178,15 @@ environment variables.
   with a team's origin group even for R32 knockout matches. Fixed by checking
   `competition.notes` and `competition.type.abbreviation` first, then inspecting
   team display names, before trusting `competition.groups`.
+
+- **Team leaking into wrong group standings**: When ESPN mis-tags an R32 game with a
+  `comp.groups` value from one participant's origin group, `parseRound()` classifies
+  the game as a group-stage match and adds both teams to that group. Fixed in
+  `fetchEnrichedGroups()` with a `teamGroupAssignment` map that locks each team to its
+  first-seen group; any subsequent attempt to add them to a different group is silently
+  dropped (along with the stat accumulation, since `teams.get()` returns undefined for
+  the wrong group). Example: Canada vs South Africa (R32) was tagged as Group A because
+  South Africa is from Group A — Canada is now correctly excluded.
 
 - **Scoreboard group letter missing**: For some games, `parseRound()` cannot extract
   a group letter from the scoreboard response. Fixed by a post-pass that looks up the
