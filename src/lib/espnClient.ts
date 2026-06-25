@@ -531,6 +531,11 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
   const groupGames = games.filter(g => g.type === 'group' && g.group !== '')
 
   const groupMap = new Map<string, Map<string, Entry>>()
+  // Tracks which group each team was first assigned to. Prevents teams from leaking
+  // into the wrong group when ESPN mis-tags an R32 knockout game with comp.groups
+  // set to the origin group of one of the participants (e.g. Canada appears in Group A
+  // because they face South Africa, who is from Group A, in the Round of 32).
+  const teamGroupAssignment = new Map<string, string>()
 
   for (const game of groupGames) {
     const grp = game.group
@@ -538,8 +543,12 @@ export async function fetchEnrichedGroups(): Promise<EnrichedGroup[]> {
     const teams = groupMap.get(grp)!
 
     const addTeam = (team: ApiTeam | undefined) => {
-      if (team && !teams.has(team.id) && !isEspnPlaceholder(team.name_en))
+      if (team && !teams.has(team.id) && !isEspnPlaceholder(team.name_en)) {
+        const knownGroup = teamGroupAssignment.get(team.id)
+        if (knownGroup && knownGroup !== grp) return  // already belongs to a different group
+        teamGroupAssignment.set(team.id, grp)
         teams.set(team.id, { team: { ...team, groups: grp }, pts: 0, gf: 0, ga: 0, w: 0, d: 0, l: 0, played: 0, yellows: 0, reds: 0 })
+      }
     }
     addTeam(game.homeTeam)
     addTeam(game.awayTeam)
