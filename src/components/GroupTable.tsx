@@ -109,7 +109,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
                         <span className="text-sm font-medium truncate max-w-[90px]">{s.team_id}</span>
                       )}
                       {(isConfirmedQualified || isThirdQualified) && (
-                        <span className="text-[9px] font-bold text-emerald-400 shrink-0">Q</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 inline-block" />
                       )}
                       {(isThirdEliminated || isEliminated) && (
                         <span className="text-[9px] font-bold text-red-500 shrink-0">✕</span>
@@ -139,7 +139,7 @@ export default function GroupTable({ group, compact = false, highlightTeamId, qu
         </span>
         {isQVisible(group, allGames) && (
           <span className="flex items-center gap-1.5">
-            <span className="text-emerald-400 font-bold">Q</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
             <span className="text-slate-500">{qualifyingThirds && qualifyingThirds.size > 0 ? 'classificado' : 'classificado matematicamente'}</span>
           </span>
         )}
