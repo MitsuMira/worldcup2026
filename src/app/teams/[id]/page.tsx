@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { Star, ChevronDown } from 'lucide-react'
+import { Star } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
 import GroupTable from '@/components/GroupTable'
 import MatchCard from '@/components/MatchCard'
@@ -36,8 +35,6 @@ export default function TeamDetailPage() {
   const team = teams.find((tm) => tm.id === id)
   const isLoading = teamsLoading || gamesLoading
 
-  // null = use computed default (collapsed when team is in playoffs)
-  const [groupOpenOverride, setGroupOpenOverride] = useState<boolean | null>(null)
 
   const teamGames = games
     .filter((g) => g.home_team_id === id || g.away_team_id === id)
@@ -92,8 +89,6 @@ export default function TeamDetailPage() {
 
   const currentKoRound = (['final', 'third', 'sf', 'qf', 'r16', 'r32'] as JourneyRound[]).find((r) => knockoutByRound[r])
   const ROUND_SHORT: Record<string, string> = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final' }
-
-  const groupStandingOpen = groupOpenOverride ?? !hasKnockoutGames
 
   // Fetch match details for finished games
   const finishedGameIds = finishedGames.map(g => g.id)
@@ -426,19 +421,11 @@ export default function TeamDetailPage() {
         <div className="text-slate-500 text-center py-12">{t.teamDetail.noMatches}</div>
       )}
 
-      {/* Group standings — collapsible historical panel for teams in the knockout phase */}
+      {/* Group standings — historical panel at bottom for teams in the knockout phase */}
       {teamGroup && hasKnockoutGames && (
         <div className="mb-6">
-          <button
-            onClick={() => setGroupOpenOverride(!groupStandingOpen)}
-            className="w-full flex items-center justify-between text-sm font-bold text-slate-400 hover:text-slate-200 uppercase tracking-widest mb-3 transition-colors"
-          >
-            {t.teamDetail.groupStanding}
-            <ChevronDown size={14} className={`transition-transform duration-200 ${groupStandingOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {groupStandingOpen && (
-            <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} allGames={games} />
-          )}
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.groupStanding}</h2>
+          <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} allGames={games} />
         </div>
       )}
 

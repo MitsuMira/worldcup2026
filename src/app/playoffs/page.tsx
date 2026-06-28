@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
@@ -50,7 +50,7 @@ function halfTop(absIdx: number, idx: number): number {
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
 
-function BracketSlot({ game, side, label, t, highlightFav = false }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations; highlightFav?: boolean }) {
+function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations; highlightFav?: boolean; scorers?: string }) {
   const { isFavorite } = useFavorites()
 
   if (!game) {
@@ -81,14 +81,21 @@ function BracketSlot({ game, side, label, t, highlightFav = false }: { game?: En
           : 'bg-slate-800/50 border-slate-700/50'
     } ${isFav ? 'ring-1 ring-amber-400/60' : ''}`}>
       <TeamFlag team={team} name={name} size="sm" />
-      <span className={`text-xs font-medium flex-1 truncate ${isWinner ? 'text-green-300' : 'text-white'}`}>
-        {name}
-      </span>
-      {status !== 'scheduled' && (
-        <span className={`text-xs font-black tabular-nums ${isWinner ? 'text-green-300' : 'text-slate-400'}`}>
-          {score}
-        </span>
-      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <span className={`text-xs font-medium flex-1 truncate ${isWinner ? 'text-green-300' : 'text-white'}`}>
+            {name}
+          </span>
+          {status !== 'scheduled' && (
+            <span className={`text-xs font-black tabular-nums shrink-0 ${isWinner ? 'text-green-300' : 'text-slate-400'}`}>
+              {score}
+            </span>
+          )}
+        </div>
+        <div className="text-[9px] text-slate-500 truncate leading-tight min-h-[11px]">
+          {status === 'finished' && scorers ? scorers : ''}
+        </div>
+      </div>
     </div>
   )
 }
@@ -132,9 +139,11 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
           <span className="text-[10px] text-slate-600 font-bold shrink-0 ml-1">M{resolvedMatchNum}</span>
         )}
       </div>
-      <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} highlightFav={highlightFav} />
+      <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} highlightFav={highlightFav}
+        scorers={game?.home_scorers && game.home_scorers !== 'null' ? game.home_scorers : undefined} />
       <div className="h-px bg-slate-800" />
-      <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} highlightFav={highlightFav} />
+      <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} highlightFav={highlightFav}
+        scorers={game?.away_scorers && game.away_scorers !== 'null' ? game.away_scorers : undefined} />
     </div>
   )
 }
@@ -280,6 +289,15 @@ export default function PlayoffsPage() {
   const { favorites } = useFavorites()
   const [round, setRound] = useState<Round>('bracket')
   const [highlightFav, setHighlightFav] = useState(false)
+  const [favInitialized, setFavInitialized] = useState(false)
+
+  // Auto-enable favorite highlight once the context loads favorites from localStorage
+  useEffect(() => {
+    if (!favInitialized && favorites.length > 0) {
+      setFavInitialized(true)
+      setHighlightFav(true)
+    }
+  }, [favorites, favInitialized])
 
   const { data, error, isLoading } = useSWR<{ games: EnrichedGame[] }>(
     '/api/games', fetcher, { refreshInterval: 30_000 },

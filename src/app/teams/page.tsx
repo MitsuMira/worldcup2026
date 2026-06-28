@@ -14,6 +14,8 @@ import { useState, useMemo } from 'react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+const ROUND_SHORT: Record<string, string> = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final' }
+const ROUND_PRIO: Record<string, number> = { final: 0, third: 0, sf: 1, qf: 2, r16: 3, r32: 4 }
 
 interface TeamStatus {
   position: number        // 1–4 current standing position
@@ -44,6 +46,26 @@ export default function TeamsPage() {
     acc[g] = filtered.filter((tm) => tm.groups === g)
     return acc
   }, {})
+
+  // Team ID → their most advanced knockout round (undefined if eliminated at group stage)
+  const teamKoRound = useMemo(() => {
+    const games = gamesData?.games ?? []
+    const map = new Map<string, string>()
+    for (const g of games) {
+      if (g.type === 'group') continue
+      for (const tid of [g.home_team_id, g.away_team_id]) {
+        const cur = map.get(tid)
+        if (!cur || (ROUND_PRIO[g.type] ?? 99) < (ROUND_PRIO[cur] ?? 99)) map.set(tid, g.type)
+      }
+    }
+    return map
+  }, [gamesData])
+
+  const groupStageComplete = useMemo(() => {
+    const games = gamesData?.games ?? []
+    const groupGames = games.filter((g) => g.type === 'group')
+    return groupGames.length > 0 && groupGames.every((g) => g.finished === 'TRUE')
+  }, [gamesData])
 
   // Build qualification/position status for every team using the same
   // brute-force simulation that GroupTable uses.
@@ -120,20 +142,51 @@ export default function TeamsPage() {
       )}
 
       {groupFilter === 'All' && !search ? (
-        GROUPS.map((g) => {
-          const groupTeams = byGroup[g]
-          if (!groupTeams?.length) return null
-          return (
-            <div key={g} className="mb-8">
-              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
-                {t.match.stageGroup} {g}
-              </h2>
-              <TeamGrid teams={groupTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
-            </div>
-          )
-        })
+        groupStageComplete ? (
+          // Playoff-era view: split by knockout vs group-eliminated
+          (() => {
+            const koTeams = filtered
+              .filter((tm) => teamKoRound.has(tm.id))
+              .sort((a, b) => (ROUND_PRIO[teamKoRound.get(a.id)!] ?? 99) - (ROUND_PRIO[teamKoRound.get(b.id)!] ?? 99))
+            const groupEliminated = filtered.filter((tm) => !teamKoRound.has(tm.id))
+            return (
+              <>
+                {koTeams.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-sm font-bold text-emerald-500 uppercase tracking-widest mb-3">
+                      🏆 Knockout Phase · {koTeams.length} teams
+                    </h2>
+                    <TeamGrid teams={koTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
+                  </div>
+                )}
+                {groupEliminated.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">
+                      Eliminated in Group Stage · {groupEliminated.length} teams
+                    </h2>
+                    <TeamGrid teams={groupEliminated} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
+                  </div>
+                )}
+              </>
+            )
+          })()
+        ) : (
+          // Group-phase view
+          GROUPS.map((g) => {
+            const groupTeams = byGroup[g]
+            if (!groupTeams?.length) return null
+            return (
+              <div key={g} className="mb-8">
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
+                  {t.match.stageGroup} {g}
+                </h2>
+                <TeamGrid teams={groupTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
+              </div>
+            )
+          })
+        )
       ) : (
-        <TeamGrid teams={filtered} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
+        <TeamGrid teams={filtered} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
       )}
 
       {!isLoading && filtered.length === 0 && !error && (
@@ -148,11 +201,13 @@ function TeamGrid({
   isFavorite,
   toggleFavorite,
   statusMap,
+  teamKoRound,
 }: {
   teams: ApiTeam[]
   isFavorite: (id: string) => boolean
   toggleFavorite: (id: string) => void
   statusMap: Map<string, TeamStatus>
+  teamKoRound?: Map<string, string>
 }) {
   const { t } = useT()
   return (
@@ -160,6 +215,7 @@ function TeamGrid({
       {teams.map((team) => {
         const fav = isFavorite(team.id)
         const status = statusMap.get(team.id)
+        const koRound = teamKoRound?.get(team.id)
         const positionColor = status
           ? (status.isConfirmedFirst || status.isConfirmedSecond)
             ? 'text-emerald-400'
@@ -178,11 +234,15 @@ function TeamGrid({
               <div className="text-center">
                 <div className="text-sm font-semibold text-white leading-tight">{team.name_en}</div>
                 <div className="text-xs text-slate-500 mt-0.5">{team.fifa_code}</div>
-                <div className="text-xs text-blue-400/70 mt-0.5">Group {team.groups}</div>
-                {FIFA_RANK[team.fifa_code] != null && (
-                  <div className="text-[10px] text-amber-400/80 mt-0.5">🏆 #{FIFA_RANK[team.fifa_code]} FIFA</div>
+                {koRound ? (
+                  <div className="text-[10px] font-semibold text-emerald-400 mt-0.5">🏆 {ROUND_SHORT[koRound]}</div>
+                ) : (
+                  <div className="text-xs text-blue-400/70 mt-0.5">Group {team.groups}</div>
                 )}
-                {status && (
+                {FIFA_RANK[team.fifa_code] != null && (
+                  <div className="text-[10px] text-amber-400/80 mt-0.5">#{FIFA_RANK[team.fifa_code]} FIFA</div>
+                )}
+                {!koRound && status && (
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <span className={`text-[10px] font-bold ${positionColor}`}>{status.position}°</span>
                     {status.isConfirmedQualified && (
