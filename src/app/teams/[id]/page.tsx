@@ -172,6 +172,11 @@ export default function TeamDetailPage() {
   const futureOpponentRows: FutureRow[] = []
   if (hasKnockoutGames && currentKoRound && currentKoRound !== 'final' && currentKoRound !== 'third') {
     const curGame = knockoutByRound[currentKoRound]
+    const curIsHome = curGame?.home_team_id === id
+    const curTs = parseInt(curIsHome ? (curGame?.home_score ?? '') : (curGame?.away_score ?? ''))
+    const curOs = parseInt(curIsHome ? (curGame?.away_score ?? '') : (curGame?.home_score ?? ''))
+    const isEliminated = getMatchStatus(curGame!) === 'finished' && !isNaN(curTs) && !isNaN(curOs) && curTs < curOs
+    if (isEliminated) { /* skip future rows */ } else
     const myMatchNum = curGame ? getGameMatchNum(curGame) : null
     if (myMatchNum) {
       let cur = myMatchNum
