@@ -113,11 +113,11 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
   })
   const timeStr = game ? formatTime(game.local_date, timezone) : ''
 
-  return (
+  const inner = (
     <div
       className={`bg-slate-900 border rounded-xl p-2 space-y-1 overflow-hidden ${
         status === 'live' ? 'border-green-500/40 shadow shadow-green-500/10' : 'border-slate-800'
-      }`}
+      } ${game?.id ? 'hover:border-slate-600 transition-colors cursor-pointer' : ''}`}
       style={{ height: CARD_H }}
     >
       <div className="h-5 flex items-center justify-between">
@@ -146,6 +146,7 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
         scorers={game?.away_scorers && game.away_scorers !== 'null' ? game.away_scorers : undefined} />
     </div>
   )
+  return game?.id ? <Link href={`/matches/${game.id}`}>{inner}</Link> : inner
 }
 
 // ─── One half of the bracket (left or right) ─────────────────────────────────
