@@ -141,6 +141,34 @@ Groups players by `POS_ORDER` (GK→DF→MF→FW). Merges FIFA static data with 
 match stats via `matchFifaToEspn()` which does the same normalised-string fuzzy match.
 Shows age (computed from `dob`), international caps, club, and any tournament stats.
 
+### Tournament Path card & future opponents (`src/app/teams/[id]/page.tsx`)
+Knockout teams display a "Tournament Path" section showing every played knockout round (W/L/D,
+score, AET/Pén. suffix) plus "possible" future opponent rows derived from the bracket.
+
+Bracket traversal uses three module-level lookup tables:
+- `KO_NEXT: Record<number, number>` — maps a match number to the next match it feeds into
+- `KO_FEEDERS: Record<number, [number, number]>` — maps a match number to its two feeder matches
+- `KO_ROUND: Record<number, string>` — maps a match number to its round label (`'r16'`…`'final'`)
+
+`getGameMatchNum(game)` converts an `EnrichedGame` to its bracket match number by looking up
+`BRACKET_POSITIONS.get(dateStr_city)`. `getPossibleOpponents(matchNum, gameByMatchNum, allTeams)`
+recurses through `KO_FEEDERS` to narrow down which teams could still face this team: returns
+exactly 1 if the feeder game is finished (the winner), returns real teams from a scheduled game
+if they're confirmed, otherwise recurses deeper.
+
+Future rows are NOT rendered when the team is eliminated (current round finished with team score
+< opponent score).
+
+Rendering:
+- 1 possible team → full row (round label, flag + name, date)
+- 2+ possible teams → compact row (round label, flag strip, count)
+- Separator between confirmed and possible rows: dashed `-- possible --` divider
+
+### Clickable bracket cards (`src/app/playoffs/page.tsx`)
+`BracketCard` wraps its inner `<div>` in a `<Link href={/matches/${game.id}}>` when `game?.id`
+is defined. Cards without a known game ID stay non-interactive. Hover state adds
+`hover:border-slate-600` to signal clickability.
+
 ### Group qualification indicators (`src/components/GroupTable.tsx`)
 Three distinct visual states for teams in group standings:
 - **Green number** (`text-emerald-500`): position is locked (confirmed 1st, or confirmed 2nd

@@ -13,11 +13,12 @@ Live scores, standings, schedule, knockout bracket, and predictions for the **FI
 - **Schedule** — 104 matches with filters (live / today / upcoming / finished / by group)
 - **Knockout bracket** — split-bracket view from Round of 32 through the Final, with slot labels showing where each team comes from (e.g. "Winner Group A", "Runner-up Group C")
 - **Tournament path** — pick any team and finishing position (1st, 2nd, or best third) to see their full path through the bracket with possible opponents at each stage and match date/time
-- **Team profiles** — fixtures, group standing, stats, tournament scorers, and full official squad with age, club, international caps, and position
+- **Team profiles** — fixtures, group standing, stats, tournament scorers, and full official squad with age, club, international caps, and position; knockout teams show a "Tournament Path" card with each round played and a "possible" section revealing future opponent flags (or full detail when only one opponent is confirmed)
 - **Players page** — all-tournament player stats sorted by goals; shows appearances, minutes played, yellow/red cards, club, and position, with filters by position and search
 - **Inline prediction editing** — predict match scores directly on match cards (no separate page needed); predictions lock when the match kicks off
 - **Knockout ET/penalty prediction flow** — when predicting a knockout draw, ET score inputs appear automatically; if ET is also a draw, penalty score inputs follow
-- **Prediction groups** — create or join private leaderboards with friends; tracks points, exact scores, and ranking in real time (requires Redis)
+- **Prediction groups** — create or join private leaderboards with friends; tracks points, exact scores (count highlighted when ≥ 3 exact scores achieved), and ranking in real time (requires Redis)
+- **Clickable bracket cards** — every match card in the knockout bracket view links to the full match detail page
 - **Favorite teams** — pin teams to track next/last match and group position
 - **Multi-language** — English, Portuguese, Español
 - **Dark theme** with system-preference detection

@@ -303,7 +303,7 @@ export default function TeamDetailPage() {
   if (!team) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <p className="text-slate-400 mb-4">Team not found.</p>
+        <p className="text-slate-400 mb-4">{t.teamDetail.notFound}</p>
         <Link href="/teams" className="text-blue-400 hover:underline">{t.teamDetail.backToTeams}</Link>
       </div>
     )
@@ -340,7 +340,7 @@ export default function TeamDetailPage() {
                   <span className="text-slate-500 text-xs">{t.match.stageGroup} {team.groups}</span>
                   <span className="text-slate-600">·</span>
                   <span className="inline-flex items-center bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full">
-                    Eliminated
+                    {t.teamDetail.eliminated}
                   </span>
                 </>
               ) : (
@@ -414,7 +414,7 @@ export default function TeamDetailPage() {
       {/* Playoff journey (teams that advanced to knockout rounds) */}
       {hasKnockoutGames && (
         <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">🏆 Tournament Path</h2>
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">🏆 {t.teamDetail.tournamentPath}</h2>
           <div className="flex flex-col gap-2">
             {JOURNEY_ROUNDS.filter((r) => knockoutByRound[r]).map((round) => {
               const game = knockoutByRound[round]!
@@ -427,7 +427,7 @@ export default function TeamDetailPage() {
               const ts = parseInt(teamScore), os = parseInt(oppScore)
               const isWin = status === 'finished' && ts > os
               const isLoss = status === 'finished' && ts < os
-              const suffix = game.decidedBy === 'et' ? 'AET' : game.decidedBy === 'penalties' ? 'PSO' : null
+              const suffix = game.decidedBy === 'et' ? t.match.aet : game.decidedBy === 'penalties' ? t.match.penalties : null
               return (
                 <div key={round} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${
                   status === 'live'   ? 'bg-green-500/10 border-green-500/30' :
@@ -476,7 +476,7 @@ export default function TeamDetailPage() {
               <>
                 <div className="flex items-center gap-2 my-0.5">
                   <div className="flex-1 border-t border-dashed border-slate-700/50" />
-                  <span className="text-[9px] text-slate-600 uppercase tracking-widest whitespace-nowrap">possible</span>
+                  <span className="text-[9px] text-slate-600 uppercase tracking-widest whitespace-nowrap">{t.teamDetail.possible}</span>
                   <div className="flex-1 border-t border-dashed border-slate-700/50" />
                 </div>
                 {futureOpponentRows.map(({ round, possibleTeams, scheduledGame }) =>

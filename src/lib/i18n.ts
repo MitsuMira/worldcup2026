@@ -57,6 +57,7 @@ export interface Translations {
     posGK: string; posDF: string; posMF: string; posFW: string
     ageUnit: string; intlCaps: string; appsShort: string
     yellowCards: string; redCards: string
+    notFound: string; eliminated: string; tournamentPath: string; possible: string
   }
   predictions: {
     title: string; subtitle: string; points: string; exactScores: string; pending: string
@@ -159,6 +160,7 @@ export const en: Translations = {
     posGK: 'Goalkeepers', posDF: 'Defenders', posMF: 'Midfielders', posFW: 'Forwards',
     ageUnit: 'yrs', intlCaps: 'intl. caps', appsShort: 'apps',
     yellowCards: 'yellow cards', redCards: 'red cards',
+    notFound: 'Team not found.', eliminated: 'Eliminated', tournamentPath: 'Tournament Path', possible: 'possible',
   },
   predictions: {
     title: 'Predictions', subtitle: 'Predict match scores · Stored locally in your browser',
@@ -283,6 +285,7 @@ export const pt: Translations = {
     posGK: 'Goleiros', posDF: 'Defensores', posMF: 'Meias', posFW: 'Atacantes',
     ageUnit: 'anos', intlCaps: 'caps internacionais', appsShort: 'jgs',
     yellowCards: 'cartões amarelos', redCards: 'cartões vermelhos',
+    notFound: 'Seleção não encontrada.', eliminated: 'Eliminado', tournamentPath: 'Caminho no Torneio', possible: 'possíveis',
   },
   predictions: {
     title: 'Palpites', subtitle: 'Preveja os placares · Salvo localmente no seu navegador',
@@ -407,6 +410,7 @@ export const es: Translations = {
     posGK: 'Porteros', posDF: 'Defensores', posMF: 'Centrocampistas', posFW: 'Delanteros',
     ageUnit: 'años', intlCaps: 'caps internacionales', appsShort: 'pj',
     yellowCards: 'tarjetas amarillas', redCards: 'tarjetas rojas',
+    notFound: 'Selección no encontrada.', eliminated: 'Eliminado', tournamentPath: 'Camino en el Torneo', possible: 'posibles',
   },
   predictions: {
     title: 'Predicciones', subtitle: 'Predice los marcadores · Guardado localmente en tu navegador',
