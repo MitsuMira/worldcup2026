@@ -69,10 +69,13 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   }, [game.id])
 
   const startEdit = () => {
-    setHomeInput(prediction ? String(prediction.homeScore) : '')
-    setAwayInput(prediction ? String(prediction.awayScore) : '')
-    setEtHomeInput(prediction?.etHomeScore !== undefined ? String(prediction.etHomeScore) : '')
-    setEtAwayInput(prediction?.etAwayScore !== undefined ? String(prediction.etAwayScore) : '')
+    const h = prediction ? String(prediction.homeScore) : ''
+    const a = prediction ? String(prediction.awayScore) : ''
+    setHomeInput(h)
+    setAwayInput(a)
+    const isRegDraw = isKnockout && h !== '' && a !== '' && h === a
+    setEtHomeInput(prediction?.etHomeScore !== undefined ? String(prediction.etHomeScore) : isRegDraw ? h : '')
+    setEtAwayInput(prediction?.etAwayScore !== undefined ? String(prediction.etAwayScore) : isRegDraw ? a : '')
     setPenHomeInput(prediction?.penHomeScore !== undefined ? String(prediction.penHomeScore) : '')
     setPenAwayInput(prediction?.penAwayScore !== undefined ? String(prediction.penAwayScore) : '')
     setEditing(true)
@@ -88,6 +91,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
     if (isDrawReg && (etHomeInput === '' || etAwayInput === '')) return
     const etH = etHomeInput !== '' ? parseInt(etHomeInput) : undefined
     const etA = etAwayInput !== '' ? parseInt(etAwayInput) : undefined
+    if (isDrawReg && etH !== undefined && etA !== undefined && (etH < h || etA < a)) return
     const isDrawET = isKnockout && isDrawReg && etHomeInput !== '' && etAwayInput !== '' && etHomeInput === etAwayInput
     if (isDrawET && (penHomeInput === '' || penAwayInput === '')) return
     const penH = penHomeInput !== '' ? parseInt(penHomeInput) : undefined
@@ -240,7 +244,14 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                       ref={homeRef}
                       type="number" min="0" max="20"
                       value={homeInput}
-                      onChange={e => setHomeInput(e.target.value)}
+                      onChange={e => {
+                        const v = e.target.value
+                        setHomeInput(v)
+                        if (isKnockout && v !== '' && v === awayInput) {
+                          if (!etHomeInput) setEtHomeInput(v)
+                          if (!etAwayInput) setEtAwayInput(awayInput)
+                        }
+                      }}
                       onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
                       className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
                     />
@@ -248,7 +259,14 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                     <input
                       type="number" min="0" max="20"
                       value={awayInput}
-                      onChange={e => setAwayInput(e.target.value)}
+                      onChange={e => {
+                        const v = e.target.value
+                        setAwayInput(v)
+                        if (isKnockout && v !== '' && homeInput === v) {
+                          if (!etHomeInput) setEtHomeInput(homeInput)
+                          if (!etAwayInput) setEtAwayInput(v)
+                        }
+                      }}
                       onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
                       className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
                     />
@@ -265,23 +283,32 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                     {lockLabel && <span className="text-xs text-orange-400 font-medium ml-1">{lockLabel}</span>}
                   </div>
                   {isDrawReg && (
-                    <div className="flex items-center gap-1.5 ml-4">
-                      <span className="text-[10px] text-slate-400 uppercase w-12">Prórr.</span>
-                      <input
-                        type="number" min="0" max="20"
-                        value={etHomeInput}
-                        onChange={e => setEtHomeInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
-                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
-                      />
-                      <span className="text-slate-500 text-sm">–</span>
-                      <input
-                        type="number" min="0" max="20"
-                        value={etAwayInput}
-                        onChange={e => setEtAwayInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
-                        className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
-                      />
+                    <div className="flex flex-col gap-0.5 ml-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-amber-400/70 uppercase w-12">AET</span>
+                        <input
+                          type="number" min={parseInt(homeInput) || 0} max="20"
+                          value={etHomeInput}
+                          onChange={e => {
+                            const v = e.target.value, min = parseInt(homeInput) || 0, n = parseInt(v)
+                            setEtHomeInput(v !== '' && !isNaN(n) && n < min ? String(min) : v)
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                          className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                        />
+                        <span className="text-slate-500 text-sm">–</span>
+                        <input
+                          type="number" min={parseInt(awayInput) || 0} max="20"
+                          value={etAwayInput}
+                          onChange={e => {
+                            const v = e.target.value, min = parseInt(awayInput) || 0, n = parseInt(v)
+                            setEtAwayInput(v !== '' && !isNaN(n) && n < min ? String(min) : v)
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') savePrediction(); if (e.key === 'Escape') cancelEdit() }}
+                          className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
+                        />
+                      </div>
+                      <span className="text-[9px] text-slate-500 ml-14">total after 120' · min. {homeInput}–{awayInput}</span>
                     </div>
                   )}
                   {isDrawET && (

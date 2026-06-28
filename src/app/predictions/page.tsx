@@ -38,13 +38,16 @@ export default function PredictionsPage() {
 
   const startEdit = useCallback((game: EnrichedGame) => {
     const existing = predictions[game.id]
+    const h = existing ? String(existing.homeScore) : ''
+    const a = existing ? String(existing.awayScore) : ''
+    const isRegDraw = isKnockoutGame(game) && h !== '' && a !== '' && h === a
     setInputs(prev => ({
       ...prev,
       [game.id]: {
-        home: existing ? String(existing.homeScore) : '',
-        away: existing ? String(existing.awayScore) : '',
-        etHome: existing?.etHomeScore !== undefined ? String(existing.etHomeScore) : '',
-        etAway: existing?.etAwayScore !== undefined ? String(existing.etAwayScore) : '',
+        home: h,
+        away: a,
+        etHome: existing?.etHomeScore !== undefined ? String(existing.etHomeScore) : isRegDraw ? h : '',
+        etAway: existing?.etAwayScore !== undefined ? String(existing.etAwayScore) : isRegDraw ? a : '',
         penHome: existing?.penHomeScore !== undefined ? String(existing.penHomeScore) : '',
         penAway: existing?.penAwayScore !== undefined ? String(existing.penAwayScore) : '',
       }
@@ -66,6 +69,7 @@ export default function PredictionsPage() {
     const isDrawReg = knockout && inp.home !== '' && inp.away !== '' && inp.home === inp.away
     const etH = inp.etHome !== '' ? parseInt(inp.etHome) : undefined
     const etA = inp.etAway !== '' ? parseInt(inp.etAway) : undefined
+    if (isDrawReg && etH !== undefined && etA !== undefined && (etH < h || etA < a)) return
     const isDrawET = isDrawReg && inp.etHome !== '' && inp.etAway !== '' && inp.etHome === inp.etAway
     const penH = inp.penHome !== '' ? parseInt(inp.penHome) : undefined
     const penA = inp.penAway !== '' ? parseInt(inp.penAway) : undefined
@@ -222,31 +226,56 @@ export default function PredictionsPage() {
                     <div className="flex flex-col items-center gap-1 flex-shrink-0">
                       <div className="flex items-center gap-1">
                         <input type="number" min="0" max="20" value={inp.home}
-                          onChange={(e) => setInputs((prev) => ({ ...prev, [game.id]: { ...inp, home: e.target.value } }))}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            const upd = { ...inp, home: v }
+                            if (knockout && v !== '' && v === inp.away) {
+                              if (!inp.etHome) upd.etHome = v
+                              if (!inp.etAway) upd.etAway = inp.away
+                            }
+                            setInputs((prev) => ({ ...prev, [game.id]: upd }))
+                          }}
                           className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-blue-500 text-sm"
                           placeholder="0"
                         />
                         <span className="text-slate-600 text-sm">–</span>
                         <input type="number" min="0" max="20" value={inp.away}
-                          onChange={(e) => setInputs((prev) => ({ ...prev, [game.id]: { ...inp, away: e.target.value } }))}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            const upd = { ...inp, away: v }
+                            if (knockout && v !== '' && inp.home === v) {
+                              if (!inp.etHome) upd.etHome = inp.home
+                              if (!inp.etAway) upd.etAway = v
+                            }
+                            setInputs((prev) => ({ ...prev, [game.id]: upd }))
+                          }}
                           className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-blue-500 text-sm"
                           placeholder="0"
                         />
                       </div>
                       {isDrawReg && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400 uppercase w-10">Prórr.</span>
-                          <input type="number" min="0" max="20" value={inp.etHome}
-                            onChange={(e) => setInputs((prev) => ({ ...prev, [game.id]: { ...inp, etHome: e.target.value } }))}
-                            className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
-                            placeholder="0"
-                          />
-                          <span className="text-slate-600 text-sm">–</span>
-                          <input type="number" min="0" max="20" value={inp.etAway}
-                            onChange={(e) => setInputs((prev) => ({ ...prev, [game.id]: { ...inp, etAway: e.target.value } }))}
-                            className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
-                            placeholder="0"
-                          />
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-amber-400/70 uppercase w-10">AET</span>
+                            <input type="number" min={parseInt(inp.home) || 0} max="20" value={inp.etHome}
+                              onChange={(e) => {
+                                const v = e.target.value, min = parseInt(inp.home) || 0, n = parseInt(v)
+                                setInputs((prev) => ({ ...prev, [game.id]: { ...inp, etHome: v !== '' && !isNaN(n) && n < min ? String(min) : v } }))
+                              }}
+                              className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                              placeholder={inp.home}
+                            />
+                            <span className="text-slate-600 text-sm">–</span>
+                            <input type="number" min={parseInt(inp.away) || 0} max="20" value={inp.etAway}
+                              onChange={(e) => {
+                                const v = e.target.value, min = parseInt(inp.away) || 0, n = parseInt(v)
+                                setInputs((prev) => ({ ...prev, [game.id]: { ...inp, etAway: v !== '' && !isNaN(n) && n < min ? String(min) : v } }))
+                              }}
+                              className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                              placeholder={inp.away}
+                            />
+                          </div>
+                          <span className="text-[9px] text-slate-500 ml-12">total after 120' · min. {inp.home}–{inp.away}</span>
                         </div>
                       )}
                       {isDrawET && (
