@@ -7,6 +7,9 @@ import { getMatchStatus, getTeamName, parseMatchDate } from '@/lib/utils'
 import { useT } from '@/contexts/LanguageContext'
 import MiniCountdown from './MiniCountdown'
 
+const ROUND_PRIO: Record<string, number> = { final: 0, third: 0, sf: 1, qf: 2, r16: 3, r32: 4 }
+const ROUND_LABEL: Record<string, string> = { r32: 'Round of 32', r16: 'Round of 16', qf: 'Quarter-Final', sf: 'Semi-Final', third: '3rd Place', final: 'Final' }
+
 interface Props {
   team: ApiTeam
   games: EnrichedGame[]
@@ -39,6 +42,16 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
   const position = standing !== undefined && standing >= 0 ? standing + 1 : null
   const pts = teamGroup?.standings.find((s) => s.team_id === team.id)?.pts
 
+  const knockoutGames = teamGames.filter((g) => g.type !== 'group')
+  const koRound = knockoutGames.reduce<string | null>((best, g) => {
+    const prio = ROUND_PRIO[g.type] ?? 99
+    return best === null || prio < (ROUND_PRIO[best] ?? 99) ? g.type : best
+  }, null)
+
+  const groupGames = teamGames.filter((g) => g.type === 'group')
+  const groupComplete = groupGames.length > 0 && groupGames.every((g) => getMatchStatus(g) === 'finished')
+  const isEliminated = groupComplete && !koRound
+
   return (
     <Link
       href={`/teams/${team.id}`}
@@ -52,12 +65,26 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
           <div className="text-xs text-slate-500">{team.fifa_code}</div>
         </div>
         <div className="text-right flex-shrink-0">
-          <div className="text-xs text-slate-500">{t.favorites.groupPos} {team.groups}</div>
-          {position !== null && (
-            <div className={`text-sm font-black ${position <= 2 ? 'text-green-400' : 'text-slate-400'}`}>
-              #{position}
-              {pts !== undefined && <span className="text-xs font-normal text-slate-500 ml-1">{pts}pts</span>}
-            </div>
+          {koRound ? (
+            <>
+              <div className="text-xs text-slate-500">Group {team.groups}</div>
+              <div className="text-xs font-bold text-emerald-400">🏆 {ROUND_LABEL[koRound]}</div>
+            </>
+          ) : isEliminated ? (
+            <>
+              <div className="text-xs text-slate-500">Group {team.groups}</div>
+              <div className="text-xs font-bold text-red-400">Eliminated</div>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-slate-500">{t.favorites.groupPos} {team.groups}</div>
+              {position !== null && (
+                <div className={`text-sm font-black ${position <= 2 ? 'text-green-400' : 'text-slate-400'}`}>
+                  #{position}
+                  {pts !== undefined && <span className="text-xs font-normal text-slate-500 ml-1">{pts}pts</span>}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

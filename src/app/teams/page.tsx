@@ -9,6 +9,7 @@ import { FIFA_RANK } from '@/lib/fifaRanking'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { isTeamConfirmedInTop, canTeamReachPosition } from '@/lib/groupSimulation'
+import { isEspnPlaceholder } from '@/lib/bracketStructure'
 import { Loader2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 
@@ -36,6 +37,7 @@ export default function TeamsPage() {
 
   const teams = data?.teams ?? []
   const filtered = teams.filter((tm) => {
+    if (isEspnPlaceholder(tm.name_en)) return false
     if (groupFilter !== 'All' && tm.groups !== groupFilter) return false
     if (search && !tm.name_en.toLowerCase().includes(search.toLowerCase()) &&
         !tm.fifa_code.toLowerCase().includes(search.toLowerCase())) return false
