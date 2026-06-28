@@ -10,13 +10,85 @@ import MatchCard from '@/components/MatchCard'
 import type { ApiTeam, EnrichedGame, EnrichedGroup, MatchDetail, RosterPlayer } from '@/lib/types'
 import { FIFA_RANK } from '@/lib/fifaRanking'
 import { FIFA_SQUADS_BY_CODE, type FifaPlayer } from '@/lib/fifaSquads'
-import { getMatchStatus, parseMatchDate } from '@/lib/utils'
+import { getMatchStatus, parseMatchDate, getVenueTimezone } from '@/lib/utils'
+import { BRACKET_POSITIONS, isEspnPlaceholder } from '@/lib/bracketStructure'
 import { simulateLiveStandings } from '@/lib/simulateLiveStandings'
 import { useT } from '@/contexts/LanguageContext'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import { Loader2 } from 'lucide-react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+// ── Bracket traversal for future opponent computation ─────────────────────────
+
+const KO_NEXT: Record<number, number> = {
+  73:90,74:89,75:90,76:91,77:89,78:91,79:92,80:92,
+  81:94,82:94,83:93,84:93,85:96,86:95,87:96,88:95,
+  89:97,90:97,91:99,92:99,93:98,94:98,95:100,96:100,
+  97:101,98:101,99:102,100:102,101:103,102:103,
+}
+const KO_FEEDERS: Record<number, [number, number]> = {
+  89:[74,77],90:[73,75],91:[76,78],92:[79,80],
+  93:[83,84],94:[81,82],95:[86,88],96:[85,87],
+  97:[89,90],98:[93,94],99:[91,92],100:[95,96],
+  101:[97,98],102:[99,100],103:[101,102],
+}
+const KO_ROUND: Record<number, string> = {
+  89:'r16',90:'r16',91:'r16',92:'r16',93:'r16',94:'r16',95:'r16',96:'r16',
+  97:'qf',98:'qf',99:'qf',100:'qf',
+  101:'sf',102:'sf',103:'final',
+}
+
+function getGameMatchNum(game: EnrichedGame): number | null {
+  const tz = getVenueTimezone(game)
+  const d = parseMatchDate(game.local_date)
+  if (!d) return null
+  const dateStr = d.toLocaleDateString('sv-SE', { timeZone: tz })
+  const rawCity = game.stadium?.city_en ?? ''
+  const bp = BRACKET_POSITIONS.get(`${dateStr}_${rawCity}`) ??
+             BRACKET_POSITIONS.get(`${dateStr}_${rawCity.split(',')[0].trim()}`)
+  return bp?.matchNum ?? null
+}
+
+function getPossibleOpponents(
+  matchNum: number,
+  gameByMatchNum: Map<number, EnrichedGame>,
+  allTeams: ApiTeam[],
+): ApiTeam[] {
+  const game = gameByMatchNum.get(matchNum)
+  if (game) {
+    const st = getMatchStatus(game)
+    if (st === 'finished') {
+      const hs = parseInt(game.home_score), as_ = parseInt(game.away_score)
+      if (!isNaN(hs) && !isNaN(as_)) {
+        const winnerId = hs > as_ ? game.home_team_id : game.away_team_id
+        const w = allTeams.find(t => t.id === winnerId)
+        return w ? [w] : []
+      }
+    }
+    const res: ApiTeam[] = []
+    if (!isEspnPlaceholder(game.home_team_name_en ?? '')) {
+      const t = allTeams.find(tm => tm.id === game.home_team_id)
+      if (t) res.push(t)
+    }
+    if (!isEspnPlaceholder(game.away_team_name_en ?? '')) {
+      const t = allTeams.find(tm => tm.id === game.away_team_id)
+      if (t) res.push(t)
+    }
+    if (res.length > 0) return res
+  }
+  const feeders = KO_FEEDERS[matchNum]
+  if (!feeders) return []
+  return [
+    ...getPossibleOpponents(feeders[0], gameByMatchNum, allTeams),
+    ...getPossibleOpponents(feeders[1], gameByMatchNum, allTeams),
+  ]
+}
+
+const JOURNEY_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'third', 'final'] as const
+type JourneyRound = typeof JOURNEY_ROUNDS[number]
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -82,13 +154,46 @@ export default function TeamDetailPage() {
   const groupComplete = groupGames.length > 0 && groupGames.every((g) => getMatchStatus(g) === 'finished')
   const isEliminatedAtGroup = groupComplete && !hasKnockoutGames
 
-  const JOURNEY_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'third', 'final'] as const
-  type JourneyRound = typeof JOURNEY_ROUNDS[number]
   const knockoutByRound: Partial<Record<JourneyRound, EnrichedGame>> = {}
   for (const g of knockoutGames) knockoutByRound[g.type as JourneyRound] = g
 
   const currentKoRound = (['final', 'third', 'sf', 'qf', 'r16', 'r32'] as JourneyRound[]).find((r) => knockoutByRound[r])
   const ROUND_SHORT: Record<string, string> = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final' }
+
+  // Build matchNum → game map for bracket lookups
+  const gameByMatchNum = new Map<number, EnrichedGame>()
+  for (const game of games) {
+    const mn = getGameMatchNum(game)
+    if (mn) gameByMatchNum.set(mn, game)
+  }
+
+  // Compute possible future opponent rows
+  type FutureRow = { round: string; possibleTeams: ApiTeam[]; scheduledGame?: EnrichedGame }
+  const futureOpponentRows: FutureRow[] = []
+  if (hasKnockoutGames && currentKoRound && currentKoRound !== 'final' && currentKoRound !== 'third') {
+    const curGame = knockoutByRound[currentKoRound]
+    const myMatchNum = curGame ? getGameMatchNum(curGame) : null
+    if (myMatchNum) {
+      let cur = myMatchNum
+      while (KO_NEXT[cur]) {
+        const nextMn = KO_NEXT[cur]
+        const round = KO_ROUND[nextMn]
+        if (round && !knockoutByRound[round as JourneyRound]) {
+          const feeders = KO_FEEDERS[nextMn]
+          if (feeders) {
+            const oppMn = feeders[0] === cur ? feeders[1] : feeders[1] === cur ? feeders[0] : null
+            if (oppMn !== null) {
+              const possible = getPossibleOpponents(oppMn, gameByMatchNum, teams)
+              if (possible.length > 0) {
+                futureOpponentRows.push({ round, possibleTeams: possible, scheduledGame: gameByMatchNum.get(nextMn) })
+              }
+            }
+          }
+        }
+        cur = nextMn
+      }
+    }
+  }
 
   // Fetch match details for finished games
   const finishedGameIds = finishedGames.map(g => g.id)
@@ -361,6 +466,44 @@ export default function TeamDetailPage() {
                 </div>
               )
             })}
+            {futureOpponentRows.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 my-0.5">
+                  <div className="flex-1 border-t border-dashed border-slate-700/50" />
+                  <span className="text-[9px] text-slate-600 uppercase tracking-widest whitespace-nowrap">possible</span>
+                  <div className="flex-1 border-t border-dashed border-slate-700/50" />
+                </div>
+                {futureOpponentRows.map(({ round, possibleTeams, scheduledGame }) =>
+                  possibleTeams.length === 1 ? (
+                    <div key={round} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-slate-800/30 border-slate-700/40">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 w-9 shrink-0">
+                        {ROUND_SHORT[round]}
+                      </span>
+                      <span className="text-xs text-slate-600 shrink-0">vs</span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <TeamFlag team={possibleTeams[0]} size="sm" />
+                        <span className="text-sm font-medium truncate text-slate-300">{possibleTeams[0].name_en}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 shrink-0">
+                        {scheduledGame
+                          ? (parseMatchDate(scheduledGame.local_date)?.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) ?? 'TBD')
+                          : 'TBD'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div key={round} className="flex items-center gap-3 rounded-xl px-3 py-2 border border-dashed bg-slate-800/20 border-slate-700/30">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 w-9 shrink-0">
+                        {ROUND_SHORT[round]}
+                      </span>
+                      <div className="flex items-center gap-1 flex-wrap flex-1">
+                        {possibleTeams.map(t => <TeamFlag key={t.id} team={t} size="sm" />)}
+                      </div>
+                      <span className="text-[10px] text-slate-600 shrink-0">{possibleTeams.length}</span>
+                    </div>
+                  )
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
