@@ -285,7 +285,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                   {isDrawReg && (
                     <div className="flex flex-col gap-0.5 ml-4">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-amber-400/70 uppercase w-12">AET</span>
+                        <span className="text-[10px] text-amber-400/70 uppercase w-12">{t.match.aet}</span>
                         <input
                           type="number" min={parseInt(homeInput) || 0} max="20"
                           value={etHomeInput}
@@ -308,12 +308,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                           className="w-9 text-center bg-slate-800 border border-slate-600 rounded text-white text-sm font-bold tabular-nums focus:outline-none focus:border-amber-500 py-0.5"
                         />
                       </div>
-                      <span className="text-[9px] text-slate-500 ml-14">total after 120' · min. {homeInput}–{awayInput}</span>
+                      <span className="text-[9px] text-slate-500 ml-14">{t.match.aetHint} {homeInput}–{awayInput}</span>
                     </div>
                   )}
                   {isDrawET && (
                     <div className="flex items-center gap-1.5 ml-4">
-                      <span className="text-[10px] text-slate-400 uppercase w-12">Pênaltis</span>
+                      <span className="text-[10px] text-slate-400 uppercase w-12">{t.match.penalties}</span>
                       <input
                         type="number" min="0" max="20"
                         value={penHomeInput}

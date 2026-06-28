@@ -156,7 +156,7 @@ export default function TeamsPage() {
                 {koTeams.length > 0 && (
                   <div className="mb-8">
                     <h2 className="text-sm font-bold text-emerald-500 uppercase tracking-widest mb-3">
-                      🏆 Knockout Phase · {koTeams.length} teams
+                      🏆 {t.teams.knockoutPhase} · {koTeams.length} {t.teams.teamsCount}
                     </h2>
                     <TeamGrid teams={koTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
                   </div>
@@ -164,7 +164,7 @@ export default function TeamsPage() {
                 {groupEliminated.length > 0 && (
                   <div className="mb-8">
                     <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">
-                      Eliminated in Group Stage · {groupEliminated.length} teams
+                      {t.teams.eliminatedGroupStage} · {groupEliminated.length} {t.teams.teamsCount}
                     </h2>
                     <TeamGrid teams={groupEliminated} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
                   </div>
@@ -239,7 +239,7 @@ function TeamGrid({
                 {koRound ? (
                   <div className="text-[10px] font-semibold text-emerald-400 mt-0.5">🏆 {ROUND_SHORT[koRound]}</div>
                 ) : (
-                  <div className="text-xs text-blue-400/70 mt-0.5">Group {team.groups}</div>
+                  <div className="text-xs text-blue-400/70 mt-0.5">{t.match.stageGroup} {team.groups}</div>
                 )}
                 {FIFA_RANK[team.fifa_code] != null && (
                   <div className="text-[10px] text-amber-400/80 mt-0.5">#{FIFA_RANK[team.fifa_code]} FIFA</div>

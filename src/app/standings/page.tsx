@@ -59,24 +59,23 @@ function computeQualifyingThirds(groups: EnrichedGroup[]): Set<string> {
 }
 
 function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
+  const { t } = useT()
   const thirds = getThirds(groups)
   if (thirds.length === 0) return null
 
-  const enoughData = thirds.every(t => (t.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
+  const enoughData = thirds.every(s => (s.played ?? 0) >= MIN_GAMES_TO_DETERMINE)
 
   return (
     <div className="mt-10">
-      <h2 className="text-xl font-black text-white mb-1">Melhores 3ºs Colocados</h2>
-      <p className="text-slate-400 text-sm mb-4">
-        Os 8 melhores de 12 grupos avançam para a Fase de 32 · ordenados por Pts → SG → GP → Cartões → Ranking FIFA
-      </p>
+      <h2 className="text-xl font-black text-white mb-1">{t.standings.bestThirds}</h2>
+      <p className="text-slate-400 text-sm mb-4">{t.standings.bestThirdsDesc}</p>
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
         <div className="min-w-[380px]">
         {/* header */}
         <div className="grid grid-cols-[1.5rem_1fr_2rem_2.5rem_2.5rem_2.5rem_2.5rem_2.5rem] gap-x-2 px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
           <span>#</span>
-          <span>Seleção</span>
+          <span>{t.standings.team}</span>
           <span className="text-center">Gr</span>
           <span className="text-right">Pts</span>
           <span className="text-right">J</span>
@@ -115,7 +114,7 @@ function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
               {cutoff && enoughData && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60">
                   <div className="flex-1 border-t border-dashed border-emerald-800" />
-                  <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-widest whitespace-nowrap">Classificados ↑ · Eliminados ↓</span>
+                  <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-widest whitespace-nowrap">{t.standings.qualifiedEliminated}</span>
                   <div className="flex-1 border-t border-dashed border-emerald-800" />
                 </div>
               )}
@@ -124,9 +123,7 @@ function BestThirdsTable({ groups }: { groups: EnrichedGroup[] }) {
         })}
       </div></div></div>
       {!enoughData && (
-        <p className="text-slate-600 text-xs mt-2 text-center">
-          A classificação final dos melhores 3ºs será definida ao término de todos os jogos da fase de grupos.
-        </p>
+        <p className="text-slate-600 text-xs mt-2 text-center">{t.standings.bestThirdsNote}</p>
       )}
     </div>
   )
@@ -184,7 +181,7 @@ export default function StandingsPage() {
       {liveGroupLetters.size > 0 && (
         <div className="flex items-center gap-2 mb-4 text-xs text-amber-400/80 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block shrink-0" />
-          Classificação simulada com o placar atual dos jogos ao vivo. Pode mudar a qualquer momento.
+          {t.standings.liveNote}
         </div>
       )}
 

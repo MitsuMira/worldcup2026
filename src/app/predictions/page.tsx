@@ -127,7 +127,7 @@ export default function PredictionsPage() {
         <Link href="/groups"
           className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/50 text-white text-sm font-semibold rounded-xl transition-colors shrink-0">
           <UsersRound size={15} className="text-amber-400" />
-          Grupos
+          {t.predictions.groups}
         </Link>
       </div>
 
@@ -136,7 +136,7 @@ export default function PredictionsPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
             <div className="text-2xl font-black text-amber-400">{totalPoints}</div>
             <div className="text-xs text-slate-500 mt-1">{t.predictions.points}</div>
-            {maxPoints > 0 && <div className="text-xs text-slate-600">of {maxPoints} max</div>}
+            {maxPoints > 0 && <div className="text-xs text-slate-600">{t.predictions.ofMax.replace('{n}', String(maxPoints))}</div>}
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
             <div className="text-2xl font-black text-green-400">
@@ -256,7 +256,7 @@ export default function PredictionsPage() {
                       {isDrawReg && (
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1">
-                            <span className="text-[10px] text-amber-400/70 uppercase w-10">AET</span>
+                            <span className="text-[10px] text-amber-400/70 uppercase w-10">{t.match.aet}</span>
                             <input type="number" min={parseInt(inp.home) || 0} max="20" value={inp.etHome}
                               onChange={(e) => {
                                 const v = e.target.value, min = parseInt(inp.home) || 0, n = parseInt(v)
@@ -275,12 +275,12 @@ export default function PredictionsPage() {
                               placeholder={inp.away}
                             />
                           </div>
-                          <span className="text-[9px] text-slate-500 ml-12">total after 120' · min. {inp.home}–{inp.away}</span>
+                          <span className="text-[9px] text-slate-500 ml-12">{t.match.aetHint} {inp.home}–{inp.away}</span>
                         </div>
                       )}
                       {isDrawET && (
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400 uppercase w-10">Pênaltis</span>
+                          <span className="text-[10px] text-slate-400 uppercase w-10">{t.match.penalties}</span>
                           <input type="number" min="0" max="20" value={inp.penHome}
                             onChange={(e) => setInputs((prev) => ({ ...prev, [game.id]: { ...inp, penHome: e.target.value } }))}
                             className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
@@ -310,7 +310,7 @@ export default function PredictionsPage() {
                   ) : existing && isEditing ? (
                     <>
                       <button onClick={() => cancelEdit(game.id)} className="text-xs text-slate-500 hover:text-white transition-colors">
-                        Cancelar
+                        {t.predictions.cancel}
                       </button>
                       <button onClick={() => clearPrediction(game.id)} className="text-xs text-slate-500 hover:text-red-400 transition-colors">
                         {t.predictions.clear}

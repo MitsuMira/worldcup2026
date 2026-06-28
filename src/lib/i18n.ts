@@ -22,6 +22,8 @@ export interface Translations {
   standings: {
     title: string; subtitle: string; team: string; top2: string
     noData: string; qualTitle: string; qualRules: string[]
+    bestThirds: string; bestThirdsDesc: string; qualifiedEliminated: string; bestThirdsNote: string
+    liveNote: string
   }
   playoffs: {
     title: string; subtitle: string
@@ -40,7 +42,7 @@ export interface Translations {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
     theme: string; themeLight: string; themeDark: string
   }
-  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string }
+  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string; knockoutPhase: string; eliminatedGroupStage: string; teamsCount: string }
   players: { title: string; subtitle: string; search: string; allPos: string; noPlayers: string }
   favorites: {
     myTeams: string; noFavorites: string; addFavorites: string
@@ -63,12 +65,14 @@ export interface Translations {
     scoringTitle: string; scoringText: string
     resultCorrect: string; resultWinner: string; resultDraw: string; resultWrong: string; resultPending: string
     actual: string; yourPick: string; locked: string; locksIn: string
+    ofMax: string; groups: string; cancel: string
   }
   match: {
     live: string; vs: string; predict: string
     stageGroup: string; stageR32: string; stageR16: string
     stageQF: string; stageSF: string; stageThird: string; stageFinal: string
     myPick: string; editPick: string
+    aet: string; penalties: string; aetHint: string
   }
   matchDetail: {
     back: string; notFound: string; homeLink: string; ft: string; ht: string
@@ -122,6 +126,11 @@ export const en: Translations = {
       'Step 3 (still tied) — FIFA ranking.',
       'Best third-placed teams: points → goal diff → goals scored → conduct → FIFA ranking.',
     ],
+    bestThirds: 'Best Third-Placed Teams',
+    bestThirdsDesc: 'The 8 best from 12 groups advance to the Round of 32 · ranked by Pts → GD → GF → Cards → FIFA Ranking',
+    qualifiedEliminated: 'Qualified ↑ · Eliminated ↓',
+    bestThirdsNote: 'Final ranking of best thirds will be decided when all group matches are complete.',
+    liveNote: 'Standings simulated with current live scores. May change at any moment.',
   },
   playoffs: {
     title: 'Playoffs', subtitle: 'Knockout stage · Round of 32 through Final',
@@ -134,7 +143,7 @@ export const en: Translations = {
     close: 'Close',
     theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
-  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated' },
+  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated', knockoutPhase: 'Knockout Phase', eliminatedGroupStage: 'Eliminated in Group Stage', teamsCount: 'teams' },
   players: { title: 'Players', subtitle: 'Tournament stats · All players with appearances', search: 'Search players…', allPos: 'All', noPlayers: 'No players found.' },
   favorites: {
     myTeams: '⭐ My Teams', noFavorites: 'No favorite teams yet.',
@@ -161,12 +170,14 @@ export const en: Translations = {
     scoringTitle: 'Scoring', scoringText: 'Exact score: 3 pts · Correct winner/draw: 1 pt · Wrong: 0 pts',
     resultCorrect: '✓ Exact score! +3', resultWinner: '~ Correct winner +1', resultDraw: '~ Correct draw +1',
     resultWrong: '✗ Wrong', resultPending: 'Pending', actual: 'Actual', yourPick: 'Your pick', locked: '🔒 Locked', locksIn: 'Locks in',
+    ofMax: 'of {n} max', groups: 'Groups', cancel: 'Cancel',
   },
   match: {
     live: 'LIVE', vs: 'vs', predict: '✦ Make a prediction →',
     stageGroup: 'Group', stageR32: 'Round of 32', stageR16: 'Round of 16',
     stageQF: 'Quarter-final', stageSF: 'Semi-final', stageThird: '3rd Place', stageFinal: 'Final',
     myPick: 'My pick', editPick: 'Edit',
+    aet: 'AET', penalties: 'Pen.', aetHint: "total after 120' · min.",
   },
   matchDetail: {
     back: '← Back', notFound: 'Match not found.', homeLink: '← Home', ft: 'FT', ht: 'HT',
@@ -239,6 +250,11 @@ export const pt: Translations = {
       'Passo 3 (ainda empatados) — Ranking FIFA.',
       'Melhores 3ºs: pontos → saldo de gols → gols marcados → fair play → Ranking FIFA.',
     ],
+    bestThirds: 'Melhores 3ºs Colocados',
+    bestThirdsDesc: 'Os 8 melhores de 12 grupos avançam para a Fase de 32 · ordenados por Pts → SG → GP → Cartões → Ranking FIFA',
+    qualifiedEliminated: 'Classificados ↑ · Eliminados ↓',
+    bestThirdsNote: 'A classificação final dos melhores 3ºs será definida ao término de todos os jogos da fase de grupos.',
+    liveNote: 'Classificação simulada com o placar atual dos jogos ao vivo. Pode mudar a qualquer momento.',
   },
   playoffs: {
     title: 'Playoffs', subtitle: 'Fase eliminatória · Da fase de 32 à Final',
@@ -251,7 +267,7 @@ export const pt: Translations = {
     close: 'Fechar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
-  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado' },
+  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatória', eliminatedGroupStage: 'Eliminados na Fase de Grupos', teamsCount: 'seleções' },
   players: { title: 'Jogadores', subtitle: 'Estatísticas do torneio · Todos com minutagem', search: 'Buscar jogadores…', allPos: 'Todos', noPlayers: 'Nenhum jogador encontrado.' },
   favorites: {
     myTeams: '⭐ Meus Times', noFavorites: 'Nenhum time favorito ainda.',
@@ -278,12 +294,14 @@ export const pt: Translations = {
     scoringTitle: 'Pontuação', scoringText: 'Placar exato: 3 pts · Vencedor correto/empate: 1 pt · Errado: 0 pts',
     resultCorrect: '✓ Placar exato! +3', resultWinner: '~ Vencedor correto +1', resultDraw: '~ Empate correto +1',
     resultWrong: '✗ Errado', resultPending: 'Pendente', actual: 'Real', yourPick: 'Seu palpite', locked: '🔒 Bloqueado', locksIn: 'Bloqueia em',
+    ofMax: 'de {n} máx.', groups: 'Grupos', cancel: 'Cancelar',
   },
   match: {
     live: 'AO VIVO', vs: 'vs', predict: '✦ Fazer previsão →',
     stageGroup: 'Grupo', stageR32: 'Fase de 32', stageR16: 'Oitavas de Final',
     stageQF: 'Quartas de Final', stageSF: 'Semifinal', stageThird: 'Disputa do 3º Lugar', stageFinal: 'Final',
     myPick: 'Meu palpite', editPick: 'Editar',
+    aet: 'Prórr.', penalties: 'Pên.', aetHint: "total após 120' · mín.",
   },
   matchDetail: {
     back: '← Voltar', notFound: 'Partida não encontrada.', homeLink: '← Início', ft: 'FT', ht: 'HT',
@@ -356,6 +374,11 @@ export const es: Translations = {
       'Paso 3 (aún empatados) — Ranking FIFA.',
       'Mejores terceros: puntos → diferencia de goles → goles marcados → fair play → Ranking FIFA.',
     ],
+    bestThirds: 'Mejores Terceros',
+    bestThirdsDesc: 'Los 8 mejores de 12 grupos avanzan a los 32avos · ordenados por Pts → GD → GF → Tarjetas → Ranking FIFA',
+    qualifiedEliminated: 'Clasificados ↑ · Eliminados ↓',
+    bestThirdsNote: 'La clasificación final de los mejores terceros se definirá al término de todos los partidos de la fase de grupos.',
+    liveNote: 'Clasificación simulada con el marcador actual de los partidos en vivo. Puede cambiar en cualquier momento.',
   },
   playoffs: {
     title: 'Playoffs', subtitle: 'Fase eliminatoria · De los 32avos a la Final',
@@ -368,7 +391,7 @@ export const es: Translations = {
     close: 'Cerrar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
-  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado' },
+  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatoria', eliminatedGroupStage: 'Eliminados en Fase de Grupos', teamsCount: 'selecciones' },
   players: { title: 'Jugadores', subtitle: 'Estadísticas del torneo · Todos con minutos jugados', search: 'Buscar jugadores…', allPos: 'Todos', noPlayers: 'No se encontraron jugadores.' },
   favorites: {
     myTeams: '⭐ Mis Equipos', noFavorites: 'Aún no tienes equipos favoritos.',
@@ -395,12 +418,14 @@ export const es: Translations = {
     scoringTitle: 'Puntuación', scoringText: 'Resultado exacto: 3 pts · Ganador correcto/empate: 1 pt · Incorrecto: 0 pts',
     resultCorrect: '✓ ¡Resultado exacto! +3', resultWinner: '~ Ganador correcto +1', resultDraw: '~ Empate correcto +1',
     resultWrong: '✗ Incorrecto', resultPending: 'Pendiente', actual: 'Real', yourPick: 'Tu pronóstico', locked: '🔒 Bloqueado', locksIn: 'Se bloquea en',
+    ofMax: 'de {n} máx.', groups: 'Grupos', cancel: 'Cancelar',
   },
   match: {
     live: 'EN VIVO', vs: 'vs', predict: '✦ Hacer predicción →',
     stageGroup: 'Grupo', stageR32: 'Dieciseisavos', stageR16: 'Octavos de Final',
     stageQF: 'Cuartos de Final', stageSF: 'Semifinal', stageThird: 'Tercer Puesto', stageFinal: 'Final',
     myPick: 'Mi pronóstico', editPick: 'Editar',
+    aet: 'Prórr.', penalties: 'Pen.', aetHint: "total tras 120' · mín.",
   },
   matchDetail: {
     back: '← Volver', notFound: 'Partido no encontrado.', homeLink: '← Inicio', ft: 'FT', ht: 'HT',

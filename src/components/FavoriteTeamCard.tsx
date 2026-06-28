@@ -8,7 +8,6 @@ import { useT } from '@/contexts/LanguageContext'
 import MiniCountdown from './MiniCountdown'
 
 const ROUND_PRIO: Record<string, number> = { final: 0, third: 0, sf: 1, qf: 2, r16: 3, r32: 4 }
-const ROUND_LABEL: Record<string, string> = { r32: 'Round of 32', r16: 'Round of 16', qf: 'Quarter-Final', sf: 'Semi-Final', third: '3rd Place', final: 'Final' }
 
 interface Props {
   team: ApiTeam
@@ -67,13 +66,16 @@ export default function FavoriteTeamCard({ team, games, groups }: Props) {
         <div className="text-right flex-shrink-0">
           {koRound ? (
             <>
-              <div className="text-xs text-slate-500">Group {team.groups}</div>
-              <div className="text-xs font-bold text-emerald-400">🏆 {ROUND_LABEL[koRound]}</div>
+              <div className="text-xs text-slate-500">{t.favorites.groupPos} {team.groups}</div>
+              <div className="text-xs font-bold text-emerald-400">🏆 {({
+                r32: t.match.stageR32, r16: t.match.stageR16, qf: t.match.stageQF,
+                sf: t.match.stageSF, third: t.match.stageThird, final: t.match.stageFinal,
+              } as Record<string, string>)[koRound] ?? koRound}</div>
             </>
           ) : isEliminated ? (
             <>
-              <div className="text-xs text-slate-500">Group {team.groups}</div>
-              <div className="text-xs font-bold text-red-400">Eliminated</div>
+              <div className="text-xs text-slate-500">{t.favorites.groupPos} {team.groups}</div>
+              <div className="text-xs font-bold text-red-400">{t.teams.eliminated}</div>
             </>
           ) : (
             <>
