@@ -176,26 +176,27 @@ export default function TeamDetailPage() {
     const curTs = parseInt(curIsHome ? (curGame?.home_score ?? '') : (curGame?.away_score ?? ''))
     const curOs = parseInt(curIsHome ? (curGame?.away_score ?? '') : (curGame?.home_score ?? ''))
     const isEliminated = getMatchStatus(curGame!) === 'finished' && !isNaN(curTs) && !isNaN(curOs) && curTs < curOs
-    if (isEliminated) { /* skip future rows */ } else
-    const myMatchNum = curGame ? getGameMatchNum(curGame) : null
-    if (myMatchNum) {
-      let cur = myMatchNum
-      while (KO_NEXT[cur]) {
-        const nextMn = KO_NEXT[cur]
-        const round = KO_ROUND[nextMn]
-        if (round && !knockoutByRound[round as JourneyRound]) {
-          const feeders = KO_FEEDERS[nextMn]
-          if (feeders) {
-            const oppMn = feeders[0] === cur ? feeders[1] : feeders[1] === cur ? feeders[0] : null
-            if (oppMn !== null) {
-              const possible = getPossibleOpponents(oppMn, gameByMatchNum, teams)
-              if (possible.length > 0) {
-                futureOpponentRows.push({ round, possibleTeams: possible, scheduledGame: gameByMatchNum.get(nextMn) })
+    if (!isEliminated) {
+      const myMatchNum = curGame ? getGameMatchNum(curGame) : null
+      if (myMatchNum) {
+        let cur = myMatchNum
+        while (KO_NEXT[cur]) {
+          const nextMn = KO_NEXT[cur]
+          const round = KO_ROUND[nextMn]
+          if (round && !knockoutByRound[round as JourneyRound]) {
+            const feeders = KO_FEEDERS[nextMn]
+            if (feeders) {
+              const oppMn = feeders[0] === cur ? feeders[1] : feeders[1] === cur ? feeders[0] : null
+              if (oppMn !== null) {
+                const possible = getPossibleOpponents(oppMn, gameByMatchNum, teams)
+                if (possible.length > 0) {
+                  futureOpponentRows.push({ round, possibleTeams: possible, scheduledGame: gameByMatchNum.get(nextMn) })
+                }
               }
             }
           }
+          cur = nextMn
         }
-        cur = nextMn
       }
     }
   }
