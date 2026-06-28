@@ -15,8 +15,9 @@ export function calcPoints(member: KvMember, games: EnrichedGame[], allMembers: 
     const pred = member.predictions[game.id] as Prediction | undefined
     if (!pred) continue
     if (isKnockoutGame(game)) {
-      pts += getKnockoutPredictionPoints(pred, game)
-      // exact/winner tracking skipped for knockout for now
+      const koPts = getKnockoutPredictionPoints(pred, game)
+      pts += koPts
+      if (koPts >= 3) exact++  // regulation exact score in knockout gives 3 pts
     } else {
       const result = getPredictionResult(
         { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,

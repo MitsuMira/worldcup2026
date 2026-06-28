@@ -20,7 +20,14 @@ type MatchFilter = 'all' | 'finished' | 'upcoming'
 interface KvMember {
   userId: string
   name: string
-  predictions: Record<string, { homeScore: number | string; awayScore: number | string }>
+  predictions: Record<string, {
+    homeScore: number | string
+    awayScore: number | string
+    etHomeScore?: number | string
+    etAwayScore?: number | string
+    penHomeScore?: number | string
+    penAwayScore?: number | string
+  }>
   updatedAt: string
 }
 
@@ -226,7 +233,9 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
             {isMe && <span className="text-[10px] text-amber-400 font-bold">você</span>}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {predictedCounted.length} palpites · {exact} exatos · {winner} vencedor
+            {predictedCounted.length} palpites
+            {' · '}<span className="text-green-400 font-semibold">{exact} exatos</span>
+            {' · '}{winner} certo
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -267,14 +276,24 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
                 { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,
                 game,
               )
+              const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
+              const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
               return (
-                <div key={game.id} className="flex items-center gap-2 text-xs">
+                <div key={game.id} className="flex items-start gap-2 text-xs">
                   <ResultDot result={result as PredictionResult} />
                   <span className="text-slate-400 truncate flex-1">{getTeamName(game, 'home')} vs {getTeamName(game, 'away')}</span>
                   <span className="text-slate-500 shrink-0">{game.home_score}–{game.away_score}</span>
-                  <span className={`font-bold shrink-0 ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-slate-600'}`}>
-                    {pred.homeScore}–{pred.awayScore}
-                  </span>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className={`font-bold ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-slate-600'}`}>
+                      {pred.homeScore}–{pred.awayScore}
+                    </span>
+                    {hasEt && (
+                      <span className="text-[10px] text-amber-400/70">ET {pred.etHomeScore}–{pred.etAwayScore}</span>
+                    )}
+                    {hasPen && (
+                      <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -284,11 +303,21 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
                 {games.filter(g => getMatchStatus(g) !== 'finished' && member.predictions[g.id] && gameCountsForScoring(g, allMembers, minParticipation)).map(game => {
                   const pred = member.predictions[game.id]
                   if (!pred) return null
+                  const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
+                  const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
                   return (
-                    <div key={game.id} className="flex items-center gap-2 text-xs">
-                      <span className="w-2 h-2 rounded-full bg-slate-700 inline-block shrink-0" />
+                    <div key={game.id} className="flex items-start gap-2 text-xs">
+                      <span className="w-2 h-2 rounded-full bg-slate-700 inline-block shrink-0 mt-0.5" />
                       <span className="text-slate-400 truncate flex-1">{getTeamName(game, 'home')} vs {getTeamName(game, 'away')}</span>
-                      <span className="text-amber-400 font-bold shrink-0">{pred.homeScore}–{pred.awayScore}</span>
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-amber-400 font-bold">{pred.homeScore}–{pred.awayScore}</span>
+                        {hasEt && (
+                          <span className="text-[10px] text-amber-400/60">ET {pred.etHomeScore}–{pred.etAwayScore}</span>
+                        )}
+                        {hasPen && (
+                          <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -350,14 +379,24 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
           const result = finished
             ? getPredictionResult({ ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction, game) as PredictionResult
             : 'pending'
+          const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
+          const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
           return (
             <div key={uid} className="px-4 py-2.5 flex items-center gap-3">
               <span className="text-xs text-slate-500 w-5 text-center">{i + 1}</span>
               <span className="text-xs text-white truncate flex-1">{member.name}</span>
               <ResultDot result={result} />
-              <span className={`text-xs font-bold shrink-0 ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-amber-400'}`}>
-                {pred.homeScore}–{pred.awayScore}
-              </span>
+              <div className="flex flex-col items-end shrink-0">
+                <span className={`text-xs font-bold ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-amber-400'}`}>
+                  {pred.homeScore}–{pred.awayScore}
+                </span>
+                {hasEt && (
+                  <span className="text-[10px] text-amber-300/70">ET {pred.etHomeScore}–{pred.etAwayScore}</span>
+                )}
+                {hasPen && (
+                  <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
+                )}
+              </div>
             </div>
           )
         })}
