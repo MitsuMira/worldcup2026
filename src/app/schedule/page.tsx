@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MatchCard from '@/components/MatchCard'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, groupGamesByDate, parseMatchDate } from '@/lib/utils'
@@ -18,11 +18,23 @@ export default function SchedulePage() {
   const { data, error, isLoading } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { refreshInterval: 30_000 })
   const [filter, setFilter] = useState(0) // index into filters array
   const [groupFilter, setGroupFilter] = useState('All')
+  const [hasAutoFiltered, setHasAutoFiltered] = useState(false)
 
   const allGames = data?.games ?? []
   const now = new Date()
   // today in user's timezone as YYYY-MM-DD (sv-SE locale)
   const todayKey = now.toLocaleDateString('sv-SE', timezone ? { timeZone: timezone } : undefined)
+
+  // Auto-switch to Knockout filter once all group games are finished
+  useEffect(() => {
+    if (!data || hasAutoFiltered || filter !== 0) return
+    setHasAutoFiltered(true)
+    const groupGames = data.games.filter((g) => g.type === 'group')
+    const allGroupDone = groupGames.length > 0 && groupGames.every((g) => getMatchStatus(g) === 'finished')
+    const hasKnockout = data.games.some((g) => g.type !== 'group')
+    if (allGroupDone && hasKnockout) setFilter(filters.length - 1)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
   const filters = [
     { label: t.schedule.all, fn: () => true },

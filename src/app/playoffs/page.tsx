@@ -4,13 +4,14 @@ import useSWR from 'swr'
 import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
+import { useFavorites } from '@/contexts/FavoriteTeamsContext'
 import type { EnrichedGame } from '@/lib/types'
 import { getMatchStatus, getTeamName, formatTime, parseMatchDate, getVenueTimezone } from '@/lib/utils'
 import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel, isEspnPlaceholder } from '@/lib/bracketStructure'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Star } from 'lucide-react'
 import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -49,7 +50,9 @@ function halfTop(absIdx: number, idx: number): number {
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
 
-function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations }) {
+function BracketSlot({ game, side, label, t, highlightFav = false }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations; highlightFav?: boolean }) {
+  const { isFavorite } = useFavorites()
+
   if (!game) {
     const displayLabel = label ? formatSlotLabel(label, t) : t.playoffs.tbd
     return (
@@ -67,6 +70,7 @@ function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'hom
   const otherScore = side === 'home' ? game.away_score : game.home_score
   const status = getMatchStatus(game)
   const isWinner = status === 'finished' && parseInt(score) > parseInt(otherScore)
+  const isFav = highlightFav && !!team && isFavorite(team.id)
 
   return (
     <div className={`flex items-center gap-2 px-2 py-0.5 rounded-lg border transition-colors ${
@@ -75,7 +79,7 @@ function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'hom
         : status === 'finished'
           ? 'bg-slate-800/30 border-slate-700/30'
           : 'bg-slate-800/50 border-slate-700/50'
-    }`}>
+    } ${isFav ? 'ring-1 ring-amber-400/60' : ''}`}>
       <TeamFlag team={team} name={name} size="sm" />
       <span className={`text-xs font-medium flex-1 truncate ${isWinner ? 'text-green-300' : 'text-white'}`}>
         {name}
@@ -90,7 +94,7 @@ function BracketSlot({ game, side, label, t }: { game?: EnrichedGame; side: 'hom
 }
 
 // ─── Single card ─────────────────────────────────────────────────────────────
-function BracketCard({ game, matchNum, timezone, t }: { game?: EnrichedGame; matchNum?: number; timezone: string; t: Translations }) {
+function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { game?: EnrichedGame; matchNum?: number; timezone: string; t: Translations; highlightFav?: boolean }) {
   const status = game ? getMatchStatus(game) : null
   const d = game ? parseMatchDate(game.local_date) : null
   const bpos = game ? getBracketPos(game) : undefined
@@ -128,9 +132,9 @@ function BracketCard({ game, matchNum, timezone, t }: { game?: EnrichedGame; mat
           <span className="text-[10px] text-slate-600 font-bold shrink-0 ml-1">M{resolvedMatchNum}</span>
         )}
       </div>
-      <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} />
+      <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} highlightFav={highlightFav} />
       <div className="h-px bg-slate-800" />
-      <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} />
+      <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} highlightFav={highlightFav} />
     </div>
   )
 }
@@ -143,11 +147,13 @@ function HalfBracket({
   flip,
   timezone,
   t,
+  highlightFav = false,
 }: {
   rounds: { key: string; label: string; padded: { game?: EnrichedGame; matchNum?: number }[]; absIdx: number }[]
   flip: boolean
   timezone: string
   t: Translations
+  highlightFav?: boolean
 }) {
   if (!rounds.length) return null
   const firstCount = rounds[0].padded.length
@@ -168,7 +174,7 @@ function HalfBracket({
                 className="absolute left-0 right-0"
                 style={{ top: halfTop(absIdx, i) }}
               >
-                <BracketCard game={game} matchNum={matchNum} timezone={timezone} t={t} />
+                <BracketCard game={game} matchNum={matchNum} timezone={timezone} t={t} highlightFav={highlightFav} />
               </div>
             ))}
           </div>
@@ -179,7 +185,7 @@ function HalfBracket({
 }
 
 // ─── Full split bracket ───────────────────────────────────────────────────────
-function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timezone: string; t: Translations }) {
+function SplitBracketView({ games, timezone, t, highlightFav = false }: { games: EnrichedGame[]; timezone: string; t: Translations; highlightFav?: boolean }) {
   const byType = (type: string) =>
     games.filter((g) => g.type === type).sort((a, b) => a.local_date.localeCompare(b.local_date))
 
@@ -239,7 +245,7 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
       <div className="flex gap-2 min-w-max items-start">
 
         {/* Left half: R32 → R16 → QF → SF */}
-        <HalfBracket rounds={leftRounds} flip={false} timezone={timezone} t={t} />
+        <HalfBracket rounds={leftRounds} flip={false} timezone={timezone} t={t} highlightFav={highlightFav} />
 
         {/* Final + 3rd Place — centre column */}
         <div className="flex flex-col">
@@ -248,19 +254,19 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
           </div>
           <div className="relative w-[196px]" style={{ height: containerH }}>
             <div className="absolute left-0 right-0" style={{ top: finalTop }}>
-              <BracketCard game={final} matchNum={103} timezone={timezone} t={t} />
+              <BracketCard game={final} matchNum={103} timezone={timezone} t={t} highlightFav={highlightFav} />
             </div>
             <div className="absolute left-0 right-0" style={{ top: finalTop + CARD_H + 28 }}>
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center mb-1">
                 {t.playoffs.third}
               </div>
-              <BracketCard game={third} matchNum={104} timezone={timezone} t={t} />
+              <BracketCard game={third} matchNum={104} timezone={timezone} t={t} highlightFav={highlightFav} />
             </div>
           </div>
         </div>
 
         {/* Right half (mirrored): SF → QF → R16 → R32 */}
-        <HalfBracket rounds={rightRounds} flip={true} timezone={timezone} t={t} />
+        <HalfBracket rounds={rightRounds} flip={true} timezone={timezone} t={t} highlightFav={highlightFav} />
 
       </div>
     </div>
@@ -271,7 +277,9 @@ function SplitBracketView({ games, timezone, t }: { games: EnrichedGame[]; timez
 export default function PlayoffsPage() {
   const { t } = useT()
   const { timezone } = useSettings()
+  const { favorites } = useFavorites()
   const [round, setRound] = useState<Round>('bracket')
+  const [highlightFav, setHighlightFav] = useState(false)
 
   const { data, error, isLoading } = useSWR<{ games: EnrichedGame[] }>(
     '/api/games', fetcher, { refreshInterval: 30_000 },
@@ -308,12 +316,27 @@ export default function PlayoffsPage() {
           <h1 className="text-3xl font-black text-white mb-1">{t.playoffs.title}</h1>
           <p className="text-slate-400 text-sm">{t.playoffs.subtitle}</p>
         </div>
-        <Link
-          href="/path"
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-xl text-xs font-bold transition-colors"
-        >
-          🗺️ Rumo à taça
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {favorites.length > 0 && (
+            <button
+              onClick={() => setHighlightFav((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-bold transition-colors ${
+                highlightFav
+                  ? 'bg-amber-500/20 border-amber-400/50 text-amber-400'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              <Star size={12} fill={highlightFav ? 'currentColor' : 'none'} />
+              My teams
+            </button>
+          )}
+          <Link
+            href="/path"
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-xl text-xs font-bold transition-colors"
+          >
+            🗺️ Rumo à taça
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
@@ -348,7 +371,7 @@ export default function PlayoffsPage() {
           {round === 'bracket' ? (
             knockoutGames.length === 0
               ? <div className="text-slate-500 text-center py-20">{t.playoffs.noGames}</div>
-              : <SplitBracketView games={knockoutGames} timezone={timezone} t={t} />
+              : <SplitBracketView games={knockoutGames} timezone={timezone} t={t} highlightFav={highlightFav} />
           ) : (
             currentGames.length === 0
               ? <div className="text-slate-500 text-center py-20">{t.playoffs.noGames}</div>

@@ -48,6 +48,7 @@ export default function PlayersPage() {
   const [posFilter, setPosFilter] = useState<'All' | 'GK' | 'DF' | 'MF' | 'FW'>('All')
   const [teamFilter, setTeamFilter] = useState('')
   const [clubFilter, setClubFilter] = useState('')
+  const [phaseFilter, setPhaseFilter] = useState<'all' | 'group' | 'knockout'>('all')
   const [sortBy, setSortBy] = useState<SortKey>('goals')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
 
@@ -79,6 +80,13 @@ export default function PlayersPage() {
     return m
   }, [teams])
 
+  // Map game ID → true if knockout, false if group stage
+  const finishedGameTypes = useMemo(() => {
+    const m = new Map<string, boolean>()
+    games.forEach((g) => { if (getMatchStatus(g) === 'finished') m.set(g.id, g.type !== 'group') })
+    return m
+  }, [games])
+
   const playerRows = useMemo<PlayerRow[]>(() => {
     if (!matchDetailsList || !teams.length) return []
 
@@ -98,6 +106,11 @@ export default function PlayersPage() {
 
     for (const detail of matchDetailsList) {
       if (!detail?.events) continue
+      if (phaseFilter !== 'all') {
+        const isKO = finishedGameTypes.get(detail.id) ?? false
+        if (phaseFilter === 'knockout' && !isKO) continue
+        if (phaseFilter === 'group' && isKO) continue
+      }
       const events = detail.events
 
       // ── Accumulate appearance + minutes ───────────────────────────────────
@@ -161,7 +174,7 @@ export default function PlayersPage() {
 
       return { name, teamId: stat.teamId, team, pos, goals: stat.goals, yellowCards: stat.yellowCards, redCards: stat.redCards, apps: stat.apps, minutesPlayed: stat.minutesPlayed, club }
     })
-  }, [matchDetailsList, teams, teamByCode])
+  }, [matchDetailsList, teams, teamByCode, phaseFilter, finishedGameTypes])
 
   // Base rows after pos + search filters (before team/club dropdowns)
   const baseRows = useMemo(() => {
@@ -270,7 +283,7 @@ export default function PlayersPage() {
             ))}
           </select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(['All', 'GK', 'DF', 'MF', 'FW'] as const).map((pos) => (
             <button
               key={pos}
@@ -280,6 +293,18 @@ export default function PlayersPage() {
               }`}
             >
               {pos === 'All' ? t.players.allPos : pos}
+            </button>
+          ))}
+          <div className="w-px bg-slate-700 self-stretch mx-1" />
+          {(['all', 'group', 'knockout'] as const).map((ph) => (
+            <button
+              key={ph}
+              onClick={() => setPhaseFilter(ph)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                phaseFilter === ph ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              {ph === 'all' ? 'All stages' : ph === 'group' ? 'Group stage' : 'Knockout'}
             </button>
           ))}
         </div>
