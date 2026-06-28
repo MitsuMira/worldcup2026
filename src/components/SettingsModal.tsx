@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Settings } from 'lucide-react'
+import { X, Settings, Share2 } from 'lucide-react'
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Lang } from '@/lib/i18n'
@@ -60,6 +60,18 @@ export default function SettingsModal({ onClose }: Props) {
   ]
   const backdropRef = useRef<HTMLDivElement>(null)
   const [tzSearch, setTzSearch] = useState('')
+  const [shared, setShared] = useState(false)
+
+  const APP_URL = 'https://wc2026.mitsumira.com/'
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: 'WC 2026 Tracker', url: APP_URL }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(APP_URL)
+      setShared(true)
+      setTimeout(() => setShared(false), 2000)
+    }
+  }
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -189,6 +201,13 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         <div className="px-5 py-4 border-t border-slate-800 space-y-3">
+          <button
+            onClick={handleShare}
+            className="w-full py-2.5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            <Share2 size={15} />
+            {shared ? '✓ Link copied!' : 'Share this app'}
+          </button>
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors"

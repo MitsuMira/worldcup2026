@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Trophy, Calendar, BarChart3, Users, User, Star, Menu, X, Award } from 'lucide-react'
+import { Trophy, Calendar, Users, User, Star, Menu, X, Award } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '@/contexts/LanguageContext'
 import { SettingsButton } from './SettingsModal'
@@ -15,7 +15,6 @@ export default function Navbar() {
   const links = [
     { href: '/', label: t.nav.home, icon: Trophy },
     { href: '/schedule', label: t.nav.schedule, icon: Calendar },
-    { href: '/standings', label: t.nav.standings, icon: BarChart3 },
     { href: '/playoffs', label: t.nav.playoffs, icon: Award },
     { href: '/teams', label: t.nav.teams, icon: Users },
     { href: '/players', label: t.nav.players, icon: User },

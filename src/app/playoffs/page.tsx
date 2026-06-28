@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
@@ -11,7 +11,7 @@ import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel, isEsp
 import { useT } from '@/contexts/LanguageContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { Translations } from '@/lib/i18n'
-import { Loader2, Star } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -286,18 +286,7 @@ function SplitBracketView({ games, timezone, t, highlightFav = false }: { games:
 export default function PlayoffsPage() {
   const { t } = useT()
   const { timezone } = useSettings()
-  const { favorites } = useFavorites()
   const [round, setRound] = useState<Round>('bracket')
-  const [highlightFav, setHighlightFav] = useState(false)
-  const [favInitialized, setFavInitialized] = useState(false)
-
-  // Auto-enable favorite highlight once the context loads favorites from localStorage
-  useEffect(() => {
-    if (!favInitialized && favorites.length > 0) {
-      setFavInitialized(true)
-      setHighlightFav(true)
-    }
-  }, [favorites, favInitialized])
 
   const { data, error, isLoading } = useSWR<{ games: EnrichedGame[] }>(
     '/api/games', fetcher, { refreshInterval: 30_000 },
@@ -334,27 +323,12 @@ export default function PlayoffsPage() {
           <h1 className="text-3xl font-black text-white mb-1">{t.playoffs.title}</h1>
           <p className="text-slate-400 text-sm">{t.playoffs.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {favorites.length > 0 && (
-            <button
-              onClick={() => setHighlightFav((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-bold transition-colors ${
-                highlightFav
-                  ? 'bg-amber-500/20 border-amber-400/50 text-amber-400'
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
-              }`}
-            >
-              <Star size={12} fill={highlightFav ? 'currentColor' : 'none'} />
-              My teams
-            </button>
-          )}
-          <Link
-            href="/path"
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-xl text-xs font-bold transition-colors"
-          >
-            🗺️ Rumo à taça
-          </Link>
-        </div>
+        <Link
+          href="/standings"
+          className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-600 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0"
+        >
+          📊 {t.nav.standings}
+        </Link>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
@@ -389,7 +363,7 @@ export default function PlayoffsPage() {
           {round === 'bracket' ? (
             knockoutGames.length === 0
               ? <div className="text-slate-500 text-center py-20">{t.playoffs.noGames}</div>
-              : <SplitBracketView games={knockoutGames} timezone={timezone} t={t} highlightFav={highlightFav} />
+              : <SplitBracketView games={knockoutGames} timezone={timezone} t={t} highlightFav={true} />
           ) : (
             currentGames.length === 0
               ? <div className="text-slate-500 text-center py-20">{t.playoffs.noGames}</div>
