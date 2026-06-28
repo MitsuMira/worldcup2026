@@ -68,12 +68,12 @@ export default function SchedulePage() {
         <p className="text-slate-400 text-sm">{t.schedule.subtitle}</p>
       </div>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-2">
+      <div className="flex flex-wrap gap-2 mb-4">
         {filters.map(({ label }, i) => (
           <button
             key={label}
             onClick={() => setFilter(i)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filter === i ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
             }`}
           >
@@ -83,10 +83,10 @@ export default function SchedulePage() {
       </div>
 
       {showGroupFilter && (
-        <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-2">
+        <div className="flex flex-wrap gap-2 mb-6">
           <button
             onClick={() => setGroupFilter('All')}
-            className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               groupFilter === 'All' ? 'bg-slate-600 text-white' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -96,7 +96,7 @@ export default function SchedulePage() {
             <button
               key={g}
               onClick={() => setGroupFilter(g)}
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 groupFilter === g ? 'bg-slate-600 text-white' : 'bg-slate-800/50 text-slate-500 hover:text-slate-300'
               }`}
             >
