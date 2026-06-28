@@ -1,9 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { Star } from 'lucide-react'
+import { Star, ChevronDown } from 'lucide-react'
 import TeamFlag from '@/components/TeamFlag'
 import GroupTable from '@/components/GroupTable'
 import MatchCard from '@/components/MatchCard'
@@ -34,6 +35,9 @@ export default function TeamDetailPage() {
 
   const team = teams.find((tm) => tm.id === id)
   const isLoading = teamsLoading || gamesLoading
+
+  // null = use computed default (collapsed when team is in playoffs)
+  const [groupOpenOverride, setGroupOpenOverride] = useState<boolean | null>(null)
 
   const teamGames = games
     .filter((g) => g.home_team_id === id || g.away_team_id === id)
@@ -73,6 +77,23 @@ export default function TeamDetailPage() {
     }
   }
   const topScorers = [...scorerMap.entries()].sort((a, b) => b[1] - a[1])
+
+  // Playoff / group phase detection
+  const groupGames = teamGames.filter((g) => g.type === 'group')
+  const knockoutGames = teamGames.filter((g) => g.type !== 'group')
+  const hasKnockoutGames = knockoutGames.length > 0
+  const groupComplete = groupGames.length > 0 && groupGames.every((g) => getMatchStatus(g) === 'finished')
+  const isEliminatedAtGroup = groupComplete && !hasKnockoutGames
+
+  const JOURNEY_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'third', 'final'] as const
+  type JourneyRound = typeof JOURNEY_ROUNDS[number]
+  const knockoutByRound: Partial<Record<JourneyRound, EnrichedGame>> = {}
+  for (const g of knockoutGames) knockoutByRound[g.type as JourneyRound] = g
+
+  const currentKoRound = (['final', 'third', 'sf', 'qf', 'r16', 'r32'] as JourneyRound[]).find((r) => knockoutByRound[r])
+  const ROUND_SHORT: Record<string, string> = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final' }
+
+  const groupStandingOpen = groupOpenOverride ?? !hasKnockoutGames
 
   // Fetch match details for finished games
   const finishedGameIds = finishedGames.map(g => g.id)
@@ -200,12 +221,30 @@ export default function TeamDetailPage() {
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <span className="text-slate-400 text-sm">{team.fifa_code}</span>
               <span className="text-slate-600">·</span>
-              <span className="text-blue-400 text-sm">{t.match.stageGroup} {team.groups}</span>
+              {hasKnockoutGames && currentKoRound ? (
+                <>
+                  <span className="text-slate-500 text-xs">{t.match.stageGroup} {team.groups}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="inline-flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    🏆 {ROUND_SHORT[currentKoRound]}
+                  </span>
+                </>
+              ) : isEliminatedAtGroup ? (
+                <>
+                  <span className="text-slate-500 text-xs">{t.match.stageGroup} {team.groups}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="inline-flex items-center bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    Eliminated
+                  </span>
+                </>
+              ) : (
+                <span className="text-blue-400 text-sm">{t.match.stageGroup} {team.groups}</span>
+              )}
               {FIFA_RANK[team.fifa_code] != null && (
                 <>
                   <span className="text-slate-600">·</span>
                   <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold px-2 py-0.5 rounded-full">
-                    🏆 #{FIFA_RANK[team.fifa_code]} FIFA
+                    #{FIFA_RANK[team.fifa_code]} FIFA
                   </span>
                 </>
               )}
@@ -266,8 +305,73 @@ export default function TeamDetailPage() {
         )}
       </div>
 
-      {/* Group standings */}
-      {teamGroup && (
+      {/* Playoff journey (teams that advanced to knockout rounds) */}
+      {hasKnockoutGames && (
+        <div className="mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">🏆 Tournament Path</h2>
+          <div className="flex flex-col gap-2">
+            {JOURNEY_ROUNDS.filter((r) => knockoutByRound[r]).map((round) => {
+              const game = knockoutByRound[round]!
+              const status = getMatchStatus(game)
+              const isHome = game.home_team_id === id
+              const opponentTeam = isHome ? game.awayTeam : game.homeTeam
+              const opponentName = opponentTeam?.name_en ?? (isHome ? game.away_team_name_en : game.home_team_name_en) ?? '?'
+              const teamScore = isHome ? game.home_score : game.away_score
+              const oppScore = isHome ? game.away_score : game.home_score
+              const ts = parseInt(teamScore), os = parseInt(oppScore)
+              const isWin = status === 'finished' && ts > os
+              const isLoss = status === 'finished' && ts < os
+              const suffix = game.decidedBy === 'et' ? 'AET' : game.decidedBy === 'penalties' ? 'PSO' : null
+              return (
+                <div key={round} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${
+                  status === 'live'   ? 'bg-green-500/10 border-green-500/30' :
+                  isWin              ? 'bg-emerald-500/5 border-emerald-500/20' :
+                  isLoss             ? 'bg-red-500/5 border-red-500/20' :
+                                       'bg-slate-800/50 border-slate-700/50'
+                }`}>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 w-9 shrink-0">
+                    {ROUND_SHORT[round]}
+                  </span>
+                  <span className="text-xs text-slate-600 shrink-0">vs</span>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {opponentTeam && <TeamFlag team={opponentTeam} size="sm" />}
+                    <span className={`text-sm font-medium truncate ${status !== 'scheduled' ? 'text-white' : 'text-slate-400'}`}>
+                      {opponentName}
+                    </span>
+                  </div>
+                  {status === 'finished' && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {suffix && <span className="text-[9px] text-slate-500">{suffix}</span>}
+                      <span className={`text-sm font-black tabular-nums ${isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-slate-300'}`}>
+                        {teamScore}–{oppScore}
+                      </span>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                        isWin  ? 'bg-emerald-500/20 text-emerald-400' :
+                        isLoss ? 'bg-red-500/20 text-red-400' :
+                                 'bg-slate-700 text-slate-300'
+                      }`}>{isWin ? 'W' : isLoss ? 'L' : 'D'}</span>
+                    </div>
+                  )}
+                  {status === 'live' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-bold text-green-400 animate-pulse">LIVE</span>
+                      <span className="text-sm font-black text-white tabular-nums">{teamScore}–{oppScore}</span>
+                    </div>
+                  )}
+                  {status === 'scheduled' && (
+                    <span className="text-[10px] text-blue-400 shrink-0">
+                      {parseMatchDate(game.local_date)?.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) ?? ''}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Group standings (always visible for non-playoff teams; collapsible at bottom for playoff teams) */}
+      {teamGroup && !hasKnockoutGames && (
         <div className="mb-6">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">{t.teamDetail.groupStanding}</h2>
           <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} allGames={games} />
@@ -320,6 +424,22 @@ export default function TeamDetailPage() {
 
       {teamGames.length === 0 && (
         <div className="text-slate-500 text-center py-12">{t.teamDetail.noMatches}</div>
+      )}
+
+      {/* Group standings — collapsible historical panel for teams in the knockout phase */}
+      {teamGroup && hasKnockoutGames && (
+        <div className="mb-6">
+          <button
+            onClick={() => setGroupOpenOverride(!groupStandingOpen)}
+            className="w-full flex items-center justify-between text-sm font-bold text-slate-400 hover:text-slate-200 uppercase tracking-widest mb-3 transition-colors"
+          >
+            {t.teamDetail.groupStanding}
+            <ChevronDown size={14} className={`transition-transform duration-200 ${groupStandingOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {groupStandingOpen && (
+            <GroupTable group={teamGroup} highlightTeamId={team.id} isLiveSimulated={liveGroupLetters.has(team.groups)} allGames={games} />
+          )}
+        </div>
       )}
 
       {/* Squad / Elenco */}
