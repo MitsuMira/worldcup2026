@@ -153,12 +153,17 @@ function parseEvents(details: EspnDetailEntry[], homeId: string): MatchEvent[] {
     const primary = athletes[0]?.displayName ?? ''
     const secondary = athletes[1]?.displayName
 
+    // Shootout kicks have clock=0; detect them to show 'PEN' instead of "0'"
+    const isShootout = d.penaltyKick === true && value <= 1
+    const minVal = isShootout ? 121 : value
+    const minDisplay = isShootout ? 'PEN' : display
+
     if (text === 'goal' || d.scoringPlay) {
       const type: MatchEvent['type'] =
         d.ownGoal ? 'owngoal' : d.penaltyKick ? 'penalty' : 'goal'
-      events.push({ type, minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary, secondaryPlayer: secondary })
-    } else if (text.includes('missed penalty') || text.includes('penalty - miss')) {
-      events.push({ type: 'missed_penalty', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary })
+      events.push({ type, minuteDisplay: minDisplay, minute: minVal, teamId: abbr, primaryPlayer: primary, secondaryPlayer: secondary })
+    } else if (text.includes('missed penalty') || text.includes('penalty - miss') || (d.penaltyKick && !d.scoringPlay)) {
+      events.push({ type: 'missed_penalty', minuteDisplay: minDisplay, minute: minVal, teamId: abbr, primaryPlayer: primary })
     } else if (text.includes('yellow-red') || text.includes('second yellow')) {
       events.push({ type: 'yellowred', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary })
     } else if (text.includes('yellow') || d.yellowCard) {
@@ -375,9 +380,13 @@ function parseKeyEvents(
     const secondary = participants[1]?.athlete?.displayName
 
     const typeStr = ev.type?.type?.toLowerCase() ?? ''
+    const isShootout = ev.penaltyKick === true && value <= 1
+    const minVal = isShootout ? 121 : value
+    const minDisplay = isShootout ? 'PEN' : display
+
     if (typeStr === 'goal' || ev.scoringPlay) {
       const type: MatchEvent['type'] = ev.ownGoal ? 'owngoal' : ev.penaltyKick ? 'penalty' : 'goal'
-      events.push({ type, minuteDisplay: display, minute: value, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
+      events.push({ type, minuteDisplay: minDisplay, minute: minVal, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
     } else if (typeStr === 'yellow-red-card' || typeStr === 'second-yellow-card') {
       events.push({ type: 'yellowred', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
     } else if (typeStr === 'yellow-card') {
@@ -386,8 +395,8 @@ function parseKeyEvents(
       events.push({ type: 'red', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
     } else if (typeStr === 'substitution') {
       events.push({ type: 'sub', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
-    } else if (typeStr === 'missed-penalty' || typeStr === 'penalty-miss') {
-      events.push({ type: 'missed_penalty', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
+    } else if (typeStr === 'missed-penalty' || typeStr === 'penalty-miss' || typeStr === 'penalty-kick' || (ev.penaltyKick && !ev.scoringPlay)) {
+      events.push({ type: 'missed_penalty', minuteDisplay: minDisplay, minute: minVal, teamId, primaryPlayer: primary })
     }
   }
   return events.sort((a, b) => a.minute - b.minute)
@@ -466,6 +475,10 @@ export async function GET(
             const iconForType = (type?: string): string => {
               switch (type) {
                 case 'goal': return '⚽'
+                case 'penalty-goal': return '⚽'
+                case 'penalty-kick': return '⚽'
+                case 'penalty-miss': return '❌'
+                case 'penalty-missed': return '❌'
                 case 'yellow-card': return '🟨'
                 case 'red-card': return '🟥'
                 case 'shot-on-target': return '🎯'

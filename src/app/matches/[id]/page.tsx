@@ -503,7 +503,7 @@ export default function MatchDetailPage() {
   const kickoffMs = kickoff?.getTime() ?? 0
   // Show feed tab from 5 min before kickoff until ~10 min after the estimated end
   // (kickoff + 140 min covers 45+15+45+35 for a typical match with stoppage)
-  const estimatedEndMs = kickoffMs + 140 * 60 * 1000
+  const estimatedEndMs = kickoffMs + 200 * 60 * 1000
   const withinMatchWindow = kickoffMs > 0 && Date.now() >= kickoffMs - 5 * 60 * 1000 &&
     Date.now() < estimatedEndMs + 10 * 60 * 1000
   const showFeedTab = (hasFeed || status === 'live') && withinMatchWindow
