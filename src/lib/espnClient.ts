@@ -124,6 +124,12 @@ function computeTimeElapsed(status: EspnStatus): string {
   const minFromDisplay = display?.includes(':') ? (parseInt(display.split(':')[0]) || 0) : 0
   const min = Math.max(1, minFromClock, minFromDisplay)
 
+  // Second half of extra time (period 4): base is 105'
+  if (period >= 4 && min >= 105) {
+    const extra = min - 105
+    return extra > 0 ? `105+${extra}` : '105+'
+  }
+  // Regulation 2nd half + first half of extra time (period 2–3): base is 90'
   if (period >= 2 && min >= 90) {
     const extra = min - 90
     return extra > 0 ? `90+${extra}` : '90+'
