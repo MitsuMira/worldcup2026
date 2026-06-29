@@ -21,6 +21,7 @@ interface EspnCompetitor {
   team: EspnTeam
   score?: string
   winner?: boolean
+  linescores?: Array<{ value?: number; displayValue?: string }>
 }
 
 interface EspnStatusType {
@@ -124,6 +125,8 @@ function computeTimeElapsed(status: EspnStatus): string {
   const minFromDisplay = display?.includes(':') ? (parseInt(display.split(':')[0]) || 0) : 0
   const min = Math.max(1, minFromClock, minFromDisplay)
 
+  // Penalty shootout (period 5+)
+  if (period >= 5) return 'PEN'
   // Second half of extra time (period 4): count 106–120', stoppage as 120+X
   if (period >= 4) {
     if (min > 120) return `120+${min - 120}`
@@ -259,6 +262,10 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     capacity: 0,
   } : undefined
 
+  // Penalty shootout score: ESPN stores it as period 5 in linescores (index 4)
+  const homePenScore = home.linescores?.[4]?.displayValue ?? home.linescores?.[4]?.value?.toString()
+  const awayPenScore = away.linescores?.[4]?.displayValue ?? away.linescores?.[4]?.value?.toString()
+
   return {
     id: event.id,
     home_team_id: home.team.abbreviation,
@@ -285,6 +292,8 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     time_elapsed: isLive ? computeTimeElapsed(st) : 'notstarted',
     type,
     decidedBy,
+    pen_home_score: homePenScore,
+    pen_away_score: awayPenScore,
     homeTeam: makeTeam(home),
     awayTeam: makeTeam(away),
     stadium,

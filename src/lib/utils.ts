@@ -190,7 +190,7 @@ export function formatLockCountdown(minutes: number): string {
 export function getStatusLabel(game: ApiGame, timezone?: string): string {
   const s = getMatchStatus(game)
   if (s === 'finished') return 'FT'
-  if (s === 'live') return `${game.time_elapsed}'`
+  if (s === 'live') return game.time_elapsed === 'PEN' ? 'PEN' : `${game.time_elapsed}'`
   return formatTime(game.local_date, timezone)
 }
 

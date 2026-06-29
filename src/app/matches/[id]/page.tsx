@@ -530,7 +530,7 @@ export default function MatchDetailPage() {
           {status === 'live' ? (
             <span className="flex items-center gap-1.5 text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              {game.time_elapsed === 'HT' ? t.matchDetail.ht : `${t.match.live} ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
+              {game.time_elapsed === 'HT' ? t.matchDetail.ht : game.time_elapsed === 'PEN' ? `${t.match.live} · PEN` : `${t.match.live} ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
             </span>
           ) : status === 'finished' ? (
             <span>{t.matchDetail.ft}</span>
@@ -564,6 +564,13 @@ export default function MatchDetailPage() {
                 <span className="text-5xl font-black tabular-nums text-white">{game.home_score}</span>
                 <span className="text-2xl text-slate-600">–</span>
                 <span className="text-5xl font-black tabular-nums text-white">{game.away_score}</span>
+              </div>
+            )}
+            {/* Penalty shootout score */}
+            {(game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && (game.pen_home_score != null || game.pen_away_score != null) && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                <span className="uppercase tracking-wide">Pen.</span>
+                <span className="font-bold tabular-nums text-white">{game.pen_home_score ?? '?'} – {game.pen_away_score ?? '?'}</span>
               </div>
             )}
             {/* Prediction */}

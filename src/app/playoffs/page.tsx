@@ -68,8 +68,14 @@ function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { 
   const team = side === 'home' ? game.homeTeam : game.awayTeam
   const score = side === 'home' ? game.home_score : game.away_score
   const otherScore = side === 'home' ? game.away_score : game.home_score
+  const penScore = side === 'home' ? game.pen_home_score : game.pen_away_score
+  const otherPenScore = side === 'home' ? game.pen_away_score : game.pen_home_score
   const status = getMatchStatus(game)
-  const isWinner = status === 'finished' && parseInt(score) > parseInt(otherScore)
+  const isWinner = status === 'finished' && (
+    game.decidedBy === 'penalties'
+      ? parseInt(penScore ?? '0') > parseInt(otherPenScore ?? '0')
+      : parseInt(score) > parseInt(otherScore)
+  )
   const isFav = highlightFav && !!team && isFavorite(team.id)
 
   return (
@@ -88,7 +94,7 @@ function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { 
           </span>
           {status !== 'scheduled' && (
             <span className={`text-xs font-black tabular-nums shrink-0 ${isWinner ? 'text-green-300' : 'text-slate-400'}`}>
-              {score}
+              {score}{penScore != null ? ` (${penScore})` : ''}
             </span>
           )}
         </div>
@@ -125,7 +131,7 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
           {status === 'live' && game && (
             <span className="flex items-center gap-1 text-[10px] text-green-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              LIVE {game.time_elapsed}&apos;
+              {game.time_elapsed === 'PEN' ? 'LIVE · PEN' : `LIVE ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
             </span>
           )}
           {status === 'scheduled' && game && (

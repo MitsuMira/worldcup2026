@@ -134,7 +134,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         {status === 'live' ? (
           <span className="flex items-center gap-1.5 text-xs font-bold text-green-400">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            {game.time_elapsed === 'HT' ? 'HT' : `${t.match.live} ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
+            {game.time_elapsed === 'HT' ? 'HT' : game.time_elapsed === 'PEN' ? `${t.match.live} · PEN` : `${t.match.live} ${game.time_elapsed}${game.time_elapsed?.endsWith('+') ? '' : "'"}`}
           </span>
         ) : status === 'finished' ? (
           <span className="text-xs text-slate-600 font-medium">
@@ -184,6 +184,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           )}
           {status === 'live' && (
             <span className="text-xs text-green-400 font-bold">{statusLabel}</span>
+          )}
+          {/* Penalty shootout score */}
+          {(game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && (game.pen_home_score != null || game.pen_away_score != null) && (
+            <span className="text-[10px] text-slate-400">
+              Pen. <span className="font-bold text-white">{game.pen_home_score ?? '?'}–{game.pen_away_score ?? '?'}</span>
+            </span>
           )}
         </div>
 
