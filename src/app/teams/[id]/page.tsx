@@ -428,6 +428,26 @@ export default function TeamDetailPage() {
               const isWin = status === 'finished' && ts > os
               const isLoss = status === 'finished' && ts < os
               const suffix = game.decidedBy === 'et' ? t.match.aet : game.decidedBy === 'penalties' ? t.match.penalties : null
+
+              // When the scheduled opponent slot is still a placeholder, resolve to possible real teams
+              let resolvedOpponents: ApiTeam[] = []
+              if (status === 'scheduled' && isEspnPlaceholder(opponentName)) {
+                const myMatchNum = getGameMatchNum(game)
+                if (myMatchNum) {
+                  const feeders = KO_FEEDERS[myMatchNum]
+                  if (feeders) {
+                    const oppFeeder = feeders.find(f => {
+                      const fg = gameByMatchNum.get(f)
+                      return !fg || (fg.home_team_id !== id && fg.away_team_id !== id)
+                    })
+                    if (oppFeeder !== undefined) {
+                      resolvedOpponents = getPossibleOpponents(oppFeeder, gameByMatchNum, teams)
+                    }
+                  }
+                }
+              }
+              const showResolved = resolvedOpponents.length > 0
+
               return (
                 <div key={round} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${
                   status === 'live'   ? 'bg-green-500/10 border-green-500/30' :
@@ -439,12 +459,26 @@ export default function TeamDetailPage() {
                     {ROUND_SHORT[round]}
                   </span>
                   <span className="text-xs text-slate-600 shrink-0">vs</span>
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {opponentTeam && <TeamFlag team={opponentTeam} size="sm" />}
-                    <span className={`text-sm font-medium truncate ${status !== 'scheduled' ? 'text-white' : 'text-slate-400'}`}>
-                      {opponentName}
-                    </span>
-                  </div>
+                  {showResolved ? (
+                    resolvedOpponents.length === 1 ? (
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <TeamFlag team={resolvedOpponents[0]} size="sm" />
+                        <span className="text-sm font-medium truncate text-slate-400">{resolvedOpponents[0].name_en}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 flex-wrap flex-1">
+                        {resolvedOpponents.map(tm => <TeamFlag key={tm.id} team={tm} size="sm" />)}
+                        <span className="text-[10px] text-slate-500 ml-1">{resolvedOpponents.length}</span>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {opponentTeam && !isEspnPlaceholder(opponentName) && <TeamFlag team={opponentTeam} size="sm" />}
+                      <span className={`text-sm font-medium truncate ${status !== 'scheduled' ? 'text-white' : 'text-slate-400'}`}>
+                        {opponentName}
+                      </span>
+                    </div>
+                  )}
                   {status === 'finished' && (
                     <div className="flex items-center gap-1.5 shrink-0">
                       {suffix && <span className="text-[9px] text-slate-500">{suffix}</span>}
