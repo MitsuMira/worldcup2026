@@ -14,16 +14,26 @@ import { Loader2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
-const GROUPS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 const ROUND_SHORT: Record<string, string> = { r32: 'R32', r16: 'R16', qf: 'QF', sf: 'SF', third: '3rd', final: 'Final' }
 const ROUND_PRIO: Record<string, number> = { final: 0, third: 0, sf: 1, qf: 2, r16: 3, r32: 4 }
+const PHASE_ORDER = ['final', 'third', 'sf', 'qf', 'r16', 'r32', 'group', 'eliminated'] as const
+const PHASE_COLOR: Record<string, string> = {
+  final: 'text-yellow-400',
+  third: 'text-orange-400',
+  sf: 'text-purple-400',
+  qf: 'text-blue-400',
+  r16: 'text-emerald-400',
+  r32: 'text-teal-400',
+  group: 'text-slate-400',
+  eliminated: 'text-red-500',
+}
 
 interface TeamStatus {
-  position: number        // 1–4 current standing position
-  isConfirmedQualified: boolean  // confirmed top-2
+  position: number
+  isConfirmedQualified: boolean
   isConfirmedFirst: boolean
   isConfirmedSecond: boolean
-  isEliminated: boolean          // can't reach 3rd
+  isEliminated: boolean
 }
 
 export default function TeamsPage() {
@@ -32,24 +42,16 @@ export default function TeamsPage() {
   const { data, error, isLoading } = useSWR<{ teams: ApiTeam[] }>('/api/teams', fetcher, { revalidateOnFocus: false })
   const { data: groupsData } = useSWR<{ groups: EnrichedGroup[] }>('/api/groups', fetcher, { revalidateOnFocus: false })
   const { data: gamesData } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher, { revalidateOnFocus: false })
-  const [groupFilter, setGroupFilter] = useState('All')
   const [search, setSearch] = useState('')
 
   const teams = data?.teams ?? []
   const filtered = teams.filter((tm) => {
     if (isEspnPlaceholder(tm.name_en)) return false
-    if (groupFilter !== 'All' && tm.groups !== groupFilter) return false
     if (search && !tm.name_en.toLowerCase().includes(search.toLowerCase()) &&
         !tm.fifa_code.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
-  const byGroup = GROUPS.reduce<Record<string, ApiTeam[]>>((acc, g) => {
-    acc[g] = filtered.filter((tm) => tm.groups === g)
-    return acc
-  }, {})
-
-  // Team ID → their most advanced knockout round (undefined if eliminated at group stage)
   const teamKoRound = useMemo(() => {
     const games = gamesData?.games ?? []
     const map = new Map<string, string>()
@@ -63,14 +65,6 @@ export default function TeamsPage() {
     return map
   }, [gamesData])
 
-  const groupStageComplete = useMemo(() => {
-    const games = gamesData?.games ?? []
-    const groupGames = games.filter((g) => g.type === 'group')
-    return groupGames.length > 0 && groupGames.every((g) => g.finished === 'TRUE')
-  }, [gamesData])
-
-  // Build qualification/position status for every team using the same
-  // brute-force simulation that GroupTable uses.
   const teamStatusMap = useMemo(() => {
     const groups = groupsData?.groups ?? []
     const games = gamesData?.games ?? []
@@ -98,6 +92,28 @@ export default function TeamsPage() {
     return map
   }, [groupsData, gamesData])
 
+  const byPhase = useMemo(() => {
+    return PHASE_ORDER.reduce<Record<string, ApiTeam[]>>((acc, phase) => {
+      acc[phase] = filtered.filter((tm) => {
+        if (teamKoRound.has(tm.id)) return teamKoRound.get(tm.id) === phase
+        if (phase === 'eliminated') return teamStatusMap.get(tm.id)?.isEliminated === true
+        return phase === 'group' && !teamStatusMap.get(tm.id)?.isEliminated
+      })
+      return acc
+    }, {} as Record<string, ApiTeam[]>)
+  }, [filtered, teamKoRound, teamStatusMap])
+
+  const phaseLabel = (phase: string): string => ({
+    final: t.teams.phaseFinal,
+    third: t.teams.phaseThird,
+    sf: t.teams.phaseSF,
+    qf: t.teams.phaseQF,
+    r16: t.teams.phaseR16,
+    r32: t.teams.phaseR32,
+    group: t.teams.phaseGroupStage,
+    eliminated: t.teams.eliminatedGroupStage,
+  }[phase] ?? phase)
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -105,7 +121,7 @@ export default function TeamsPage() {
         <p className="text-slate-400 text-sm">{t.teams.subtitle}</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="mb-6">
         <input
           type="text"
           placeholder={t.teams.search}
@@ -113,25 +129,6 @@ export default function TeamsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-64"
         />
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          <button
-            onClick={() => setGroupFilter('All')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              groupFilter === 'All' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            {t.teams.all}
-          </button>
-          {GROUPS.map((g) => (
-            <button key={g} onClick={() => setGroupFilter(g)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                groupFilter === g ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
       </div>
 
       {error && (
@@ -143,52 +140,21 @@ export default function TeamsPage() {
         </div>
       )}
 
-      {groupFilter === 'All' && !search ? (
-        groupStageComplete ? (
-          // Playoff-era view: split by knockout vs group-eliminated
-          (() => {
-            const koTeams = filtered
-              .filter((tm) => teamKoRound.has(tm.id))
-              .sort((a, b) => (ROUND_PRIO[teamKoRound.get(a.id)!] ?? 99) - (ROUND_PRIO[teamKoRound.get(b.id)!] ?? 99))
-            const groupEliminated = filtered.filter((tm) => !teamKoRound.has(tm.id))
-            return (
-              <>
-                {koTeams.length > 0 && (
-                  <div className="mb-8">
-                    <h2 className="text-sm font-bold text-emerald-500 uppercase tracking-widest mb-3">
-                      🏆 {t.teams.knockoutPhase} · {koTeams.length} {t.teams.teamsCount}
-                    </h2>
-                    <TeamGrid teams={koTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
-                  </div>
-                )}
-                {groupEliminated.length > 0 && (
-                  <div className="mb-8">
-                    <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">
-                      {t.teams.eliminatedGroupStage} · {groupEliminated.length} {t.teams.teamsCount}
-                    </h2>
-                    <TeamGrid teams={groupEliminated} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
-                  </div>
-                )}
-              </>
-            )
-          })()
-        ) : (
-          // Group-phase view
-          GROUPS.map((g) => {
-            const groupTeams = byGroup[g]
-            if (!groupTeams?.length) return null
-            return (
-              <div key={g} className="mb-8">
-                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">
-                  {t.match.stageGroup} {g}
-                </h2>
-                <TeamGrid teams={groupTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} />
-              </div>
-            )
-          })
-        )
-      ) : (
+      {search ? (
         <TeamGrid teams={filtered} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
+      ) : (
+        PHASE_ORDER.map((phase) => {
+          const phaseTeams = byPhase[phase]
+          if (!phaseTeams?.length) return null
+          return (
+            <div key={phase} className="mb-8">
+              <h2 className={`text-sm font-bold ${PHASE_COLOR[phase]} uppercase tracking-widest mb-3`}>
+                {phaseLabel(phase)} · {phaseTeams.length} {t.teams.teamsCount}
+              </h2>
+              <TeamGrid teams={phaseTeams} isFavorite={isFavorite} toggleFavorite={toggleFavorite} statusMap={teamStatusMap} teamKoRound={teamKoRound} />
+            </div>
+          )
+        })
       )}
 
       {!isLoading && filtered.length === 0 && !error && (
@@ -257,7 +223,6 @@ function TeamGrid({
                 )}
               </div>
             </Link>
-            {/* Favorite star */}
             <button
               onClick={(e) => { e.preventDefault(); toggleFavorite(team.id) }}
               className={`absolute top-2 right-2 p-1 rounded-lg transition-colors ${

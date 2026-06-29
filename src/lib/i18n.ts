@@ -42,7 +42,7 @@ export interface Translations {
     title: string; language: string; timezone: string; timezoneHint: string; close: string
     theme: string; themeLight: string; themeDark: string
   }
-  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string; knockoutPhase: string; eliminatedGroupStage: string; teamsCount: string }
+  teams: { title: string; subtitle: string; search: string; all: string; noTeams: string; qualified: string; eliminated: string; knockoutPhase: string; eliminatedGroupStage: string; teamsCount: string; phaseFinal: string; phaseThird: string; phaseSF: string; phaseQF: string; phaseR16: string; phaseR32: string; phaseGroupStage: string }
   players: { title: string; subtitle: string; search: string; allPos: string; noPlayers: string }
   favorites: {
     myTeams: string; noFavorites: string; addFavorites: string
@@ -144,7 +144,7 @@ export const en: Translations = {
     close: 'Close',
     theme: 'Theme', themeLight: '☀️ Light', themeDark: '🌙 Dark',
   },
-  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated', knockoutPhase: 'Knockout Phase', eliminatedGroupStage: 'Eliminated in Group Stage', teamsCount: 'teams' },
+  teams: { title: 'Teams', subtitle: '48 nations competing for the World Cup', search: 'Search teams…', all: 'All', noTeams: 'No teams found.', qualified: 'Qualified', eliminated: 'Eliminated', knockoutPhase: 'Knockout Phase', eliminatedGroupStage: 'Eliminated in Group Stage', teamsCount: 'teams', phaseFinal: 'Final', phaseThird: '3rd Place', phaseSF: 'Semi-Finals', phaseQF: 'Quarter-Finals', phaseR16: 'Round of 16', phaseR32: 'Round of 32', phaseGroupStage: 'Group Stage' },
   players: { title: 'Players', subtitle: 'Tournament stats · All players with appearances', search: 'Search players…', allPos: 'All', noPlayers: 'No players found.' },
   favorites: {
     myTeams: '⭐ My Teams', noFavorites: 'No favorite teams yet.',
@@ -269,7 +269,7 @@ export const pt: Translations = {
     close: 'Fechar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Escuro',
   },
-  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatória', eliminatedGroupStage: 'Eliminados na Fase de Grupos', teamsCount: 'seleções' },
+  teams: { title: 'Seleções', subtitle: '48 nações disputando a Copa do Mundo', search: 'Buscar seleções…', all: 'Todas', noTeams: 'Nenhuma seleção encontrada.', qualified: 'Classificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatória', eliminatedGroupStage: 'Eliminados na Fase de Grupos', teamsCount: 'seleções', phaseFinal: 'Final', phaseThird: '3º Lugar', phaseSF: 'Semifinais', phaseQF: 'Quartas de Final', phaseR16: 'Oitavas de Final', phaseR32: 'Rodada de 32', phaseGroupStage: 'Fase de Grupos' },
   players: { title: 'Jogadores', subtitle: 'Estatísticas do torneio · Todos com minutagem', search: 'Buscar jogadores…', allPos: 'Todos', noPlayers: 'Nenhum jogador encontrado.' },
   favorites: {
     myTeams: '⭐ Meus Times', noFavorites: 'Nenhum time favorito ainda.',
@@ -394,7 +394,7 @@ export const es: Translations = {
     close: 'Cerrar',
     theme: 'Tema', themeLight: '☀️ Claro', themeDark: '🌙 Oscuro',
   },
-  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatoria', eliminatedGroupStage: 'Eliminados en Fase de Grupos', teamsCount: 'selecciones' },
+  teams: { title: 'Selecciones', subtitle: '48 naciones compitiendo por el Mundial', search: 'Buscar selecciones…', all: 'Todas', noTeams: 'No se encontraron selecciones.', qualified: 'Clasificado', eliminated: 'Eliminado', knockoutPhase: 'Fase Eliminatoria', eliminatedGroupStage: 'Eliminados en Fase de Grupos', teamsCount: 'selecciones', phaseFinal: 'Final', phaseThird: '3er Lugar', phaseSF: 'Semifinales', phaseQF: 'Cuartos de Final', phaseR16: 'Octavos de Final', phaseR32: 'Ronda de 32', phaseGroupStage: 'Fase de Grupos' },
   players: { title: 'Jugadores', subtitle: 'Estadísticas del torneo · Todos con minutos jugados', search: 'Buscar jugadores…', allPos: 'Todos', noPlayers: 'No se encontraron jugadores.' },
   favorites: {
     myTeams: '⭐ Mis Equipos', noFavorites: 'Aún no tienes equipos favoritos.',
