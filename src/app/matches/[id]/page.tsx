@@ -615,20 +615,23 @@ export default function MatchDetailPage() {
           <div className="flex flex-col items-center gap-1 shrink-0">
             {status === 'scheduled' ? (
               <span className="text-2xl font-bold text-slate-500">VS</span>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span className="text-5xl font-black tabular-nums text-white">{game.home_score}</span>
-                <span className="text-2xl text-slate-600">–</span>
-                <span className="text-5xl font-black tabular-nums text-white">{game.away_score}</span>
-              </div>
-            )}
-            {/* Penalty shootout score */}
-            {(game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && (game.pen_home_score != null || game.pen_away_score != null) && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                <span className="uppercase tracking-wide">Pen.</span>
-                <span className="font-bold tabular-nums text-white">{game.pen_home_score ?? '?'} – {game.pen_away_score ?? '?'}</span>
-              </div>
-            )}
+            ) : (() => {
+              const hasPen = (game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') &&
+                (game.pen_home_score != null || game.pen_away_score != null)
+              return (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-baseline gap-1 justify-end">
+                    <span className="text-5xl font-black tabular-nums text-white">{game.home_score}</span>
+                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({game.pen_home_score ?? '?'})</span>}
+                  </div>
+                  <span className="text-2xl text-slate-600">–</span>
+                  <div className="flex items-baseline gap-1">
+                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({game.pen_away_score ?? '?'})</span>}
+                    <span className="text-5xl font-black tabular-nums text-white">{game.away_score}</span>
+                  </div>
+                </div>
+              )
+            })()}
             {/* Prediction */}
             {prediction && (
               <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">

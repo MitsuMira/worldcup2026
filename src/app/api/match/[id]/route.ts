@@ -402,6 +402,52 @@ function parseKeyEvents(
   return events.sort((a, b) => a.minute - b.minute)
 }
 
+// Parse penalty shootout kicks from commentary (ESPN never puts them in keyEvents/details)
+function parsePenShootoutFromCommentary(
+  commentary: NonNullable<EspnSummary['commentary']>,
+  homeId: string,
+  awayId: string,
+  homeName: string,
+  awayName: string,
+): MatchEvent[] {
+  const events: MatchEvent[] = []
+  const homeWords = homeName.toLowerCase().split(' ').filter(w => w.length > 3)
+  const awayWords = awayName.toLowerCase().split(' ').filter(w => w.length > 3)
+
+  const resolveTeam = (name: string): string => {
+    const n = name.trim().toLowerCase()
+    if (homeWords.some(w => n.includes(w))) return homeId
+    if (awayWords.some(w => n.includes(w))) return awayId
+    return homeId
+  }
+
+  for (const c of commentary) {
+    const text = c.text ?? ''
+    const minVal = parseInt(c.time?.displayValue ?? '0') || 0
+
+    // Shootout goal: "Goal! TeamA 1(3), TeamB 1(4). Player (Team) converts..."
+    // The "(N)" pen-score after the regulation score distinguishes shootout from regular goals
+    if (/^Goal!/i.test(text) && /\(\d+\),/.test(text)) {
+      const m = text.match(/\)\.\s+(.+?)\s+\(([^)]+)\)/)
+      if (m) {
+        events.push({ type: 'penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
+      }
+      continue
+    }
+
+    // Shootout miss/save at minute ≥ 120: "Penalty missed. Player (Team)..." or "Penalty saved. Player (Team)..."
+    if (/^Penalty\s+(missed|saved)\./i.test(text) && minVal >= 120) {
+      const m = text.match(/^Penalty\s+(?:missed|saved)\.\s+(.+?)\s+\(([^)]+)\)/i)
+      if (m) {
+        events.push({ type: 'missed_penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
+      }
+    }
+  }
+
+  // ESPN returns commentary newest-first; reverse to chronological order
+  return events.reverse()
+}
+
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function GET(
@@ -430,11 +476,19 @@ export async function GET(
     const awayName = awayComp?.team.displayName ?? awayId
     const homeEspnId = homeComp?.id ?? ''
     const awayEspnId = awayComp?.id ?? ''
-    const events = keyEvents.length > 0
+    const baseEvents = keyEvents.length > 0
       ? parseKeyEvents(keyEvents, homeEspnId, awayEspnId, homeId, awayId)
       : details.length > 0
         ? parseEvents(details, homeId)
         : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
+
+    // ESPN never includes penalty shootout kicks in keyEvents/details — always parse from commentary
+    const penShootout = parsePenShootoutFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
+    const hasPenAlready = baseEvents.some(e => e.minuteDisplay === 'PEN')
+    const events = !hasPenAlready && penShootout.length > 0
+      ? [...baseEvents, ...penShootout]
+      : baseEvents
+
     const boxTeams = data.boxscore?.teams ?? []
 
     // Adjust cache based on match state
