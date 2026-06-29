@@ -410,6 +410,59 @@ function LeadersSection({ home, away, homeName, awayName }: {
   )
 }
 
+// ── Penalty Shootout grid ─────────────────────────────────────────────────────
+
+function PenaltyShootout({
+  homeKicks, awayKicks, homeName, awayName, homePenScore, awayPenScore,
+}: {
+  homeKicks: MatchEvent[]
+  awayKicks: MatchEvent[]
+  homeName: string
+  awayName: string
+  homePenScore?: string | null
+  awayPenScore?: string | null
+}) {
+  const maxRows = Math.max(homeKicks.length, awayKicks.length)
+  if (maxRows === 0) return null
+  return (
+    <div className="px-4 pt-3 pb-4 border-t border-slate-700">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <span className="text-xs font-bold text-blue-400 truncate flex-1">{homeName}</span>
+        <div className="flex flex-col items-center shrink-0">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Pênaltis</span>
+          <span className="text-sm font-black text-white tabular-nums">
+            {homePenScore ?? '?'} – {awayPenScore ?? '?'}
+          </span>
+        </div>
+        <span className="text-xs font-bold text-amber-400 truncate flex-1 text-right">{awayName}</span>
+      </div>
+      <div className="space-y-1.5">
+        {Array.from({ length: maxRows }).map((_, i) => {
+          const hk = homeKicks[i]
+          const ak = awayKicks[i]
+          const circle = (ev?: MatchEvent) => {
+            if (!ev) return <span className="w-5 h-5 rounded-full bg-slate-800 shrink-0" />
+            const scored = ev.type === 'penalty'
+            return (
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${scored ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                {scored ? '✓' : '✕'}
+              </span>
+            )
+          }
+          return (
+            <div key={i} className="flex items-center gap-1.5">
+              <span className="flex-1 text-xs text-slate-300 truncate text-right">{hk?.primaryPlayer ?? ''}</span>
+              {circle(hk)}
+              {circle(ak)}
+              <span className="flex-1 text-xs text-slate-300 truncate">{ak?.primaryPlayer ?? ''}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Form badges ───────────────────────────────────────────────────────────────
 
 function FormBadges({ form }: { form: string }) {
@@ -498,6 +551,9 @@ export default function MatchDetailPage() {
   const homeEvents = detail?.events.filter(e => e.teamId === detail.homeTeamId) ?? []
   const awayEvents = detail?.events.filter(e => e.teamId === detail.awayTeamId) ?? []
   const allEvents = detail?.events ?? []
+  const regularEvents = allEvents.filter(e => e.minuteDisplay !== 'PEN')
+  const penHomeKicks = allEvents.filter(e => e.minuteDisplay === 'PEN' && e.teamId === detail?.homeTeamId)
+  const penAwayKicks = allEvents.filter(e => e.minuteDisplay === 'PEN' && e.teamId === detail?.awayTeamId)
 
   const hasFeed = (detail?.commentary?.length ?? 0) > 0
   const kickoffMs = kickoff?.getTime() ?? 0
@@ -598,16 +654,16 @@ export default function MatchDetailPage() {
           </div>
         </div>
 
-        {/* Quick event summary under each team (goals & cards) */}
-        {allEvents.length > 0 && (
+        {/* Quick event summary under each team (goals & cards, excluding shootout) */}
+        {regularEvents.length > 0 && (
           <div className="flex justify-between mt-4 text-xs text-slate-400 gap-4">
             <div className="flex-1 space-y-0.5">
-              {homeEvents.filter(e => e.type !== 'sub').map((e, i) => (
+              {homeEvents.filter(e => e.type !== 'sub' && e.minuteDisplay !== 'PEN').map((e, i) => (
                 <div key={i}>{eventIcon(e.type)} {e.minuteDisplay} {e.primaryPlayer}</div>
               ))}
             </div>
             <div className="flex-1 space-y-0.5 text-right">
-              {awayEvents.filter(e => e.type !== 'sub').map((e, i) => (
+              {awayEvents.filter(e => e.type !== 'sub' && e.minuteDisplay !== 'PEN').map((e, i) => (
                 <div key={i}>{e.primaryPlayer} {e.minuteDisplay} {eventIcon(e.type)}</div>
               ))}
             </div>
@@ -687,25 +743,37 @@ export default function MatchDetailPage() {
               {allEvents.length === 0 ? (
                 <p className="text-slate-500 text-center py-10 text-sm">{t.matchDetail.noEvents}</p>
               ) : (
-                allEvents.map((ev, i) => {
-                  const isHome = ev.teamId === detail.homeTeamId
-                  return (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-3 px-4 py-2.5 border-t border-slate-800/50 first:border-t-0 ${
-                        isHome ? '' : 'flex-row-reverse'
-                      }`}
-                    >
-                      <span className="text-xs text-slate-600 w-10 shrink-0 text-center">
-                        {ev.minuteDisplay}
-                      </span>
-                      <span className="text-base shrink-0">{eventIcon(ev.type)}</span>
-                      <span className={`text-sm flex-1 ${isHome ? 'text-left' : 'text-right'} text-slate-200`}>
-                        {eventLabel(ev)}
-                      </span>
-                    </div>
-                  )
-                })
+                <>
+                  {regularEvents.map((ev, i) => {
+                    const isHome = ev.teamId === detail.homeTeamId
+                    return (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-3 px-4 py-2.5 border-t border-slate-800/50 first:border-t-0 ${
+                          isHome ? '' : 'flex-row-reverse'
+                        }`}
+                      >
+                        <span className="text-xs text-slate-600 w-10 shrink-0 text-center">
+                          {ev.minuteDisplay}
+                        </span>
+                        <span className="text-base shrink-0">{eventIcon(ev.type)}</span>
+                        <span className={`text-sm flex-1 ${isHome ? 'text-left' : 'text-right'} text-slate-200`}>
+                          {eventLabel(ev)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                  {(penHomeKicks.length > 0 || penAwayKicks.length > 0) && (
+                    <PenaltyShootout
+                      homeKicks={penHomeKicks}
+                      awayKicks={penAwayKicks}
+                      homeName={homeName}
+                      awayName={awayName}
+                      homePenScore={game.pen_home_score}
+                      awayPenScore={game.pen_away_score}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
