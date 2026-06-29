@@ -157,6 +157,8 @@ function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
     .filter(d => {
       if (d.team?.id !== espnTeamId) return false
       if (d.ownGoal) return false
+      // Exclude penalty shootout kicks: penaltyKick=true with clock=0 means period 5 (no game clock)
+      if (d.penaltyKick && (d.clock?.value ?? 1) === 0) return false
       // Prefer ESPN's explicit boolean flags when present
       if (d.scoringPlay !== undefined) return d.scoringPlay === true
       // Fallback: match by type text
@@ -294,6 +296,8 @@ function mapEvent(event: EspnEvent): EnrichedGame {
     decidedBy,
     pen_home_score: homePenScore,
     pen_away_score: awayPenScore,
+    home_winner: home.winner,
+    away_winner: away.winner,
     homeTeam: makeTeam(home),
     awayTeam: makeTeam(away),
     stadium,

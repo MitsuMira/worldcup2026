@@ -73,7 +73,9 @@ function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { 
   const status = getMatchStatus(game)
   const isWinner = status === 'finished' && (
     game.decidedBy === 'penalties'
-      ? parseInt(penScore ?? '0') > parseInt(otherPenScore ?? '0')
+      ? (penScore != null && otherPenScore != null)
+          ? parseInt(penScore) > parseInt(otherPenScore)
+          : !!(side === 'home' ? game.home_winner : game.away_winner)
       : parseInt(score) > parseInt(otherScore)
   )
   const isFav = highlightFav && !!team && isFavorite(team.id)

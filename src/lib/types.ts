@@ -23,6 +23,8 @@ export interface ApiGame {
   decidedBy?: 'regulation' | 'et' | 'penalties'  // parsed from ESPN status
   pen_home_score?: string   // penalty shootout score if available
   pen_away_score?: string
+  home_winner?: boolean     // ESPN winner flag — used for pen-shootout winner detection
+  away_winner?: boolean
   name?: string          // ESPN event name e.g. "Group A Winner vs Group B Runner-up"
   home_team_name_en?: string
   home_team_name_fa?: string

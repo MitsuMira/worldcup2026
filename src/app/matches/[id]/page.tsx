@@ -616,17 +616,21 @@ export default function MatchDetailPage() {
             {status === 'scheduled' ? (
               <span className="text-2xl font-bold text-slate-500">VS</span>
             ) : (() => {
-              const hasPen = (game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') &&
-                (game.pen_home_score != null || game.pen_away_score != null)
+              const isPen = game.decidedBy === 'penalties' || game.time_elapsed === 'PEN'
+              const computedHomePen = penHomeKicks.filter(k => k.type === 'penalty').length
+              const computedAwayPen = penAwayKicks.filter(k => k.type === 'penalty').length
+              const penH = game.pen_home_score ?? (isPen && computedHomePen > 0 ? String(computedHomePen) : null)
+              const penA = game.pen_away_score ?? (isPen && computedAwayPen > 0 ? String(computedAwayPen) : null)
+              const hasPen = isPen && (penH != null || penA != null)
               return (
                 <div className="flex items-center gap-3">
                   <div className="flex items-baseline gap-1 justify-end">
                     <span className="text-5xl font-black tabular-nums text-white">{game.home_score}</span>
-                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({game.pen_home_score ?? '?'})</span>}
+                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({penH ?? '?'})</span>}
                   </div>
                   <span className="text-2xl text-slate-600">–</span>
                   <div className="flex items-baseline gap-1">
-                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({game.pen_away_score ?? '?'})</span>}
+                    {hasPen && <span className="text-xl font-bold text-slate-500 tabular-nums">({penA ?? '?'})</span>}
                     <span className="text-5xl font-black tabular-nums text-white">{game.away_score}</span>
                   </div>
                 </div>
@@ -672,6 +676,26 @@ export default function MatchDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Penalty shootout grid — shown in main card so it's immediately visible */}
+        {(penHomeKicks.length > 0 || penAwayKicks.length > 0) && (() => {
+          const computedHomePen = penHomeKicks.filter(k => k.type === 'penalty').length
+          const computedAwayPen = penAwayKicks.filter(k => k.type === 'penalty').length
+          const dispHome = game.pen_home_score ?? (computedHomePen > 0 ? String(computedHomePen) : '?')
+          const dispAway = game.pen_away_score ?? (computedAwayPen > 0 ? String(computedAwayPen) : '?')
+          return (
+            <div className="mt-4 border-t border-slate-700 pt-3">
+              <PenaltyShootout
+                homeKicks={penHomeKicks}
+                awayKicks={penAwayKicks}
+                homeName={homeName}
+                awayName={awayName}
+                homePenScore={dispHome}
+                awayPenScore={dispAway}
+              />
+            </div>
+          )
+        })()}
 
         {/* Venue */}
         {game.stadium && (
@@ -766,16 +790,6 @@ export default function MatchDetailPage() {
                       </div>
                     )
                   })}
-                  {(penHomeKicks.length > 0 || penAwayKicks.length > 0) && (
-                    <PenaltyShootout
-                      homeKicks={penHomeKicks}
-                      awayKicks={penAwayKicks}
-                      homeName={homeName}
-                      awayName={awayName}
-                      homePenScore={game.pen_home_score}
-                      awayPenScore={game.pen_away_score}
-                    />
-                  )}
                 </>
               )}
             </div>
