@@ -80,7 +80,7 @@ export default function PredictionsPage() {
       homeTeamFlag: game.homeTeam?.flag ?? '',
       awayTeamFlag: game.awayTeam?.flag ?? '',
       homeScore: h, awayScore: a,
-      ...(knockout && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
+      ...(knockout && isDrawReg && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
       ...(knockout && isDrawET && penH !== undefined && penA !== undefined ? { penHomeScore: penH, penAwayScore: penA } : {}),
       createdAt: new Date().toISOString(),
     }
