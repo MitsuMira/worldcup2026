@@ -413,9 +413,16 @@ function parsePenShootoutFromCommentary(
   const events: MatchEvent[] = []
   const homeWords = homeName.toLowerCase().split(' ').filter(w => w.length > 3)
   const awayWords = awayName.toLowerCase().split(' ').filter(w => w.length > 3)
+  // Also index by ESPN abbreviation (homeId/awayId are abbreviations like "NED", "MAR")
+  const homeAbbrLower = homeId.toLowerCase()
+  const awayAbbrLower = awayId.toLowerCase()
 
   const resolveTeam = (name: string): string => {
     const n = name.trim().toLowerCase()
+    // Match by abbreviation (e.g. "NED", "MAR")
+    if (n === homeAbbrLower) return homeId
+    if (n === awayAbbrLower) return awayId
+    // Match by full-name words (length > 3 to avoid short-word false matches)
     if (homeWords.some(w => n.includes(w))) return homeId
     if (awayWords.some(w => n.includes(w))) return awayId
     return homeId
@@ -429,8 +436,7 @@ function parsePenShootoutFromCommentary(
     // Early kicks: only one team has a pen score yet — "Goal! Germany 1, Paraguay 1(1). Player..."
     //   → "(1)" is followed by "." ✓  matches \)\.
     // But home-team first kick: "Goal! Netherlands 1(1), Morocco 0. Player (Netherlands)..."
-    //   → "(1)" is followed by "," NOT "." — old regex failed here.
-    // Fix: also match digit+period before the player name: (?:\d+|\))\.\s+Player (Team)
+    //   → "(1)" is followed by "," NOT "." — digit before period: (?:\d+|\))\.\s+Player (Team)
     if (/^Goal!/i.test(text) && /\(\d+\)/.test(text)) {
       const m = text.match(/(?:\d+|\))\.\s+(.+?)\s+\(([^)]+)\)/)
       if (m) {
@@ -439,11 +445,15 @@ function parsePenShootoutFromCommentary(
       continue
     }
 
-    // Shootout miss/save: "Penalty missed. Player (Team)..." or "Penalty saved. Player (Team)..."
+    // Shootout miss/save variants:
+    //   "Penalty missed. Player (Team)..."
+    //   "Penalty saved. Player (Team)..."
+    //   "Penalty kick missed. Player (Team)..."   ← ESPN uses this for some kicks
+    //   "Penalty kick saved. Player (Team)..."
     // Guard: minute ≥ 120 (post-ET) OR minute === 0 (ESPN sometimes labels PK kicks with
-    // a non-numeric time like "PK" or "Pen" which parseInt converts to 0)
-    if (/^Penalty\s+(missed|saved)\./i.test(text) && (minVal >= 120 || minVal === 0)) {
-      const m = text.match(/^Penalty\s+(?:missed|saved)\.\s+(.+?)\s+\(([^)]+)\)/i)
+    // a non-numeric time like "PK" or "Pen" which parseInt/|| converts to 0)
+    if (/^Penalty(?:\s+kick)?\s+(missed|saved)\./i.test(text) && (minVal >= 120 || minVal === 0)) {
+      const m = text.match(/^Penalty(?:\s+kick)?\s+(?:missed|saved)\.\s+(.+?)\s+\(([^)]+)\)/i)
       if (m) {
         events.push({ type: 'missed_penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
       }
