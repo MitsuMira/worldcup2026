@@ -66,16 +66,18 @@ function getPossibleOpponents(
         return w ? [w] : []
       }
     }
-    const res: ApiTeam[] = []
-    if (!isEspnPlaceholder(game.home_team_name_en ?? '')) {
-      const t = allTeams.find(tm => tm.id === game.home_team_id)
-      if (t) res.push(t)
+    const homePlaceholder = isEspnPlaceholder(game.home_team_name_en ?? '')
+    const awayPlaceholder = isEspnPlaceholder(game.away_team_name_en ?? '')
+    if (!homePlaceholder && !awayPlaceholder) {
+      // Both slots confirmed — return them directly
+      const res: ApiTeam[] = []
+      const ht = allTeams.find(tm => tm.id === game.home_team_id)
+      if (ht) res.push(ht)
+      const at = allTeams.find(tm => tm.id === game.away_team_id)
+      if (at) res.push(at)
+      if (res.length > 0) return res
     }
-    if (!isEspnPlaceholder(game.away_team_name_en ?? '')) {
-      const t = allTeams.find(tm => tm.id === game.away_team_id)
-      if (t) res.push(t)
-    }
-    if (res.length > 0) return res
+    // At least one slot is still a placeholder — fall through to feeder recursion
   }
   const feeders = KO_FEEDERS[matchNum]
   if (!feeders) return []
