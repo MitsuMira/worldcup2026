@@ -152,32 +152,47 @@ function computeTimeElapsed(status: EspnStatus): string {
 
 function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
   if (!comp.details) return ''
+
+  // Determine pre-shootout goal cap: if any competitor has a 5th linescore (penalty period),
+  // sum only periods 1–4 to know how many regulation+ET goals this team scored.
+  // This is the most reliable way to exclude shootout kicks regardless of how ESPN labels them.
+  const hasPenaltyShootout = comp.competitors.some(c => (c.linescores?.length ?? 0) >= 5)
+  let goalCap = Infinity
+  if (hasPenaltyShootout) {
+    const competitor = comp.competitors.find(c => c.id === espnTeamId)
+    if (competitor?.linescores) {
+      goalCap = competitor.linescores
+        .slice(0, 4)  // periods 1–4 only (regulation + ET)
+        .reduce((sum, ls) => sum + (ls.value ?? 0), 0)
+    }
+  }
+
   const seen = new Set<string>()
-  return comp.details
-    .filter(d => {
-      if (d.team?.id !== espnTeamId) return false
-      if (d.ownGoal) return false
-      // Exclude penalty shootout kicks — ESPN labels them "Penalty Kick" in type.text
-      const typeText = d.type?.text?.toLowerCase() ?? ''
-      if (typeText === 'penalty kick') return false
-      // Also catch via explicit penaltyKick flag with no game clock (period 5)
-      if (d.penaltyKick && (d.clock?.value ?? 1) === 0) return false
-      // Prefer ESPN's explicit boolean flags when present
-      if (d.scoringPlay !== undefined) return d.scoringPlay === true
-      // Fallback: match by type text
-      const text = d.type?.text?.toLowerCase() ?? ''
-      return text.includes('goal') && !text.includes('missed') && !text.includes('own')
-    })
-    .filter(d => {
-      // Deduplicate: some penalty goals appear as both a "Penalty" and a "Goal" event at the same clock + player
-      const key = `${d.team?.id}-${d.clock?.value ?? 0}-${d.athletesInvolved?.[0]?.id ?? ''}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .map(d => d.athletesInvolved?.[0]?.displayName ?? '')
-    .filter(Boolean)
-    .join(',')
+  const scorers: string[] = []
+
+  for (const d of comp.details) {
+    if (scorers.length >= goalCap) break  // reached pre-shootout goal count — stop
+    if (d.team?.id !== espnTeamId) continue
+    if (d.ownGoal) continue
+
+    const isGoal = d.scoringPlay !== undefined
+      ? d.scoringPlay === true
+      : (() => {
+          const t = d.type?.text?.toLowerCase() ?? ''
+          return t.includes('goal') && !t.includes('missed') && !t.includes('own')
+        })()
+    if (!isGoal) continue
+
+    // Deduplicate: some in-game penalty goals fire as both "Penalty" and "Goal" events
+    const key = `${d.team?.id}-${d.clock?.value ?? 0}-${d.athletesInvolved?.[0]?.id ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    const name = d.athletesInvolved?.[0]?.displayName
+    if (name) scorers.push(name)
+  }
+
+  return scorers.join(',')
 }
 
 function extractCards(comp: EspnCompetition, espnTeamId: string, cardType: 'yellow' | 'red'): number {
