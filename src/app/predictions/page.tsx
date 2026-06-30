@@ -73,6 +73,7 @@ export default function PredictionsPage() {
     const isDrawET = isDrawReg && inp.etHome !== '' && inp.etAway !== '' && inp.etHome === inp.etAway
     const penH = inp.penHome !== '' ? parseInt(inp.penHome) : undefined
     const penA = inp.penAway !== '' ? parseInt(inp.penAway) : undefined
+    if (isDrawET && penH !== undefined && penA !== undefined && penH === penA) return
     const pred: Prediction = {
       matchId: game.id,
       homeTeamName: getTeamName(game, 'home'),
@@ -183,9 +184,11 @@ export default function PredictionsPage() {
             const knockout = isKnockoutGame(game)
             const isDrawReg = knockout && inp.home !== '' && inp.away !== '' && inp.home === inp.away
             const isDrawET = isDrawReg && inp.etHome !== '' && inp.etAway !== '' && inp.etHome === inp.etAway
+            const penIsTie = isDrawET && inp.penHome !== '' && inp.penAway !== '' && inp.penHome === inp.penAway
             const canSubmit = inp.home !== '' && inp.away !== '' &&
               (!isDrawReg || (inp.etHome !== '' && inp.etAway !== '')) &&
-              (!isDrawET || (inp.penHome !== '' && inp.penAway !== ''))
+              (!isDrawET || (inp.penHome !== '' && inp.penAway !== '')) &&
+              !penIsTie
             const minsLeft = minutesUntilLock(game)
             const showLockWarning = minsLeft !== null
             return (

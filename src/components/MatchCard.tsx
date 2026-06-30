@@ -103,6 +103,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
     if (isDrawET && (penHomeInput === '' || penAwayInput === '')) return
     const penH = penHomeInput !== '' ? parseInt(penHomeInput) : undefined
     const penA = penAwayInput !== '' ? parseInt(penAwayInput) : undefined
+    if (isDrawET && penH !== undefined && penA !== undefined && penH === penA) return
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       const preds: Record<string, import('@/lib/types').Prediction> = raw ? JSON.parse(raw) : {}
@@ -115,8 +116,8 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         awayTeamFlag: existing?.awayTeamFlag ?? (game.awayTeam?.flag ?? ''),
         homeScore: h,
         awayScore: a,
-        ...(isKnockout && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
-        ...(isKnockout && penH !== undefined && penA !== undefined ? { penHomeScore: penH, penAwayScore: penA } : {}),
+        ...(isKnockout && isDrawReg && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
+        ...(isKnockout && isDrawET && penH !== undefined && penA !== undefined ? { penHomeScore: penH, penAwayScore: penA } : {}),
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preds))
@@ -246,9 +247,11 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
             if (editing) {
               const isDrawReg = isKnockout && homeInput !== '' && awayInput !== '' && homeInput === awayInput
               const isDrawET = isDrawReg && etHomeInput !== '' && etAwayInput !== '' && etHomeInput === etAwayInput
+              const penIsTie = isDrawET && penHomeInput !== '' && penAwayInput !== '' && penHomeInput === penAwayInput
               const canSave = homeInput !== '' && awayInput !== '' &&
                 (!isDrawReg || (etHomeInput !== '' && etAwayInput !== '')) &&
-                (!isDrawET || (penHomeInput !== '' && penAwayInput !== ''))
+                (!isDrawET || (penHomeInput !== '' && penAwayInput !== '')) &&
+                !penIsTie
               return (
                 <div className="flex flex-col gap-1.5 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -353,10 +356,10 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                 <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
                 <span className="text-sm font-black text-amber-300 tabular-nums">
                   {prediction.homeScore} – {prediction.awayScore}
-                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && (
+                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && prediction.homeScore === prediction.awayScore && (
                     <span className="text-amber-300/70"> → {prediction.etHomeScore}–{prediction.etAwayScore} ET</span>
                   )}
-                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && (
+                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && prediction.homeScore === prediction.awayScore && prediction.etHomeScore === prediction.etAwayScore && (
                     <span className="text-amber-300/70"> → {prediction.penHomeScore}–{prediction.penAwayScore} PEN</span>
                   )}
                 </span>
@@ -381,10 +384,10 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
                 <span className="text-xs text-slate-500">🎯 {t.match.myPick}:</span>
                 <span className="text-sm font-black text-amber-300/70 tabular-nums">
                   {prediction.homeScore} – {prediction.awayScore}
-                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && (
+                  {prediction.etHomeScore !== undefined && prediction.etAwayScore !== undefined && prediction.homeScore === prediction.awayScore && (
                     <span> → {prediction.etHomeScore}–{prediction.etAwayScore} ET</span>
                   )}
-                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && (
+                  {prediction.penHomeScore !== undefined && prediction.penAwayScore !== undefined && prediction.homeScore === prediction.awayScore && prediction.etHomeScore === prediction.etAwayScore && (
                     <span> → {prediction.penHomeScore}–{prediction.penAwayScore} PEN</span>
                   )}
                 </span>
