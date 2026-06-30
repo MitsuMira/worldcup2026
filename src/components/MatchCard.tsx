@@ -157,7 +157,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
       {/* Teams and score */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
-          {game.homeTeam?.id ? (
+          {game.homeTeam?.id && !isEspnPlaceholder(homeName) ? (
             <Link href={`/teams/${game.homeTeam.id}`} className="flex flex-col items-center gap-1 group">
               <TeamFlag team={game.homeTeam} name={homeName} size="lg" />
               <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1 group-hover:underline">
@@ -201,7 +201,7 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
         </div>
 
         <div className="flex flex-col items-center gap-1 w-24 sm:w-32">
-          {game.awayTeam?.id ? (
+          {game.awayTeam?.id && !isEspnPlaceholder(awayName) ? (
             <Link href={`/teams/${game.awayTeam.id}`} className="flex flex-col items-center gap-1 group">
               <TeamFlag team={game.awayTeam} name={awayName} size="lg" />
               <span className="text-xs sm:text-sm text-white font-semibold text-center leading-tight mt-1 group-hover:underline">
