@@ -177,7 +177,12 @@ export default function TeamDetailPage() {
     const curIsHome = curGame?.home_team_id === id
     const curTs = parseInt(curIsHome ? (curGame?.home_score ?? '') : (curGame?.away_score ?? ''))
     const curOs = parseInt(curIsHome ? (curGame?.away_score ?? '') : (curGame?.home_score ?? ''))
-    const isEliminated = getMatchStatus(curGame!) === 'finished' && !isNaN(curTs) && !isNaN(curOs) && curTs < curOs
+    const curFinished = getMatchStatus(curGame!) === 'finished'
+    const curIsPenalty = curGame?.decidedBy === 'penalties'
+    const curTeamWon = curIsHome ? curGame?.home_winner : curGame?.away_winner
+    const isEliminated = curFinished && (
+      curIsPenalty ? curTeamWon === false : (!isNaN(curTs) && !isNaN(curOs) && curTs < curOs)
+    )
     if (!isEliminated) {
       const myMatchNum = curGame ? getGameMatchNum(curGame) : null
       if (myMatchNum) {
@@ -210,6 +215,11 @@ export default function TeamDetailPage() {
     () => Promise.all(finishedGameIds.map(gid => fetch(`/api/match/${gid}`).then(r => r.json()))),
     { revalidateOnFocus: false }
   )
+
+  const matchDetailByGameId = new Map<string, MatchDetail>()
+  if (matchDetailsList) {
+    finishedGameIds.forEach((gid, i) => { if (matchDetailsList[i]) matchDetailByGameId.set(gid, matchDetailsList[i]) })
+  }
 
   // Aggregate cards
   let totalYellow = 0, totalRed = 0
@@ -427,9 +437,16 @@ export default function TeamDetailPage() {
               const teamScore = isHome ? game.home_score : game.away_score
               const oppScore = isHome ? game.away_score : game.home_score
               const ts = parseInt(teamScore), os = parseInt(oppScore)
-              const isWin = status === 'finished' && ts > os
-              const isLoss = status === 'finished' && ts < os
-              const suffix = game.decidedBy === 'et' ? t.match.aet : game.decidedBy === 'penalties' ? t.match.penalties : null
+              const isPenalty = game.decidedBy === 'penalties'
+              const teamWon = isHome ? game.home_winner : game.away_winner
+              const isWin = status === 'finished' && (isPenalty ? teamWon === true : ts > os)
+              const isLoss = status === 'finished' && (isPenalty ? teamWon === false : ts < os)
+              const suffix = game.decidedBy === 'et' ? t.match.aet : isPenalty ? t.match.penalties : null
+              const detail = matchDetailByGameId.get(game.id)
+              const penH = game.pen_home_score ?? (detail?.penHomeGoals != null ? String(detail.penHomeGoals) : null)
+              const penA = game.pen_away_score ?? (detail?.penAwayGoals != null ? String(detail.penAwayGoals) : null)
+              const teamPen = isHome ? penH : penA
+              const oppPen = isHome ? penA : penH
 
               // When the scheduled opponent slot is still a placeholder, resolve to possible real teams
               let resolvedOpponents: ApiTeam[] = []
@@ -483,10 +500,19 @@ export default function TeamDetailPage() {
                   )}
                   {status === 'finished' && (
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {suffix && <span className="text-[9px] text-slate-500">{suffix}</span>}
-                      <span className={`text-sm font-black tabular-nums ${isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-slate-300'}`}>
-                        {teamScore}–{oppScore}
-                      </span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-center gap-1.5">
+                          {suffix && <span className="text-[9px] text-slate-500">{suffix}</span>}
+                          <span className={`text-sm font-black tabular-nums ${isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-slate-300'}`}>
+                            {teamScore}–{oppScore}
+                          </span>
+                        </div>
+                        {isPenalty && (teamPen != null || oppPen != null) && (
+                          <span className="text-[10px] text-slate-400 tabular-nums leading-none">
+                            ({teamPen ?? '?'}–{oppPen ?? '?'} pen.)
+                          </span>
+                        )}
+                      </div>
                       <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
                         isWin  ? 'bg-emerald-500/20 text-emerald-400' :
                         isLoss ? 'bg-red-500/20 text-red-400' :
