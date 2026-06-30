@@ -413,31 +413,34 @@ function parsePenShootoutFromCommentary(
   const events: MatchEvent[] = []
   const homeWords = homeName.toLowerCase().split(' ').filter(w => w.length > 3)
   const awayWords = awayName.toLowerCase().split(' ').filter(w => w.length > 3)
-  // Also index by ESPN abbreviation (homeId/awayId are abbreviations like "NED", "MAR")
   const homeAbbrLower = homeId.toLowerCase()
   const awayAbbrLower = awayId.toLowerCase()
 
   const resolveTeam = (name: string): string => {
     const n = name.trim().toLowerCase()
-    // Match by abbreviation (e.g. "NED", "MAR")
     if (n === homeAbbrLower) return homeId
     if (n === awayAbbrLower) return awayId
-    // Match by full-name words (length > 3 to avoid short-word false matches)
     if (homeWords.some(w => n.includes(w))) return homeId
     if (awayWords.some(w => n.includes(w))) return awayId
     return homeId
   }
 
-  for (const c of commentary) {
+  // Process oldest-first so we can use an inShootout flag:
+  // once a shootout event is detected, all subsequent penalty misses/saves
+  // are also shootout events regardless of their time label.
+  const chronological = [...commentary].reverse()
+  let inShootout = false
+
+  for (const c of chronological) {
     const text = c.text ?? ''
     const minVal = parseInt(c.time?.displayValue ?? '0') || 0
 
     // Shootout goal: "Goal! TeamA 1(3), TeamB 1(4). Player (Team) converts..."
-    // Early kicks: only one team has a pen score yet — "Goal! Germany 1, Paraguay 1(1). Player..."
-    //   → "(1)" is followed by "." ✓  matches \)\.
-    // But home-team first kick: "Goal! Netherlands 1(1), Morocco 0. Player (Netherlands)..."
-    //   → "(1)" is followed by "," NOT "." — digit before period: (?:\d+|\))\.\s+Player (Team)
+    // \(\d+\) pen-score marker reliably distinguishes from regulation goals.
+    // Home-team-first format: "Goal! Netherlands 1(1), Morocco 0. Player (Netherlands)..."
+    //   the pen-score digit appears before the period → (?:\d+|\))\. catches both.
     if (/^Goal!/i.test(text) && /\(\d+\)/.test(text)) {
+      inShootout = true
       const m = text.match(/(?:\d+|\))\.\s+(.+?)\s+\(([^)]+)\)/)
       if (m) {
         events.push({ type: 'penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
@@ -445,14 +448,12 @@ function parsePenShootoutFromCommentary(
       continue
     }
 
-    // Shootout miss/save variants:
-    //   "Penalty missed. Player (Team)..."
-    //   "Penalty saved. Player (Team)..."
-    //   "Penalty kick missed. Player (Team)..."   ← ESPN uses this for some kicks
-    //   "Penalty kick saved. Player (Team)..."
-    // Guard: minute ≥ 120 (post-ET) OR minute === 0 (ESPN sometimes labels PK kicks with
-    // a non-numeric time like "PK" or "Pen" which parseInt/|| converts to 0)
-    if (/^Penalty(?:\s+kick)?\s+(missed|saved)\./i.test(text) && (minVal >= 120 || minVal === 0)) {
+    // Shootout miss/save — once inShootout is set, all misses are shootout misses.
+    // Before the first shootout event, require minute ≥ 120 or a non-numeric time
+    // label ("PK" etc.) which parseInt converts to NaN and || 0 gives 0.
+    // Handles both "Penalty missed." and "Penalty kick missed." variants.
+    if (/^Penalty(?:\s+kick)?\s+(missed|saved)\./i.test(text) && (inShootout || minVal >= 120 || minVal === 0)) {
+      inShootout = true
       const m = text.match(/^Penalty(?:\s+kick)?\s+(?:missed|saved)\.\s+(.+?)\s+\(([^)]+)\)/i)
       if (m) {
         events.push({ type: 'missed_penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
@@ -460,8 +461,8 @@ function parsePenShootoutFromCommentary(
     }
   }
 
-  // ESPN returns commentary newest-first; reverse to chronological order
-  return events.reverse()
+  // Events are already in chronological order (processed oldest-first above)
+  return events
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
