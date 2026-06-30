@@ -6,12 +6,21 @@ import useSWR from 'swr'
 import Link from 'next/link'
 import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock, Share2, UserX, ArrowRightLeft } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
-import type { EnrichedGame, Prediction } from '@/lib/types'
+import type { EnrichedGame, Prediction, MatchDetail } from '@/lib/types'
 import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
 import { gameCountsForScoring, calcPoints } from '@/lib/scoring'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
+
+function PenScore({ game, className }: { game: EnrichedGame; className?: string }) {
+  const needsPen = game.decidedBy === 'penalties' && !game.pen_home_score
+  const { data: detail } = useSWR<MatchDetail>(needsPen ? `/api/match/${game.id}` : null, fetcher, { revalidateOnFocus: false })
+  const penH = game.pen_home_score ?? (detail?.penHomeGoals != null ? String(detail.penHomeGoals) : null)
+  const penA = game.pen_away_score ?? (detail?.penAwayGoals != null ? String(detail.penAwayGoals) : null)
+  if (game.decidedBy !== 'penalties' || (!penH && !penA)) return null
+  return <span className={className ?? 'text-[10px] text-slate-600'}>PEN {penH ?? '?'}–{penA ?? '?'}</span>
+}
 
 type PredictionResult = 'correct' | 'correct-winner' | 'wrong' | 'pending'
 type Tab = 'leaderboard' | 'matches'
@@ -286,9 +295,7 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
                   {/* Actual score */}
                   <div className="flex flex-col items-end shrink-0 text-slate-500">
                     <span>{game.home_score}–{game.away_score}{isET ? ' AET' : ''}</span>
-                    {game.decidedBy === 'penalties' && game.pen_home_score && game.pen_away_score && (
-                      <span className="text-[10px] text-slate-600">PEN {game.pen_home_score}–{game.pen_away_score}</span>
-                    )}
+                    <PenScore game={game} className="text-[10px] text-slate-600" />
                   </div>
                   {/* Pick */}
                   <div className="flex flex-col items-end shrink-0">
@@ -372,9 +379,7 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
                   <span className="text-[10px] font-normal text-slate-400 ml-1">AET</span>
                 )}
               </span>
-              {game.decidedBy === 'penalties' && game.pen_home_score && game.pen_away_score && (
-                <span className="text-[10px] text-slate-500">PEN {game.pen_home_score}–{game.pen_away_score}</span>
-              )}
+              <PenScore game={game} className="text-[10px] text-slate-500" />
             </div>
           ) : (
             <span className="text-[10px] text-slate-500">não iniciado</span>
