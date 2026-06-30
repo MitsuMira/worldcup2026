@@ -426,18 +426,23 @@ function parsePenShootoutFromCommentary(
     const minVal = parseInt(c.time?.displayValue ?? '0') || 0
 
     // Shootout goal: "Goal! TeamA 1(3), TeamB 1(4). Player (Team) converts..."
-    // For the first kick, only one team has a pen score: "Goal! Germany 1, Paraguay 1(1). Player..."
-    // So we only require any "(N)" parenthetical anywhere in the line (not necessarily before comma)
+    // Early kicks: only one team has a pen score yet — "Goal! Germany 1, Paraguay 1(1). Player..."
+    //   → "(1)" is followed by "." ✓  matches \)\.
+    // But home-team first kick: "Goal! Netherlands 1(1), Morocco 0. Player (Netherlands)..."
+    //   → "(1)" is followed by "," NOT "." — old regex failed here.
+    // Fix: also match digit+period before the player name: (?:\d+|\))\.\s+Player (Team)
     if (/^Goal!/i.test(text) && /\(\d+\)/.test(text)) {
-      const m = text.match(/\)\.\s+(.+?)\s+\(([^)]+)\)/)
+      const m = text.match(/(?:\d+|\))\.\s+(.+?)\s+\(([^)]+)\)/)
       if (m) {
         events.push({ type: 'penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
       }
       continue
     }
 
-    // Shootout miss/save at minute ≥ 120: "Penalty missed. Player (Team)..." or "Penalty saved. Player (Team)..."
-    if (/^Penalty\s+(missed|saved)\./i.test(text) && minVal >= 120) {
+    // Shootout miss/save: "Penalty missed. Player (Team)..." or "Penalty saved. Player (Team)..."
+    // Guard: minute ≥ 120 (post-ET) OR minute === 0 (ESPN sometimes labels PK kicks with
+    // a non-numeric time like "PK" or "Pen" which parseInt converts to 0)
+    if (/^Penalty\s+(missed|saved)\./i.test(text) && (minVal >= 120 || minVal === 0)) {
       const m = text.match(/^Penalty\s+(?:missed|saved)\.\s+(.+?)\s+\(([^)]+)\)/i)
       if (m) {
         events.push({ type: 'missed_penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
