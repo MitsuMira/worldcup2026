@@ -153,18 +153,14 @@ function computeTimeElapsed(status: EspnStatus): string {
 function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
   if (!comp.details) return ''
 
-  // Determine pre-shootout goal cap: if any competitor has a 5th linescore (penalty period),
-  // sum only periods 1–4 to know how many regulation+ET goals this team scored.
-  // This is the most reliable way to exclude shootout kicks regardless of how ESPN labels them.
-  const hasPenaltyShootout = comp.competitors.some(c => (c.linescores?.length ?? 0) >= 5)
+  // If the game was decided by penalties, competitor.score holds the regulation+ET goals only
+  // (penalty shootout kicks do NOT add to the scoreline — ESPN keeps them separate).
+  // Use that as a hard cap so we stop accepting detail entries once regulation+ET goals are exhausted.
+  // STATUS_FINAL_PEN is the same string already used for decidedBy='penalties' below.
   let goalCap = Infinity
-  if (hasPenaltyShootout) {
+  if (comp.status.type.name === 'STATUS_FINAL_PEN') {
     const competitor = comp.competitors.find(c => c.id === espnTeamId)
-    if (competitor?.linescores) {
-      goalCap = competitor.linescores
-        .slice(0, 4)  // periods 1–4 only (regulation + ET)
-        .reduce((sum, ls) => sum + (ls.value ?? 0), 0)
-    }
+    goalCap = parseInt(competitor?.score ?? '') || 0
   }
 
   const seen = new Set<string>()

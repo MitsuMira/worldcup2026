@@ -278,17 +278,25 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
               )
               const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
               const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
+              const isET = game.decidedBy === 'et' || game.decidedBy === 'penalties'
               return (
                 <div key={game.id} className="flex items-start gap-2 text-xs">
                   <ResultDot result={result as PredictionResult} />
                   <span className="text-slate-400 truncate flex-1">{getTeamName(game, 'home')} vs {getTeamName(game, 'away')}</span>
-                  <span className="text-slate-500 shrink-0">{game.home_score}–{game.away_score}</span>
+                  {/* Actual score */}
+                  <div className="flex flex-col items-end shrink-0 text-slate-500">
+                    <span>{game.home_score}–{game.away_score}{isET ? ' AET' : ''}</span>
+                    {game.decidedBy === 'penalties' && game.pen_home_score && game.pen_away_score && (
+                      <span className="text-[10px] text-slate-600">PEN {game.pen_home_score}–{game.pen_away_score}</span>
+                    )}
+                  </div>
+                  {/* Pick */}
                   <div className="flex flex-col items-end shrink-0">
                     <span className={`font-bold ${result === 'correct' ? 'text-green-400' : result === 'correct-winner' ? 'text-blue-400' : result === 'wrong' ? 'text-red-400' : 'text-slate-600'}`}>
                       {pred.homeScore}–{pred.awayScore}
                     </span>
                     {hasEt && (
-                      <span className="text-[10px] text-amber-400/70">ET {pred.etHomeScore}–{pred.etAwayScore}</span>
+                      <span className="text-[10px] text-amber-400/70">AET {pred.etHomeScore}–{pred.etAwayScore}</span>
                     )}
                     {hasPen && (
                       <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
@@ -357,7 +365,17 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
             <span className="text-[9px] font-bold text-slate-600 bg-slate-800 rounded px-1.5 py-0.5">não conta</span>
           )}
           {finished ? (
-            <span className="text-xs font-black text-white">{game.home_score}–{game.away_score}</span>
+            <div className="flex flex-col items-end">
+              <span className="text-xs font-black text-white">
+                {game.home_score}–{game.away_score}
+                {(game.decidedBy === 'et' || game.decidedBy === 'penalties') && (
+                  <span className="text-[10px] font-normal text-slate-400 ml-1">AET</span>
+                )}
+              </span>
+              {game.decidedBy === 'penalties' && game.pen_home_score && game.pen_away_score && (
+                <span className="text-[10px] text-slate-500">PEN {game.pen_home_score}–{game.pen_away_score}</span>
+              )}
+            </div>
           ) : (
             <span className="text-[10px] text-slate-500">não iniciado</span>
           )}
@@ -391,7 +409,7 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
                   {pred.homeScore}–{pred.awayScore}
                 </span>
                 {hasEt && (
-                  <span className="text-[10px] text-amber-300/70">ET {pred.etHomeScore}–{pred.etAwayScore}</span>
+                  <span className="text-[10px] text-amber-300/70">AET {pred.etHomeScore}–{pred.etAwayScore}</span>
                 )}
                 {hasPen && (
                   <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>

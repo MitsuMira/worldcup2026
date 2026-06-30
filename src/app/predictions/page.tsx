@@ -358,23 +358,47 @@ export default function PredictionsPage() {
                   <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'home')}</span>
                 </div>
                 <div className="text-center flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="text-center">
-                      <div className="text-lg font-black text-white">{game.home_score} – {game.away_score}</div>
-                      <div className="text-xs text-slate-500">{t.predictions.actual}</div>
-                    </div>
-                    <div className="text-slate-700">|</div>
-                    <div className="text-center">
-                      <div className="text-lg font-black text-amber-400">
-                        {pred.homeScore} – {pred.awayScore}
-                        {pred.etHomeScore !== undefined && pred.etAwayScore !== undefined && (
-                          <span className="text-amber-400/70 text-sm"> (ET: {pred.etHomeScore}–{pred.etAwayScore})</span>
-                        )}
-                        {pred.penHomeScore !== undefined && pred.penAwayScore !== undefined && (
-                          <span className="text-amber-400/70 text-sm"> (PEN: {pred.penHomeScore}–{pred.penAwayScore})</span>
+                  <div className="flex items-start gap-3">
+                    {/* Actual result — stacked rows for each phase */}
+                    <div className="text-center min-w-[3.5rem]">
+                      <div className="space-y-0.5">
+                        <div className="text-base font-black text-white leading-tight">
+                          {game.home_score}–{game.away_score}
+                          <span className="text-[10px] font-normal text-slate-500 ml-1">
+                            {game.decidedBy === 'et' || game.decidedBy === 'penalties' ? 'AET' : 'FT'}
+                          </span>
+                        </div>
+                        {game.decidedBy === 'penalties' && (
+                          <div className="text-sm font-black text-slate-300 leading-tight">
+                            {game.pen_home_score ?? '?'}–{game.pen_away_score ?? '?'}
+                            <span className="text-[10px] font-normal text-slate-500 ml-1">PEN</span>
+                          </div>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">{t.predictions.yourPick}</div>
+                      <div className="text-[10px] text-slate-500 mt-1">{t.predictions.actual}</div>
+                    </div>
+                    <div className="text-slate-700 self-center">|</div>
+                    {/* Prediction — stacked rows matching actual */}
+                    <div className="text-center min-w-[3.5rem]">
+                      <div className="space-y-0.5">
+                        <div className="text-base font-black text-amber-400 leading-tight">
+                          {pred.homeScore}–{pred.awayScore}
+                          <span className="text-[10px] font-normal text-amber-400/60 ml-1">Reg</span>
+                        </div>
+                        {pred.etHomeScore !== undefined && pred.etAwayScore !== undefined && (
+                          <div className="text-sm font-black text-amber-400/80 leading-tight">
+                            {pred.etHomeScore}–{pred.etAwayScore}
+                            <span className="text-[10px] font-normal text-amber-400/50 ml-1">AET</span>
+                          </div>
+                        )}
+                        {pred.penHomeScore !== undefined && pred.penAwayScore !== undefined && (
+                          <div className="text-sm font-black text-amber-400/60 leading-tight">
+                            {pred.penHomeScore}–{pred.penAwayScore}
+                            <span className="text-[10px] font-normal text-amber-400/40 ml-1">PEN</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1">{t.predictions.yourPick}</div>
                     </div>
                   </div>
                 </div>
