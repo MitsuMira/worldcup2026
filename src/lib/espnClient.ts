@@ -157,7 +157,10 @@ function extractScorers(comp: EspnCompetition, espnTeamId: string): string {
     .filter(d => {
       if (d.team?.id !== espnTeamId) return false
       if (d.ownGoal) return false
-      // Exclude penalty shootout kicks: penaltyKick=true with clock=0 means period 5 (no game clock)
+      // Exclude penalty shootout kicks — ESPN labels them "Penalty Kick" in type.text
+      const typeText = d.type?.text?.toLowerCase() ?? ''
+      if (typeText === 'penalty kick') return false
+      // Also catch via explicit penaltyKick flag with no game clock (period 5)
       if (d.penaltyKick && (d.clock?.value ?? 1) === 0) return false
       // Prefer ESPN's explicit boolean flags when present
       if (d.scoringPlay !== undefined) return d.scoringPlay === true

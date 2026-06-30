@@ -426,8 +426,9 @@ function parsePenShootoutFromCommentary(
     const minVal = parseInt(c.time?.displayValue ?? '0') || 0
 
     // Shootout goal: "Goal! TeamA 1(3), TeamB 1(4). Player (Team) converts..."
-    // The "(N)" pen-score after the regulation score distinguishes shootout from regular goals
-    if (/^Goal!/i.test(text) && /\(\d+\),/.test(text)) {
+    // For the first kick, only one team has a pen score: "Goal! Germany 1, Paraguay 1(1). Player..."
+    // So we only require any "(N)" parenthetical anywhere in the line (not necessarily before comma)
+    if (/^Goal!/i.test(text) && /\(\d+\)/.test(text)) {
       const m = text.match(/\)\.\s+(.+?)\s+\(([^)]+)\)/)
       if (m) {
         events.push({ type: 'penalty', minuteDisplay: 'PEN', minute: 121, teamId: resolveTeam(m[2]), primaryPlayer: m[1].trim() })
