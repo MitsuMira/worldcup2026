@@ -170,6 +170,8 @@ export interface MatchDetail {
   h2h?: H2HGame[]
   broadcasts?: string[]  // network names e.g. ["FOX", "Telemundo"]
   leaders?: MatchLeaders
+  penHomeGoals?: number  // computed from shootout kick events (ESPN linescores[4] is often missing)
+  penAwayGoals?: number
 }
 
 // Prediction stored in localStorage

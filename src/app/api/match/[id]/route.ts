@@ -504,11 +504,18 @@ export async function GET(
       .filter((n): n is string => !!n)
       .filter((n, i, arr) => arr.indexOf(n) === i)  // deduplicate
 
+    // Compute penalty shootout goal counts from parsed kick events
+    // (ESPN's scoreboard linescores[4] is often absent, so this is the reliable source)
+    const penHomeGoals = events.filter(e => e.minuteDisplay === 'PEN' && e.type === 'penalty' && e.teamId === homeId).length
+    const penAwayGoals = events.filter(e => e.minuteDisplay === 'PEN' && e.type === 'penalty' && e.teamId === awayId).length
+
     const result: MatchDetail = {
       id,
       homeTeamId: homeId,
       awayTeamId: awayId,
       events,
+      penHomeGoals: penHomeGoals > 0 ? penHomeGoals : undefined,
+      penAwayGoals: penAwayGoals > 0 ? penAwayGoals : undefined,
       homeStats: parseStats(boxTeams, homeComp?.id ?? homeId),
       awayStats: parseStats(boxTeams, awayComp?.id ?? awayId),
       homeLineup: data.rosters?.find(r => teamAbbr(r.team) === homeId || r.team?.id === homeComp?.id)

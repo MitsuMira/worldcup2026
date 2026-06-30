@@ -343,71 +343,7 @@ export default function PredictionsPage() {
             </div>
           )}
           {finishedPredictions.map(({ game, pred, result, knockoutPts }) => (
-            <div key={game.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 uppercase tracking-wide">{localStageLabel(game.type, game.group, t)}</span>
-                {isKnockoutGame(game) ? (
-                  <span className="text-xs font-bold text-amber-400">{knockoutPts} pts</span>
-                ) : (
-                  <ResultBadge result={result} isDraw={game.home_score === game.away_score} t={t} />
-                )}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <TeamFlag team={game.homeTeam} name={getTeamName(game, 'home')} size="sm" />
-                  <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'home')}</span>
-                </div>
-                <div className="text-center flex-shrink-0">
-                  <div className="flex items-start gap-3">
-                    {/* Actual result — stacked rows for each phase */}
-                    <div className="text-center min-w-[3.5rem]">
-                      <div className="space-y-0.5">
-                        <div className="text-base font-black text-white leading-tight">
-                          {game.home_score}–{game.away_score}
-                          <span className="text-[10px] font-normal text-slate-500 ml-1">
-                            {game.decidedBy === 'et' || game.decidedBy === 'penalties' ? 'AET' : 'FT'}
-                          </span>
-                        </div>
-                        {game.decidedBy === 'penalties' && (
-                          <div className="text-sm font-black text-slate-300 leading-tight">
-                            {game.pen_home_score ?? '?'}–{game.pen_away_score ?? '?'}
-                            <span className="text-[10px] font-normal text-slate-500 ml-1">PEN</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1">{t.predictions.actual}</div>
-                    </div>
-                    <div className="text-slate-700 self-center">|</div>
-                    {/* Prediction — stacked rows matching actual */}
-                    <div className="text-center min-w-[3.5rem]">
-                      <div className="space-y-0.5">
-                        <div className="text-base font-black text-amber-400 leading-tight">
-                          {pred.homeScore}–{pred.awayScore}
-                          <span className="text-[10px] font-normal text-amber-400/60 ml-1">Reg</span>
-                        </div>
-                        {pred.etHomeScore !== undefined && pred.etAwayScore !== undefined && (
-                          <div className="text-sm font-black text-amber-400/80 leading-tight">
-                            {pred.etHomeScore}–{pred.etAwayScore}
-                            <span className="text-[10px] font-normal text-amber-400/50 ml-1">AET</span>
-                          </div>
-                        )}
-                        {pred.penHomeScore !== undefined && pred.penAwayScore !== undefined && (
-                          <div className="text-sm font-black text-amber-400/60 leading-tight">
-                            {pred.penHomeScore}–{pred.penAwayScore}
-                            <span className="text-[10px] font-normal text-amber-400/40 ml-1">PEN</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-1">{t.predictions.yourPick}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                  <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'away')}</span>
-                  <TeamFlag team={game.awayTeam} name={getTeamName(game, 'away')} size="sm" />
-                </div>
-              </div>
-            </div>
+            <ResultCard key={game.id} game={game} pred={pred} result={result} knockoutPts={knockoutPts} />
           ))}
           {finishedPredictions.length > 0 && (
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mt-6 text-xs text-slate-500">
@@ -481,6 +417,79 @@ function GamePreview({ gameId, homeName, awayName }: { gameId: string; homeName:
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function ResultCard({ game, pred, result, knockoutPts }: { game: EnrichedGame; pred: Prediction; result: PredictionResult; knockoutPts: number }) {
+  const { t } = useT()
+  const needsPen = game.decidedBy === 'penalties' && game.pen_home_score == null
+  const { data: penDetail } = useSWR<MatchDetail>(needsPen ? `/api/match/${game.id}` : null, fetcher, { revalidateOnFocus: false })
+  const penH = game.pen_home_score ?? (penDetail?.penHomeGoals != null ? String(penDetail.penHomeGoals) : null)
+  const penA = game.pen_away_score ?? (penDetail?.penAwayGoals != null ? String(penDetail.penAwayGoals) : null)
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-slate-500 uppercase tracking-wide">{localStageLabel(game.type, game.group, t)}</span>
+        {isKnockoutGame(game) ? (
+          <span className="text-xs font-bold text-amber-400">{knockoutPts} pts</span>
+        ) : (
+          <ResultBadge result={result} isDraw={game.home_score === game.away_score} t={t} />
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <TeamFlag team={game.homeTeam} name={getTeamName(game, 'home')} size="sm" />
+          <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'home')}</span>
+        </div>
+        <div className="text-center flex-shrink-0">
+          <div className="flex items-start gap-3">
+            <div className="text-center min-w-[3.5rem]">
+              <div className="space-y-0.5">
+                <div className="text-base font-black text-white leading-tight">
+                  {game.home_score}–{game.away_score}
+                  <span className="text-[10px] font-normal text-slate-500 ml-1">
+                    {game.decidedBy === 'et' || game.decidedBy === 'penalties' ? 'AET' : 'FT'}
+                  </span>
+                </div>
+                {game.decidedBy === 'penalties' && (
+                  <div className="text-sm font-black text-slate-300 leading-tight">
+                    {penH ?? '?'}–{penA ?? '?'}
+                    <span className="text-[10px] font-normal text-slate-500 ml-1">PEN</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">{t.predictions.actual}</div>
+            </div>
+            <div className="text-slate-700 self-center">|</div>
+            <div className="text-center min-w-[3.5rem]">
+              <div className="space-y-0.5">
+                <div className="text-base font-black text-amber-400 leading-tight">
+                  {pred.homeScore}–{pred.awayScore}
+                  <span className="text-[10px] font-normal text-amber-400/60 ml-1">Reg</span>
+                </div>
+                {pred.etHomeScore !== undefined && pred.etAwayScore !== undefined && (
+                  <div className="text-sm font-black text-amber-400/80 leading-tight">
+                    {pred.etHomeScore}–{pred.etAwayScore}
+                    <span className="text-[10px] font-normal text-amber-400/50 ml-1">AET</span>
+                  </div>
+                )}
+                {pred.penHomeScore !== undefined && pred.penAwayScore !== undefined && (
+                  <div className="text-sm font-black text-amber-400/60 leading-tight">
+                    {pred.penHomeScore}–{pred.penAwayScore}
+                    <span className="text-[10px] font-normal text-amber-400/40 ml-1">PEN</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">{t.predictions.yourPick}</div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'away')}</span>
+          <TeamFlag team={game.awayTeam} name={getTeamName(game, 'away')} size="sm" />
+        </div>
+      </div>
     </div>
   )
 }

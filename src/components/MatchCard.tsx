@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
+import useSWR from 'swr'
 import TeamFlag from './TeamFlag'
-import type { EnrichedGame } from '@/lib/types'
+import type { EnrichedGame, MatchDetail } from '@/lib/types'
 import { getMatchStatus, getStatusLabel, getScorers, getTeamName, formatMatchDateTime, getVenueTimezone, parseMatchDate, canPredict, minutesUntilLock, formatLockCountdown } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
@@ -46,6 +47,12 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
   const homeName = resolveTeamName(game, 'home', t)
   const awayName = resolveTeamName(game, 'away', t)
   const stageLabel = localStageLabel(game.type, game.group, t)
+
+  // Fetch pen scores from match detail when ESPN scoreboard doesn't include linescores[4]
+  const needsPen = (game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && game.pen_home_score == null
+  const { data: penDetail } = useSWR<MatchDetail>(needsPen ? `/api/match/${game.id}` : null, (url: string) => fetch(url).then(r => r.json()), { revalidateOnFocus: false })
+  const penH = game.pen_home_score ?? (penDetail?.penHomeGoals != null ? String(penDetail.penHomeGoals) : null)
+  const penA = game.pen_away_score ?? (penDetail?.penAwayGoals != null ? String(penDetail.penAwayGoals) : null)
 
   const [prediction, setPrediction] = useState<import('@/lib/types').Prediction | null>(null)
   const [editing, setEditing] = useState(false)
@@ -185,10 +192,10 @@ export default function MatchCard({ game, showPredictLink = false }: Props) {
           {status === 'live' && (
             <span className="text-xs text-green-400 font-bold">{statusLabel}</span>
           )}
-          {/* Penalty shootout score */}
-          {(game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && (game.pen_home_score != null || game.pen_away_score != null) && (
+          {/* Penalty shootout score — show as soon as we have either value */}
+          {(game.decidedBy === 'penalties' || game.time_elapsed === 'PEN') && (penH != null || penA != null) && (
             <span className="text-[10px] text-slate-400">
-              Pen. <span className="font-bold text-white">{game.pen_home_score ?? '?'}–{game.pen_away_score ?? '?'}</span>
+              Pén. <span className="font-bold text-white">{penH ?? '?'}–{penA ?? '?'}</span>
             </span>
           )}
         </div>

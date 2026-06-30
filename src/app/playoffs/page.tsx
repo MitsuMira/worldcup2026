@@ -5,7 +5,7 @@ import { useState } from 'react'
 import MatchCard from '@/components/MatchCard'
 import TeamFlag from '@/components/TeamFlag'
 import { useFavorites } from '@/contexts/FavoriteTeamsContext'
-import type { EnrichedGame } from '@/lib/types'
+import type { EnrichedGame, MatchDetail } from '@/lib/types'
 import { getMatchStatus, getTeamName, formatTime, parseMatchDate, getVenueTimezone } from '@/lib/utils'
 import { BRACKET_POSITIONS, MATCH_LABELS, SLOT_MATCH_NUM, formatSlotLabel, isEspnPlaceholder } from '@/lib/bracketStructure'
 import { useT } from '@/contexts/LanguageContext'
@@ -50,7 +50,11 @@ function halfTop(absIdx: number, idx: number): number {
 
 // ─── Bracket slot ────────────────────────────────────────────────────────────
 
-function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations; highlightFav?: boolean; scorers?: string }) {
+function BracketSlot({ game, side, label, t, highlightFav = false, scorers, computedPenHome, computedPenAway }: {
+  game?: EnrichedGame; side: 'home' | 'away'; label?: string; t: Translations
+  highlightFav?: boolean; scorers?: string
+  computedPenHome?: number; computedPenAway?: number
+}) {
   const { isFavorite } = useFavorites()
 
   if (!game) {
@@ -68,8 +72,13 @@ function BracketSlot({ game, side, label, t, highlightFav = false, scorers }: { 
   const team = side === 'home' ? game.homeTeam : game.awayTeam
   const score = side === 'home' ? game.home_score : game.away_score
   const otherScore = side === 'home' ? game.away_score : game.home_score
-  const penScore = side === 'home' ? game.pen_home_score : game.pen_away_score
-  const otherPenScore = side === 'home' ? game.pen_away_score : game.pen_home_score
+  // Use ESPN linescore pen score if available, otherwise use computed value from commentary
+  const rawPenScore = side === 'home' ? game.pen_home_score : game.pen_away_score
+  const rawOtherPenScore = side === 'home' ? game.pen_away_score : game.pen_home_score
+  const penGoals = side === 'home' ? computedPenHome : computedPenAway
+  const otherPenGoals = side === 'home' ? computedPenAway : computedPenHome
+  const penScore = rawPenScore ?? (penGoals != null ? String(penGoals) : null)
+  const otherPenScore = rawOtherPenScore ?? (otherPenGoals != null ? String(otherPenGoals) : null)
   const status = getMatchStatus(game)
   const isWinner = status === 'finished' && (
     game.decidedBy === 'penalties'
@@ -121,6 +130,10 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
   })
   const timeStr = game ? formatTime(game.local_date, timezone) : ''
 
+  // Fetch pen scores from match detail when ESPN scoreboard omits linescores[4]
+  const needsPen = !!(game?.decidedBy === 'penalties' && game.pen_home_score == null && game.id)
+  const { data: detail } = useSWR<MatchDetail>(needsPen ? `/api/match/${game!.id}` : null, fetcher, { revalidateOnFocus: false })
+
   const inner = (
     <div
       className={`bg-slate-900 border rounded-xl p-2 space-y-1 overflow-hidden ${
@@ -148,10 +161,12 @@ function BracketCard({ game, matchNum, timezone, t, highlightFav = false }: { ga
         )}
       </div>
       <BracketSlot game={game} side="home" label={slotLabels?.home} t={t} highlightFav={highlightFav}
-        scorers={game?.home_scorers && game.home_scorers !== 'null' ? game.home_scorers : undefined} />
+        scorers={game?.home_scorers && game.home_scorers !== 'null' ? game.home_scorers : undefined}
+        computedPenHome={detail?.penHomeGoals} computedPenAway={detail?.penAwayGoals} />
       <div className="h-px bg-slate-800" />
       <BracketSlot game={game} side="away" label={slotLabels?.away} t={t} highlightFav={highlightFav}
-        scorers={game?.away_scorers && game.away_scorers !== 'null' ? game.away_scorers : undefined} />
+        scorers={game?.away_scorers && game.away_scorers !== 'null' ? game.away_scorers : undefined}
+        computedPenHome={detail?.penHomeGoals} computedPenAway={detail?.penAwayGoals} />
     </div>
   )
   return game?.id ? <Link href={`/matches/${game.id}`}>{inner}</Link> : inner
