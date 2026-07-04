@@ -3,8 +3,8 @@
 import useSWR from 'swr'
 import { useState, useEffect, useCallback } from 'react'
 import TeamFlag from '@/components/TeamFlag'
-import type { EnrichedGame, Prediction, MatchDetail } from '@/lib/types'
-import { getMatchStatus, getTeamName } from '@/lib/utils'
+import type { EnrichedGame, Prediction } from '@/lib/types'
+import { getMatchStatus, getTeamName, isKnockoutGame } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, CheckCircle2 } from 'lucide-react'
@@ -19,74 +19,13 @@ function savePredictions(p: Record<string, Prediction>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
 }
 
-// ── Form dots (no scores shown) ───────────────────────────────────────────────
-
-function FormDots({ form }: { form: string }) {
-  return (
-    <div className="flex gap-0.5">
-      {[...form].map((r, i) => (
-        <span key={i} className={`w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center ${
-          r === 'W' ? 'bg-green-500 text-white' :
-          r === 'L' ? 'bg-red-500 text-white' :
-          'bg-slate-700 text-slate-300'
-        }`}>
-          {r === 'W' ? 'V' : r === 'L' ? 'D' : 'E'}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function GamePreview({ gameId, homeName, awayName }: { gameId: string; homeName: string; awayName: string }) {
-  const { data } = useSWR<MatchDetail>(`/api/match/${gameId}`, fetcher, { revalidateOnFocus: false })
-  if (!data) return null
-  const hasForm = data.homeForm || data.awayForm
-  // H2H: hide result of this exact game by filtering it out
-  const h2h = (data.h2h ?? []).slice(0, 3)
-  if (!hasForm && h2h.length === 0) return null
-  return (
-    <div className="mt-3 pt-3 border-t border-slate-800 text-[11px]">
-      {hasForm && (
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex flex-col gap-1">
-            <span className="text-slate-500">{homeName}</span>
-            {data.homeForm && <FormDots form={data.homeForm} />}
-          </div>
-          <span className="text-slate-600 text-[10px] uppercase tracking-wider">Últimos 5</span>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-slate-500">{awayName}</span>
-            {data.awayForm && <FormDots form={data.awayForm} />}
-          </div>
-        </div>
-      )}
-      {h2h.length > 0 && (
-        <div className="space-y-0.5">
-          <div className="text-slate-600 text-[10px] uppercase tracking-wider mb-1">Últimos confrontos</div>
-          {h2h.map((g, i) => {
-            const hs = parseInt(g.homeScore), as_ = parseInt(g.awayScore)
-            const hWon = hs > as_, aWon = as_ > hs
-            return (
-              <div key={i} className="flex items-center gap-2 py-0.5">
-                <span className="text-slate-600 w-14 shrink-0">{g.date?.slice(0, 7)}</span>
-                <span className={`flex-1 text-right truncate ${hWon ? 'text-white font-semibold' : 'text-slate-500'}`}>{g.homeTeam}</span>
-                <span className="font-black tabular-nums text-white shrink-0 w-10 text-center">{g.homeScore}–{g.awayScore}</span>
-                <span className={`flex-1 truncate ${aWon ? 'text-white font-semibold' : 'text-slate-500'}`}>{g.awayTeam}</span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LatePicksPage() {
   const { t } = useT()
   const { data, isLoading } = useSWR<{ games: EnrichedGame[] }>('/api/games', fetcher)
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({})
-  const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
+  const [inputs, setInputs] = useState<Record<string, { home: string; away: string; etHome: string; etAway: string; penHome: string; penAway: string }>>({})
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -95,9 +34,9 @@ export default function LatePicksPage() {
   }, [])
 
   const games = data?.games ?? []
-  // Only finished group-stage games, sorted chronologically
+  // All finished games (group + knockout), sorted chronologically
   const finishedGames = games
-    .filter(g => getMatchStatus(g) === 'finished' && g.type === 'group')
+    .filter(g => getMatchStatus(g) === 'finished')
     .sort((a, b) => new Date(a.local_date).getTime() - new Date(b.local_date).getTime())
 
   const unpredicted = finishedGames.filter(g => !predictions[g.id])
@@ -108,6 +47,15 @@ export default function LatePicksPage() {
     if (!inp) return
     const h = parseInt(inp.home), a = parseInt(inp.away)
     if (isNaN(h) || isNaN(a) || h < 0 || a < 0) return
+    const knockout = isKnockoutGame(game)
+    const isDrawReg = knockout && inp.home !== '' && inp.away !== '' && inp.home === inp.away
+    const etH = inp.etHome !== '' ? parseInt(inp.etHome) : undefined
+    const etA = inp.etAway !== '' ? parseInt(inp.etAway) : undefined
+    if (isDrawReg && etH !== undefined && etA !== undefined && (etH < h || etA < a)) return
+    const isDrawET = isDrawReg && inp.etHome !== '' && inp.etAway !== '' && inp.etHome === inp.etAway
+    const penH = inp.penHome !== '' ? parseInt(inp.penHome) : undefined
+    const penA = inp.penAway !== '' ? parseInt(inp.penAway) : undefined
+    if (isDrawET && penH !== undefined && penA !== undefined && penH === penA) return
     const pred: Prediction = {
       matchId: game.id,
       homeTeamName: getTeamName(game, 'home'),
@@ -115,6 +63,8 @@ export default function LatePicksPage() {
       homeTeamFlag: game.homeTeam?.flag ?? '',
       awayTeamFlag: game.awayTeam?.flag ?? '',
       homeScore: h, awayScore: a,
+      ...(knockout && isDrawReg && etH !== undefined && etA !== undefined ? { etHomeScore: etH, etAwayScore: etA } : {}),
+      ...(knockout && isDrawET && penH !== undefined && penA !== undefined ? { penHomeScore: penH, penAwayScore: penA } : {}),
       createdAt: new Date().toISOString(),
     }
     const updated = { ...predictions, [game.id]: pred }
@@ -142,15 +92,23 @@ export default function LatePicksPage() {
 
       {!isLoading && (
         <>
-          {/* Unpredicted games */}
           {unpredicted.length === 0 && predicted.length === 0 && (
             <div className="text-slate-500 text-center py-20">Nenhuma partida disponível ainda.</div>
           )}
 
+          {/* Unpredicted games */}
           {unpredicted.length > 0 && (
             <div className="space-y-3 mb-8">
               {unpredicted.map(game => {
-                const inp = inputs[game.id] ?? { home: '', away: '' }
+                const inp = inputs[game.id] ?? { home: '', away: '', etHome: '', etAway: '', penHome: '', penAway: '' }
+                const knockout = isKnockoutGame(game)
+                const isDrawReg = knockout && inp.home !== '' && inp.away !== '' && inp.home === inp.away
+                const isDrawET = isDrawReg && inp.etHome !== '' && inp.etAway !== '' && inp.etHome === inp.etAway
+                const penIsTie = isDrawET && inp.penHome !== '' && inp.penAway !== '' && inp.penHome === inp.penAway
+                const canSave = inp.home !== '' && inp.away !== '' &&
+                  (!isDrawReg || (inp.etHome !== '' && inp.etAway !== '')) &&
+                  (!isDrawET || (inp.penHome !== '' && inp.penAway !== '')) &&
+                  !penIsTie
                 return (
                   <div key={game.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-4 transition-colors">
                     <div className="flex items-center justify-between mb-3">
@@ -164,31 +122,89 @@ export default function LatePicksPage() {
                         <TeamFlag team={game.homeTeam} name={getTeamName(game, 'home')} size="sm" />
                         <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'home')}</span>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <input
-                          type="number" min="0" max="20" value={inp.home}
-                          onChange={e => setInputs(prev => ({ ...prev, [game.id]: { ...inp, home: e.target.value } }))}
-                          className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-amber-500 text-sm"
-                          placeholder="0"
-                        />
-                        <span className="text-slate-600 text-sm">–</span>
-                        <input
-                          type="number" min="0" max="20" value={inp.away}
-                          onChange={e => setInputs(prev => ({ ...prev, [game.id]: { ...inp, away: e.target.value } }))}
-                          className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-amber-500 text-sm"
-                          placeholder="0"
-                        />
+                      <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number" min="0" max="20" value={inp.home}
+                            onChange={e => {
+                              const v = e.target.value
+                              const upd = { ...inp, home: v }
+                              if (knockout && v !== '' && v === inp.away) {
+                                if (!inp.etHome) upd.etHome = v
+                                if (!inp.etAway) upd.etAway = inp.away
+                              }
+                              setInputs(prev => ({ ...prev, [game.id]: upd }))
+                            }}
+                            className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-amber-500 text-sm"
+                            placeholder="0"
+                          />
+                          <span className="text-slate-600 text-sm">–</span>
+                          <input
+                            type="number" min="0" max="20" value={inp.away}
+                            onChange={e => {
+                              const v = e.target.value
+                              const upd = { ...inp, away: v }
+                              if (knockout && v !== '' && inp.home === v) {
+                                if (!inp.etHome) upd.etHome = inp.home
+                                if (!inp.etAway) upd.etAway = v
+                              }
+                              setInputs(prev => ({ ...prev, [game.id]: upd }))
+                            }}
+                            className="w-12 bg-slate-800 border border-slate-700 rounded-lg text-center text-white font-bold py-1.5 focus:outline-none focus:border-amber-500 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                        {isDrawReg && (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-amber-400/70 uppercase w-10">{t.match.aet}</span>
+                              <input type="number" min={parseInt(inp.home) || 0} max="20" value={inp.etHome}
+                                onChange={e => {
+                                  const v = e.target.value, min = parseInt(inp.home) || 0, n = parseInt(v)
+                                  setInputs(prev => ({ ...prev, [game.id]: { ...inp, etHome: v !== '' && !isNaN(n) && n < min ? String(min) : v } }))
+                                }}
+                                className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                                placeholder={inp.home}
+                              />
+                              <span className="text-slate-600 text-sm">–</span>
+                              <input type="number" min={parseInt(inp.away) || 0} max="20" value={inp.etAway}
+                                onChange={e => {
+                                  const v = e.target.value, min = parseInt(inp.away) || 0, n = parseInt(v)
+                                  setInputs(prev => ({ ...prev, [game.id]: { ...inp, etAway: v !== '' && !isNaN(n) && n < min ? String(min) : v } }))
+                                }}
+                                className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                                placeholder={inp.away}
+                              />
+                            </div>
+                            <span className="text-[9px] text-slate-500 ml-12">{t.match.aetHint} {inp.home}–{inp.away}</span>
+                          </div>
+                        )}
+                        {isDrawET && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-400 uppercase w-10">{t.match.penalties}</span>
+                            <input type="number" min="0" max="20" value={inp.penHome}
+                              onChange={e => setInputs(prev => ({ ...prev, [game.id]: { ...inp, penHome: e.target.value } }))}
+                              className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                              placeholder="0"
+                            />
+                            <span className="text-slate-600 text-sm">–</span>
+                            <input type="number" min="0" max="20" value={inp.penAway}
+                              onChange={e => setInputs(prev => ({ ...prev, [game.id]: { ...inp, penAway: e.target.value } }))}
+                              className="w-9 bg-slate-800 border border-slate-600 rounded text-center text-white font-bold py-0.5 focus:outline-none focus:border-amber-500 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <span className="text-sm font-medium text-white truncate">{getTeamName(game, 'away')}</span>
                         <TeamFlag team={game.awayTeam} name={getTeamName(game, 'away')} size="sm" />
                       </div>
                     </div>
-                    <GamePreview gameId={game.id} homeName={getTeamName(game, 'home')} awayName={getTeamName(game, 'away')} />
                     <div className="mt-3 flex justify-end">
                       <button
                         onClick={() => submit(game)}
-                        disabled={!inp.home || !inp.away}
+                        disabled={!canSave}
                         className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-bold text-sm rounded-lg transition-colors"
                       >
                         Salvar palpite
@@ -214,9 +230,17 @@ export default function LatePicksPage() {
                     <div key={game.id} className="bg-slate-900/60 border border-slate-800/60 rounded-xl px-4 py-3 flex items-center gap-3">
                       <TeamFlag team={game.homeTeam} name={getTeamName(game, 'home')} size="sm" />
                       <span className="text-sm text-slate-300 truncate flex-1">{getTeamName(game, 'home')}</span>
-                      <span className="text-lg font-black text-amber-400 shrink-0">
-                        {pred.homeScore}–{pred.awayScore}
-                      </span>
+                      <div className="flex flex-col items-center shrink-0">
+                        <span className="text-lg font-black text-amber-400">
+                          {pred.homeScore}–{pred.awayScore}
+                        </span>
+                        {pred.etHomeScore !== undefined && pred.etAwayScore !== undefined && (
+                          <span className="text-xs text-amber-400/70">ET: {pred.etHomeScore}–{pred.etAwayScore}</span>
+                        )}
+                        {pred.penHomeScore !== undefined && pred.penAwayScore !== undefined && (
+                          <span className="text-xs text-amber-400/60">PEN: {pred.penHomeScore}–{pred.penAwayScore}</span>
+                        )}
+                      </div>
                       <span className="text-sm text-slate-300 truncate flex-1 text-right">{getTeamName(game, 'away')}</span>
                       <TeamFlag team={game.awayTeam} name={getTeamName(game, 'away')} size="sm" />
                     </div>
