@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { fetchAllTeams } from '@/lib/espnClient'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export async function GET() {
   try {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { fetchEnrichedGames } from '@/lib/espnClient'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 15
 
 export async function GET() {
   try {
