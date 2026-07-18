@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 import { Users, Plus, LogIn, LogOut, Copy, Check, Pencil, Loader2, Crown, Share2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { getOrCreateUserId, getUserName, setUserName, getGroups, saveGroup, removeGroup, generateCode, type GroupEntry } from '@/lib/identity'
@@ -16,6 +16,23 @@ function loadPredictions() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
 }
 
+// Push the user's current local predictions to every joined group's KV record,
+// so the leaderboard reflects new picks without needing to open each group individually.
+async function syncAllGroups(uid: string, uname: string, entries: GroupEntry[]) {
+  if (!uid || !uname || entries.length === 0) return
+  const predictions = loadPredictions()
+  await Promise.allSettled(entries.map(async (g) => {
+    const res = await fetch(`/api/groups/${g.code}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: uid, name: uname, predictions, groupLabel: g.label }),
+    })
+    if (res.ok) {
+      mutate(`group-stats-${g.code}`)
+      mutate(`group-settings-list-${g.code}`)
+    }
+  }))
+}
 
 function GroupStats({ code, userId, games }: { code: string; userId: string; games: EnrichedGame[] }) {
   const { data: membersData } = useSWR<{ members: KvMember[] }>(
@@ -79,14 +96,22 @@ export default function GroupsPage() {
 
   useEffect(() => {
     setMounted(true)
-    setUserId(getOrCreateUserId())
+    const uid = getOrCreateUserId()
+    setUserId(uid)
     const n = getUserName()
     setName(n)
     setNameInput(n)
-    setGroups(getGroups())
+    const loadedGroups = getGroups()
+    setGroups(loadedGroups)
+    syncAllGroups(uid, n, loadedGroups)
 
-    // Re-sync group labels from localStorage when user navigates back to this page
-    const onVisible = () => { if (document.visibilityState === 'visible') setGroups(getGroups()) }
+    // Re-sync group labels and predictions from localStorage when user navigates back to this page
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      const g = getGroups()
+      setGroups(g)
+      syncAllGroups(uid, getUserName(), g)
+    }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
