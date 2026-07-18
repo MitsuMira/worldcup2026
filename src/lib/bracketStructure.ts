@@ -18,7 +18,7 @@ import type { Translations } from './i18n'
  */
 
 export interface BracketPos {
-  round: 'r32' | 'r16' | 'qf' | 'sf'
+  round: 'r32' | 'r16' | 'qf' | 'sf' | 'third' | 'final'
   half:  0 | 1
   pos:   number
   matchNum: number
@@ -123,6 +123,16 @@ const ENTRIES: [string, BracketPos][] = [
   ['2026-07-14_Dallas',                          { round: 'sf', half: 0, pos: 0, matchNum: 101 }],
   ['2026-07-14_Dallas (Arlington)',               { round: 'sf', half: 0, pos: 0, matchNum: 101 }],
   ['2026-07-15_Atlanta',                         { round: 'sf', half: 1, pos: 0, matchNum: 102 }],
+
+  // ── 3rd Place  (Jul 18, Miami Gardens) ──────────────────────────────────────
+  ['2026-07-18_Miami Gardens',                   { round: 'third', half: 1, pos: 0, matchNum: 104 }],
+  ['2026-07-18_Miami',                           { round: 'third', half: 1, pos: 0, matchNum: 104 }],
+  ['2026-07-18_Miami (Miami Gardens)',            { round: 'third', half: 1, pos: 0, matchNum: 104 }],
+
+  // ── Final  (Jul 19, East Rutherford) ────────────────────────────────────────
+  ['2026-07-19_East Rutherford',                 { round: 'final', half: 0, pos: 0, matchNum: 103 }],
+  ['2026-07-19_New York',                        { round: 'final', half: 0, pos: 0, matchNum: 103 }],
+  ['2026-07-19_New York/New Jersey (East Rutherford)', { round: 'final', half: 0, pos: 0, matchNum: 103 }],
 ]
 
 export const BRACKET_POSITIONS: ReadonlyMap<string, BracketPos> =
