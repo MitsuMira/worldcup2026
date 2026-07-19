@@ -223,31 +223,59 @@ export function isKnockoutGame(game: ApiGame): boolean {
   return game.type !== 'group'
 }
 
-export function getKnockoutPredictionPoints(pred: Prediction, game: ApiGame): number {
-  if (game.finished !== 'TRUE') return 0
+export interface KnockoutScore { pts: number; exact: boolean }
+
+// Knockout scoring, layered by how the match was actually decided:
+//   Regulation — exact score: 3 pts · correct winner: 1 pt · wrong: 0
+//   Extra time (won outright) — exact 120' score: 3 pts · correct ET winner: 1 pt · wrong: 0
+//   Penalties — exact 120' (drawn) score: 1 pt · exact shootout score: 2 pts (else correct
+//     shootout winner: 1 pt) — max 3 pts total, same ceiling as the other two outcomes.
+// The ET/pen tiers only score if the user's regulation prediction was itself a draw (the
+// only path that reveals those inputs) — correctly requiring them to have called that the
+// match would need extra time at all.
+export function getKnockoutPredictionPoints(pred: Prediction, game: ApiGame): KnockoutScore {
+  if (game.finished !== 'TRUE') return { pts: 0, exact: false }
   const ah = parseInt(game.home_score)
   const aa = parseInt(game.away_score)
-  let pts = 0
 
-  // 3 pts: exact regulation score and game ended in regulation
-  if (pred.homeScore === ah && pred.awayScore === aa && game.decidedBy === 'regulation') pts += 3
-  // 1 pt: correct ET winner
-  if (game.decidedBy === 'et' || game.decidedBy === 'penalties') {
-    if (pred.etHomeScore !== undefined && pred.etAwayScore !== undefined) {
-      const etH = pred.etHomeScore, etA = pred.etAwayScore
-      const actualH = ah, actualA = aa
-      const predWinner = etH > etA ? 'home' : etH < etA ? 'away' : 'draw'
-      const actualWinner = actualH > actualA ? 'home' : actualH < actualA ? 'away' : 'draw'
-      if (predWinner === actualWinner && actualWinner !== 'draw') pts += 1
+  if (game.decidedBy === 'regulation') {
+    if (pred.homeScore === ah && pred.awayScore === aa) return { pts: 3, exact: true }
+    const predWinner = pred.homeScore > pred.awayScore ? 'home' : pred.homeScore < pred.awayScore ? 'away' : 'draw'
+    const actualWinner = ah > aa ? 'home' : ah < aa ? 'away' : 'draw'
+    return { pts: predWinner === actualWinner ? 1 : 0, exact: false }
+  }
+
+  if (pred.etHomeScore === undefined || pred.etAwayScore === undefined) return { pts: 0, exact: false }
+  const etH = pred.etHomeScore, etA = pred.etAwayScore
+
+  if (game.decidedBy === 'et') {
+    if (etH === ah && etA === aa) return { pts: 3, exact: true }
+    const predWinner = etH > etA ? 'home' : etH < etA ? 'away' : 'draw'
+    const actualWinner = ah > aa ? 'home' : ah < aa ? 'away' : 'draw'
+    return { pts: predWinner === actualWinner && actualWinner !== 'draw' ? 1 : 0, exact: false }
+  }
+
+  // Decided by penalties — ah/aa is the drawn 120' score.
+  let pts = 0
+  const etExact = etH === ah && etA === aa
+  if (etExact) pts += 1
+
+  let penExact = false
+  if (pred.penHomeScore !== undefined && pred.penAwayScore !== undefined &&
+      game.pen_home_score != null && game.pen_away_score != null) {
+    const actualPenH = parseInt(game.pen_home_score)
+    const actualPenA = parseInt(game.pen_away_score)
+    if (pred.penHomeScore === actualPenH && pred.penAwayScore === actualPenA) {
+      pts += 2
+      penExact = true
+    } else {
+      const predWinner = pred.penHomeScore > pred.penAwayScore ? 'home' : 'away'
+      const actualWinner = actualPenH > actualPenA ? 'home' : 'away'
+      if (predWinner === actualWinner) pts += 1
     }
   }
-  // 1 pt: correct penalty score
-  if (game.decidedBy === 'penalties' && pred.penHomeScore !== undefined && pred.penAwayScore !== undefined) {
-    if (game.pen_home_score && game.pen_away_score) {
-      if (pred.penHomeScore === parseInt(game.pen_home_score) && pred.penAwayScore === parseInt(game.pen_away_score)) pts += 1
-    }
-  }
-  return pts
+
+  return { pts, exact: etExact && penExact }
 }
 
 export function getPredictionResult(
@@ -261,6 +289,17 @@ export function getPredictionResult(
   const predWinner = pred.homeScore > pred.awayScore ? 'home' : pred.homeScore < pred.awayScore ? 'away' : 'draw'
   const actualWinner = ah > aa ? 'home' : ah < aa ? 'away' : 'draw'
   if (predWinner === actualWinner) return 'correct-winner'
+  return 'wrong'
+}
+
+// Knockout counterpart of getPredictionResult() — categorizes a knockout prediction using
+// the actual phased scoring rules above, instead of a naive score comparison. Used anywhere
+// a match needs a correct/correct-winner/wrong indicator (e.g. leaderboard result dots).
+export function getKnockoutPredictionResult(pred: Prediction, game: ApiGame): PredictionResult {
+  if (game.finished !== 'TRUE') return 'pending'
+  const { pts, exact } = getKnockoutPredictionPoints(pred, game)
+  if (exact) return 'correct'
+  if (pts > 0) return 'correct-winner'
   return 'wrong'
 }
 

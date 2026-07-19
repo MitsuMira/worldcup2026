@@ -15,9 +15,10 @@ export function calcPoints(member: KvMember, games: EnrichedGame[], allMembers: 
     const pred = member.predictions[game.id] as Prediction | undefined
     if (!pred) continue
     if (isKnockoutGame(game)) {
-      const koPts = getKnockoutPredictionPoints(pred, game)
+      const { pts: koPts, exact: koExact } = getKnockoutPredictionPoints(pred, game)
       pts += koPts
-      if (koPts >= 3) exact++  // regulation exact score in knockout gives 3 pts
+      if (koExact) exact++
+      else if (koPts > 0) winner++
     } else {
       const result = getPredictionResult(
         { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,

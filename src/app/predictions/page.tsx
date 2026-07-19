@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import TeamFlag from '@/components/TeamFlag'
 import type { EnrichedGame, Prediction, PredictionResult, MatchDetail } from '@/lib/types'
-import { getMatchStatus, getPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock, formatLockCountdown, isKnockoutGame, getKnockoutPredictionPoints } from '@/lib/utils'
+import { getMatchStatus, getPredictionResult, getKnockoutPredictionResult, getTeamName, formatMatchDateTime, canPredict, minutesUntilLock, formatLockCountdown, isKnockoutGame, getKnockoutPredictionPoints } from '@/lib/utils'
 import { localStageLabel } from '@/lib/i18n'
 import { useT } from '@/contexts/LanguageContext'
 import { Loader2, CheckCircle2, XCircle, Minus, Trophy, UsersRound } from 'lucide-react'
@@ -105,8 +105,8 @@ export default function PredictionsPage() {
     .filter((g) => predictions[g.id])
     .map((g) => {
       const pred = predictions[g.id]
-      const result = isKnockoutGame(g) ? 'pending' as const : getPredictionResult(pred, g)
-      const knockoutPts = isKnockoutGame(g) ? getKnockoutPredictionPoints(pred, g) : 0
+      const result = isKnockoutGame(g) ? getKnockoutPredictionResult(pred, g) : getPredictionResult(pred, g)
+      const knockoutPts = isKnockoutGame(g) ? getKnockoutPredictionPoints(pred, g).pts : 0
       return { game: g, pred, result, knockoutPts }
     })
 

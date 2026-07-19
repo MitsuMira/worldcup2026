@@ -7,11 +7,32 @@ import Link from 'next/link'
 import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Settings, Lock, Share2, UserX, ArrowRightLeft } from 'lucide-react'
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction, MatchDetail } from '@/lib/types'
-import { getPredictionResult, getTeamName, getMatchStatus } from '@/lib/utils'
+import { getPredictionResult, getKnockoutPredictionResult, isKnockoutGame, getTeamName, getMatchStatus } from '@/lib/utils'
 import { gameCountsForScoring, calcPoints } from '@/lib/scoring'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
+
+// KV stores prediction fields as number | string (JSON round-trip); coerce to a real
+// Prediction before handing off to the scoring functions, which do strict (===) comparisons.
+function toPrediction(pred: KvMember['predictions'][string]): Prediction {
+  const num = (v: number | string | undefined) => (v === undefined ? undefined : Number(v))
+  return {
+    matchId: '', homeTeamName: '', awayTeamName: '', homeTeamFlag: '', awayTeamFlag: '', createdAt: '',
+    homeScore: Number(pred.homeScore),
+    awayScore: Number(pred.awayScore),
+    etHomeScore: num(pred.etHomeScore),
+    etAwayScore: num(pred.etAwayScore),
+    penHomeScore: num(pred.penHomeScore),
+    penAwayScore: num(pred.penAwayScore),
+  }
+}
+
+function getResult(pred: KvMember['predictions'][string], game: EnrichedGame) {
+  return isKnockoutGame(game)
+    ? getKnockoutPredictionResult(toPrediction(pred), game)
+    : getPredictionResult(toPrediction(pred), game)
+}
 
 function PenScore({ game, className }: { game: EnrichedGame; className?: string }) {
   const needsPen = game.decidedBy === 'penalties' && !game.pen_home_score
@@ -281,10 +302,7 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
             {countedFinished.map(game => {
               const pred = member.predictions[game.id]
               if (!pred) return null
-              const result = getPredictionResult(
-                { ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction,
-                game,
-              )
+              const result = getResult(pred, game)
               const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
               const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
               const isET = game.decidedBy === 'et' || game.decidedBy === 'penalties'
@@ -399,9 +417,7 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
               <span className="text-xs text-slate-700">—</span>
             </div>
           )
-          const result = finished
-            ? getPredictionResult({ ...pred, homeScore: Number(pred.homeScore), awayScore: Number(pred.awayScore) } as Prediction, game) as PredictionResult
-            : 'pending'
+          const result = finished ? getResult(pred, game) : 'pending'
           const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
           const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
           return (
