@@ -8,7 +8,7 @@ import { ArrowLeft, Copy, Check, ChevronDown, ChevronUp, Crown, RefreshCw, Setti
 import { getOrCreateUserId, getUserName, getGroups, saveGroup } from '@/lib/identity'
 import type { EnrichedGame, Prediction, MatchDetail } from '@/lib/types'
 import { getPredictionResult, getKnockoutPredictionResult, isKnockoutGame, getTeamName, getMatchStatus } from '@/lib/utils'
-import { gameCountsForScoring, calcPoints } from '@/lib/scoring'
+import { gameCountsForScoring, calcPoints, getGamePoints } from '@/lib/scoring'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 const STORAGE_KEY = 'wc2026_predictions'
@@ -303,6 +303,7 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
               const pred = member.predictions[game.id]
               if (!pred) return null
               const result = getResult(pred, game)
+              const gamePts = getGamePoints(toPrediction(pred), game).pts
               const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
               const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
               const isET = game.decidedBy === 'et' || game.decidedBy === 'penalties'
@@ -327,6 +328,10 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
                       <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
                     )}
                   </div>
+                  {/* Points earned for this match */}
+                  <span className={`font-black shrink-0 w-6 text-right ${gamePts >= 3 ? 'text-green-400' : gamePts > 0 ? 'text-blue-400' : 'text-slate-600'}`}>
+                    +{gamePts}
+                  </span>
                 </div>
               )
             })}
@@ -418,6 +423,7 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
             </div>
           )
           const result = finished ? getResult(pred, game) : 'pending'
+          const gamePts = finished ? getGamePoints(toPrediction(pred), game).pts : 0
           const hasEt = pred.etHomeScore !== undefined && pred.etAwayScore !== undefined
           const hasPen = pred.penHomeScore !== undefined && pred.penAwayScore !== undefined
           return (
@@ -436,6 +442,11 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
                   <span className="text-[10px] text-slate-400">PEN {pred.penHomeScore}–{pred.penAwayScore}</span>
                 )}
               </div>
+              {finished && (
+                <span className={`text-xs font-black shrink-0 w-6 text-right ${gamePts >= 3 ? 'text-green-400' : gamePts > 0 ? 'text-blue-400' : 'text-slate-600'}`}>
+                  +{gamePts}
+                </span>
+              )}
             </div>
           )
         })}
