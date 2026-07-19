@@ -1,28 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { MatchDetail, MatchEvent, TeamMatchStats, TeamLineup, RosterPlayer, H2HGame, CommentaryEntry, MatchLeader, MatchLeaders } from '@/lib/types'
+import { formatMinute, teamAbbr, parseEvents, parseKeyEvents, parseEventsFromCommentary, type EspnClock, type EspnDetailEntry, type EspnKeyEvent, type EspnCommentaryEntry } from '@/lib/matchEvents'
 
 const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
-
-// ── Commentary-based event parsing (fallback when details[] is empty) ─────────
 
 export const dynamic = 'force-dynamic'
 
 // ── ESPN raw shapes (summary endpoint) ───────────────────────────────────────
-
-interface EspnClock { value?: number; displayValue?: string }
-
-interface EspnDetailEntry {
-  type?: { id: string; text: string }
-  clock?: EspnClock
-  team?: { id: string; abbreviation?: string }
-  athletesInvolved?: Array<{ id: string; displayName: string }>
-  scoringPlay?: boolean
-  penaltyKick?: boolean
-  ownGoal?: boolean
-  yellowCard?: boolean
-  redCard?: boolean
-  substitution?: boolean
-}
 
 interface EspnBoxTeam {
   team?: { id: string; abbreviation?: string }
@@ -58,16 +42,6 @@ interface EspnCompetitor {
   score?: string
 }
 
-interface EspnKeyEvent {
-  type?: { id: string; text: string; type: string }
-  clock?: EspnClock
-  team?: { id: string; displayName?: string; abbreviation?: string }
-  participants?: Array<{ athlete?: { id: string; displayName: string } }>
-  scoringPlay?: boolean
-  penaltyKick?: boolean
-  ownGoal?: boolean
-}
-
 interface EspnSummary {
   header?: {
     competitions?: Array<{
@@ -89,12 +63,7 @@ interface EspnSummary {
   boxscore?: { teams?: EspnBoxTeam[] }
   rosters?: EspnRoster[]
   officials?: EspnOfficial[]
-  commentary?: Array<{
-    sequence?: number
-    time?: { displayValue?: string }
-    text?: string
-    play?: { id?: string; type?: { type?: string } }
-  }>
+  commentary?: EspnCommentaryEntry[]
   headToHeadGames?: Array<{
     team?: { id: string; abbreviation?: string; displayName?: string }
     events?: Array<{
@@ -126,56 +95,8 @@ interface EspnSummary {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatMinute(clock?: EspnClock): { display: string; value: number } {
-  if (!clock) return { display: '', value: 0 }
-  const dv = String(clock.displayValue ?? clock.value ?? '')
-  if (dv.includes("'")) return { display: dv, value: parseInt(dv) || 0 }
-  if (dv.includes(':')) {
-    const min = parseInt(dv)
-    return { display: `${min}'`, value: min }
-  }
-  const min = parseInt(dv) || clock.value || 0
-  return { display: `${min}'`, value: min }
-}
-
-function teamAbbr(t?: { id: string; abbreviation?: string }): string {
-  return t?.abbreviation ?? t?.id ?? ''
-}
-
-function parseEvents(details: EspnDetailEntry[], homeId: string): MatchEvent[] {
-  const events: MatchEvent[] = []
-  for (const d of details) {
-    const text = d.type?.text?.toLowerCase() ?? ''
-    const { display, value } = formatMinute(d.clock)
-    const abbr = teamAbbr(d.team) || homeId
-    const athletes = d.athletesInvolved ?? []
-    const primary = athletes[0]?.displayName ?? ''
-    const secondary = athletes[1]?.displayName
-
-    // Shootout kicks have clock=0; detect them to show 'PEN' instead of "0'"
-    const isShootout = d.penaltyKick === true && value <= 1
-    const minVal = isShootout ? 121 : value
-    const minDisplay = isShootout ? 'PEN' : display
-
-    if (text === 'goal' || d.scoringPlay) {
-      const type: MatchEvent['type'] =
-        d.ownGoal ? 'owngoal' : d.penaltyKick ? 'penalty' : 'goal'
-      events.push({ type, minuteDisplay: minDisplay, minute: minVal, teamId: abbr, primaryPlayer: primary, secondaryPlayer: secondary })
-    } else if (text.includes('missed penalty') || text.includes('penalty - miss') || (d.penaltyKick && !d.scoringPlay)) {
-      events.push({ type: 'missed_penalty', minuteDisplay: minDisplay, minute: minVal, teamId: abbr, primaryPlayer: primary })
-    } else if (text.includes('yellow-red') || text.includes('second yellow')) {
-      events.push({ type: 'yellowred', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary })
-    } else if (text.includes('yellow') || d.yellowCard) {
-      events.push({ type: 'yellow', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary })
-    } else if (text.includes('red') || d.redCard) {
-      events.push({ type: 'red', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary })
-    } else if (text.includes('substitution') || d.substitution) {
-      events.push({ type: 'sub', minuteDisplay: display, minute: value, teamId: abbr, primaryPlayer: primary, secondaryPlayer: secondary })
-    }
-  }
-  return events.sort((a, b) => a.minute - b.minute)
-}
+// formatMinute, teamAbbr, parseEvents, parseKeyEvents, parseEventsFromCommentary
+// live in @/lib/matchEvents (shared with espnClient's regulation-score reconstruction).
 
 function parseStats(teams: EspnBoxTeam[], teamId: string): TeamMatchStats | undefined {
   const bt = teams.find(t => teamAbbr(t.team) === teamId || t.team?.id === teamId)
@@ -290,116 +211,6 @@ function parseLeaders(raw: EspnSummary['leaders'], homeEspnId: string, awayEspnI
     result[teamKey] = leaders
   }
   return result
-}
-
-function parseEventsFromCommentary(
-  commentary: NonNullable<EspnSummary['commentary']>,
-  homeId: string,
-  awayId: string,
-  homeName: string,
-  awayName: string,
-): MatchEvent[] {
-  const events: MatchEvent[] = []
-  const homeNameLower = homeName.toLowerCase()
-  const awayNameLower = awayName.toLowerCase()
-
-  const resolveTeam = (teamNameInText: string): string => {
-    const t = teamNameInText.trim().toLowerCase()
-    if (homeNameLower.startsWith(t) || t.startsWith(homeNameLower.split(' ')[0])) return homeId
-    if (awayNameLower.startsWith(t) || t.startsWith(awayNameLower.split(' ')[0])) return awayId
-    return homeId
-  }
-
-  for (const c of commentary) {
-    const text = c.text ?? ''
-    const timeStr = c.time?.displayValue ?? ''
-    const min = parseInt(timeStr) || 0
-
-    // "Goal! Mexico 1, South Africa 0. Julián Quiñones (9')"
-    // lazy (.+?) stops at first \s+\d+, even for multi-word team names
-    const goalMatch = text.match(/^Goal!\s+(.+?)\s+\d+,\s+.+?\s+\d+\.\s+(.+?)\s+\((\d+)\+?'?\)/i)
-    if (goalMatch) {
-      const teamId = resolveTeam(goalMatch[1])
-      const player = goalMatch[2].trim()
-      const minute = parseInt(goalMatch[3]) || min
-      const isOwn = /own\s*goal/i.test(text)
-      events.push({ type: isOwn ? 'owngoal' : 'goal', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: player })
-      continue
-    }
-
-    // "Yellow Card. Player Name (23')"  or  "Booking. Player Name (23')"
-    const yellowMatch = text.match(/^(?:Yellow\s+Card|Booking)[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
-    if (yellowMatch) {
-      const minute = parseInt(yellowMatch[2]) || min
-      // Try to find which team from next text segment — default homeId as fallback
-      events.push({ type: 'yellow', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: yellowMatch[1].trim() })
-      continue
-    }
-
-    // "Red Card. Player Name (67')"
-    const redMatch = text.match(/^Red\s+Card[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
-    if (redMatch) {
-      const minute = parseInt(redMatch[2]) || min
-      events.push({ type: 'red', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: redMatch[1].trim() })
-      continue
-    }
-
-    // "Second Yellow Card. Player Name (78')"
-    const secondYellowMatch = text.match(/^Second\s+Yellow[^.]*\.\s*(.+?)\s+\((\d+)\+?'?\)/i)
-    if (secondYellowMatch) {
-      const minute = parseInt(secondYellowMatch[2]) || min
-      events.push({ type: 'yellowred', minuteDisplay: `${minute}'`, minute, teamId: homeId, primaryPlayer: secondYellowMatch[1].trim() })
-      continue
-    }
-
-    // "Substitution. Team. PlayerOn replaces PlayerOff (min')"
-    const subMatch = text.match(/^Substitution[^.]*\.\s*(?:(.+?)\.\s*)?(.+?)\s+replaces\s+(.+?)\s+\((\d+)\+?'?\)/i)
-    if (subMatch) {
-      const teamId = subMatch[1] ? resolveTeam(subMatch[1]) : homeId
-      const minute = parseInt(subMatch[4]) || min
-      events.push({ type: 'sub', minuteDisplay: `${minute}'`, minute, teamId, primaryPlayer: subMatch[3].trim(), secondaryPlayer: subMatch[2].trim() })
-    }
-  }
-  return events.sort((a, b) => a.minute - b.minute)
-}
-
-function parseKeyEvents(
-  keyEvents: EspnKeyEvent[],
-  homeEspnId: string,
-  awayEspnId: string,
-  homeId: string,
-  awayId: string,
-): MatchEvent[] {
-  const events: MatchEvent[] = []
-  for (const ev of keyEvents) {
-    const { display, value } = formatMinute(ev.clock)
-    const espnTeamId = ev.team?.id ?? ''
-    const teamId = espnTeamId === homeEspnId ? homeId : espnTeamId === awayEspnId ? awayId : homeId
-    const participants = ev.participants ?? []
-    const primary = participants[0]?.athlete?.displayName ?? ''
-    const secondary = participants[1]?.athlete?.displayName
-
-    const typeStr = ev.type?.type?.toLowerCase() ?? ''
-    const isShootout = ev.penaltyKick === true && value <= 1
-    const minVal = isShootout ? 121 : value
-    const minDisplay = isShootout ? 'PEN' : display
-
-    if (typeStr === 'goal' || ev.scoringPlay) {
-      const type: MatchEvent['type'] = ev.ownGoal ? 'owngoal' : ev.penaltyKick ? 'penalty' : 'goal'
-      events.push({ type, minuteDisplay: minDisplay, minute: minVal, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
-    } else if (typeStr === 'yellow-red-card' || typeStr === 'second-yellow-card') {
-      events.push({ type: 'yellowred', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
-    } else if (typeStr === 'yellow-card') {
-      events.push({ type: 'yellow', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
-    } else if (typeStr === 'red-card') {
-      events.push({ type: 'red', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary })
-    } else if (typeStr === 'substitution') {
-      events.push({ type: 'sub', minuteDisplay: display, minute: value, teamId, primaryPlayer: primary, secondaryPlayer: secondary })
-    } else if (typeStr === 'missed-penalty' || typeStr === 'penalty-miss' || typeStr === 'penalty-kick' || (ev.penaltyKick && !ev.scoringPlay)) {
-      events.push({ type: 'missed_penalty', minuteDisplay: minDisplay, minute: minVal, teamId, primaryPlayer: primary })
-    }
-  }
-  return events.sort((a, b) => a.minute - b.minute)
 }
 
 // Parse penalty shootout kicks from commentary (ESPN never puts them in keyEvents/details)

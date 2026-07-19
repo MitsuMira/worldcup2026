@@ -2,8 +2,13 @@ import 'server-only'
 import type { EnrichedGame, EnrichedGroup, ApiTeam, ApiStadium } from './types'
 import { FIFA_RANK } from './fifaRanking'
 import { isEspnPlaceholder, BRACKET_POSITIONS } from './bracketStructure'
+import {
+  parseEvents, parseKeyEvents, parseEventsFromCommentary, computeRegulationScore,
+  type EspnDetailEntry, type EspnKeyEvent, type EspnCommentaryEntry,
+} from './matchEvents'
 
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard'
+const SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary'
 
 // ── Minimal ESPN raw types ──────────────────────────────────────────────────
 
@@ -451,6 +456,80 @@ async function fetchScoreboard(yearMonth: string): Promise<EspnEvent[]> {
   return data.events ?? []
 }
 
+// ── Regulation-time score reconstruction (for knockout matches that went to ET) ────
+
+interface EspnSummaryCompetitor {
+  id: string
+  homeAway: 'home' | 'away'
+  team: { id: string; abbreviation?: string; displayName?: string }
+}
+
+interface EspnSummaryLite {
+  header?: {
+    competitions?: Array<{
+      competitors?: EspnSummaryCompetitor[]
+      details?: EspnDetailEntry[]
+    }>
+  }
+  keyEvents?: EspnKeyEvent[]
+  commentary?: EspnCommentaryEntry[]
+}
+
+// Fetches match events and reconstructs the regulation-time (90') score for a single
+// finished knockout match that went to extra time. Returns null if the summary can't be
+// fetched or the reconstruction can't be verified (see computeRegulationScore).
+async function fetchRegulationScore(
+  eventId: string, homeId: string, awayId: string, finalHome: number, finalAway: number,
+): Promise<{ home: string; away: string } | null> {
+  try {
+    const res = await fetch(`${SUMMARY}?event=${eventId}`, {
+      next: { revalidate: 86400 },
+      headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    })
+    if (!res.ok) return null
+    const data: EspnSummaryLite = await res.json()
+    const comp = data.header?.competitions?.[0]
+    const competitors = comp?.competitors ?? []
+    const homeComp = competitors.find(c => c.homeAway === 'home')
+    const awayComp = competitors.find(c => c.homeAway === 'away')
+    const homeEspnId = homeComp?.id ?? ''
+    const awayEspnId = awayComp?.id ?? ''
+    const homeName = homeComp?.team.displayName ?? homeId
+    const awayName = awayComp?.team.displayName ?? awayId
+
+    const details = comp?.details ?? []
+    const keyEvents = data.keyEvents ?? []
+    const events = keyEvents.length > 0
+      ? parseKeyEvents(keyEvents, homeEspnId, awayEspnId, homeId, awayId)
+      : details.length > 0
+        ? parseEvents(details, homeId)
+        : parseEventsFromCommentary(data.commentary ?? [], homeId, awayId, homeName, awayName)
+
+    const reg = computeRegulationScore(events, homeId, awayId, finalHome, finalAway)
+    return reg ? { home: String(reg.home), away: String(reg.away) } : null
+  } catch {
+    return null
+  }
+}
+
+// Enriches finished knockout games that went to extra time with a verified regulation-time
+// score, used to award prediction credit for correctly calling the 90' draw separately from
+// the extra-time/penalty outcome. Best-effort — leaves reg_home_score/reg_away_score unset
+// (no bonus, same as before this existed) for any match it can't confidently reconstruct.
+async function enrichRegulationScores(games: EnrichedGame[]): Promise<void> {
+  const eligible = games.filter(g =>
+    g.type !== 'group' && g.finished === 'TRUE' && (g.decidedBy === 'et' || g.decidedBy === 'penalties'),
+  )
+  if (eligible.length === 0) return
+
+  await Promise.all(eligible.map(async g => {
+    const finalHome = parseInt(g.home_score), finalAway = parseInt(g.away_score)
+    if (isNaN(finalHome) || isNaN(finalAway)) return
+    const reg = await fetchRegulationScore(g.id, g.home_team_id, g.away_team_id, finalHome, finalAway)
+    if (reg) { g.reg_home_score = reg.home; g.reg_away_score = reg.away }
+  }))
+}
+
 // ── Public API (same shape as apiClient.ts exports) ─────────────────────────
 
 export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
@@ -488,6 +567,8 @@ export async function fetchEnrichedGames(): Promise<EnrichedGame[]> {
       }
     }
   }
+
+  await enrichRegulationScores(games)
 
   return games
 }

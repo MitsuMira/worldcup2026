@@ -314,6 +314,9 @@ function MemberRow({ member, rank, isMe, games, allMembers, minParticipation, ex
                   {/* Actual score */}
                   <div className="flex flex-col items-end shrink-0 text-slate-500">
                     <span>{game.home_score}–{game.away_score}{isET ? ' AET' : ''}</span>
+                    {game.reg_home_score != null && (
+                      <span className="text-[10px] text-slate-600">90&apos; {game.reg_home_score}–{game.reg_away_score}</span>
+                    )}
                     <PenScore game={game} className="text-[10px] text-slate-600" />
                   </div>
                   {/* Pick */}
@@ -402,6 +405,9 @@ function MatchCompare({ game, members, rankedOrder, counts }: {
                   <span className="text-[10px] font-normal text-slate-400 ml-1">AET</span>
                 )}
               </span>
+              {game.reg_home_score != null && (
+                <span className="text-[10px] text-slate-500">90&apos; {game.reg_home_score}–{game.reg_away_score}</span>
+              )}
               <PenScore game={game} className="text-[10px] text-slate-500" />
             </div>
           ) : (

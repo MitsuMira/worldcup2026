@@ -229,10 +229,17 @@ export interface KnockoutScore { pts: number; exact: boolean }
 //   Regulation — exact score: 3 pts · correct winner: 1 pt · wrong: 0
 //   Extra time (won outright) — exact 120' score: 3 pts · correct ET winner: 1 pt · wrong: 0
 //   Penalties — exact 120' (drawn) score: 1 pt · exact shootout score: 2 pts (else correct
-//     shootout winner: 1 pt) — max 3 pts total, same ceiling as the other two outcomes.
+//     shootout winner: 1 pt)
 // The ET/pen tiers only score if the user's regulation prediction was itself a draw (the
 // only path that reveals those inputs) — correctly requiring them to have called that the
 // match would need extra time at all.
+//
+// Regulation bonus (matches that went to extra time): when game.reg_home_score/away_score
+// is set (the true 90' score, reconstructed server-side from goal events — see
+// matchEvents.ts), predicting it exactly is worth a further +3 pts, or +1 for correctly
+// calling it a draw without the exact scoreline. This stacks on top of the ET/pen tiers
+// above, since it's a genuinely separate, independently-verified call. When the true
+// regulation score couldn't be verified, this bonus is simply 0 — no penalty, no guess.
 export function getKnockoutPredictionPoints(pred: Prediction, game: ApiGame): KnockoutScore {
   if (game.finished !== 'TRUE') return { pts: 0, exact: false }
   const ah = parseInt(game.home_score)
@@ -248,15 +255,23 @@ export function getKnockoutPredictionPoints(pred: Prediction, game: ApiGame): Kn
   if (pred.etHomeScore === undefined || pred.etAwayScore === undefined) return { pts: 0, exact: false }
   const etH = pred.etHomeScore, etA = pred.etAwayScore
 
+  let regBonus = 0
+  if (game.reg_home_score != null && game.reg_away_score != null) {
+    const trh = parseInt(game.reg_home_score), tra = parseInt(game.reg_away_score)
+    if (pred.homeScore === trh && pred.awayScore === tra) regBonus = 3
+    else if (pred.homeScore === pred.awayScore) regBonus = 1
+  }
+
   if (game.decidedBy === 'et') {
-    if (etH === ah && etA === aa) return { pts: 3, exact: true }
+    if (etH === ah && etA === aa) return { pts: regBonus + 3, exact: true }
     const predWinner = etH > etA ? 'home' : etH < etA ? 'away' : 'draw'
     const actualWinner = ah > aa ? 'home' : ah < aa ? 'away' : 'draw'
-    return { pts: predWinner === actualWinner && actualWinner !== 'draw' ? 1 : 0, exact: false }
+    const etPts = predWinner === actualWinner && actualWinner !== 'draw' ? 1 : 0
+    return { pts: regBonus + etPts, exact: false }
   }
 
   // Decided by penalties — ah/aa is the drawn 120' score.
-  let pts = 0
+  let pts = regBonus
   const etExact = etH === ah && etA === aa
   if (etExact) pts += 1
 

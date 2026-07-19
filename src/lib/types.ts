@@ -23,6 +23,11 @@ export interface ApiGame {
   decidedBy?: 'regulation' | 'et' | 'penalties'  // parsed from ESPN status
   pen_home_score?: string   // penalty shootout score if available
   pen_away_score?: string
+  // Score at the end of regulation (90') for knockout matches that went to extra time.
+  // Reconstructed server-side from goal events (minute <= 90); only set when the
+  // reconstruction could be verified against the final score (see matchEvents.ts).
+  reg_home_score?: string
+  reg_away_score?: string
   home_winner?: boolean     // ESPN winner flag — used for pen-shootout winner detection
   away_winner?: boolean
   name?: string          // ESPN event name e.g. "Group A Winner vs Group B Runner-up"
